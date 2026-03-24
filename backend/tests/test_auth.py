@@ -32,7 +32,6 @@ def test_me_authenticated(unauth_client):
     assert rv.status_code == 200
     assert rv.get_json()['displayName'] == 'Jan'
 
-@pytest.mark.skip(reason="vestigingen routes not yet implemented")
 def test_protected_endpoint_requires_login(unauth_client):
     rv = unauth_client.get('/api/vestigingen')
     assert rv.status_code == 401
