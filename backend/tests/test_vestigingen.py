@@ -24,3 +24,7 @@ def test_delete_vestiging(client):
     assert rv.status_code == 200
     rv = client.get('/api/vestigingen')
     assert len(rv.get_json()) == 0
+
+def test_delete_vestiging_not_found(client):
+    rv = client.delete('/api/vestigingen/999')
+    assert rv.status_code == 404

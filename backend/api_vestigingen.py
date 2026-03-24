@@ -41,6 +41,9 @@ def update_vestiging(vid):
 @vestigingen_bp.route('/vestigingen/<int:vid>', methods=['DELETE'])
 @login_required
 def delete_vestiging(vid):
+    row = g.db.execute('SELECT id FROM vestigingen WHERE id = ?', (vid,)).fetchone()
+    if not row:
+        return jsonify({'error': 'Niet gevonden'}), 404
     # Check for ANY toewijzingen (active or historical) — FK constraints prevent deletion otherwise
     has_toewijzingen = g.db.execute('''
         SELECT COUNT(*) as cnt FROM toewijzingen t
