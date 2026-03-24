@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+*.db
+
+# Config with secrets
+backend/config.json
+
+# Node
+node_modules/
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+
+# Superpowers
+.superpowers/
+
+# OS
+.DS_Store
+Thumbs.db
