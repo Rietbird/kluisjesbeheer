@@ -13,7 +13,10 @@ def db_path():
     fd, path = tempfile.mkstemp(suffix='.db')
     os.close(fd)
     yield path
-    os.unlink(path)
+    try:
+        os.unlink(path)
+    except OSError:
+        pass  # Windows may keep SQLite file locked briefly
 
 @pytest.fixture
 def db(db_path):

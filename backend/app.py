@@ -1,9 +1,11 @@
 import os
 from datetime import timedelta
-from flask import Flask, g
+from flask import Flask, g, send_from_directory
 from flask_cors import CORS
 from config import config
 from db import init_db, get_db, close_db
+
+FRONTEND_DIST = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'kluisjesbeheer.db')
 
@@ -65,6 +67,20 @@ def create_app(test_config=None):
 
     from api_instellingen import instellingen_bp
     app.register_blueprint(instellingen_bp)
+
+    # SPA catch-all: serve frontend dist for non-API/auth routes
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve_frontend(path):
+        # Serve static assets (js, css, etc.)
+        full_path = os.path.join(FRONTEND_DIST, path)
+        if path and os.path.isfile(full_path):
+            return send_from_directory(FRONTEND_DIST, path)
+        # All other routes: serve index.html (SPA routing)
+        index = os.path.join(FRONTEND_DIST, 'index.html')
+        if os.path.isfile(index):
+            return send_from_directory(FRONTEND_DIST, 'index.html')
+        return {'error': 'Frontend not built. Run: cd frontend && npm run build'}, 404
 
     return app
 
