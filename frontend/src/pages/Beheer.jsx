@@ -370,12 +370,12 @@ function MagisterSyncPanel() {
 // ── Borg Tab ──────────────────────────────────────────────────────────────────
 
 function BorgTab() {
-  const { borgActief, setBorgActief } = useInstellingen()
+  const { borgActiefVoor, setBorgActiefVoor } = useInstellingen()
   const [vestigingen, setVestigingen] = useState([])
   const [clusters, setClusters] = useState({})
   const [editId, setEditId] = useState(null)
   const [editBorg, setEditBorg] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useState(null)
 
   useEffect(() => {
     api.get('/api/vestigingen').then(async (vList) => {
@@ -389,10 +389,10 @@ function BorgTab() {
     }).catch(() => {})
   }, [])
 
-  async function handleToggle() {
-    setSaving(true)
-    try { await setBorgActief(!borgActief) }
-    finally { setSaving(false) }
+  async function handleToggle(vestigingId) {
+    setSaving(vestigingId)
+    try { await setBorgActiefVoor(vestigingId, !borgActiefVoor(vestigingId)) }
+    finally { setSaving(null) }
   }
 
   async function handleSaveBorg(clusterId) {
@@ -408,9 +408,7 @@ function BorgTab() {
       }))
       setClusters(map)
       setEditId(null)
-    } catch {
-      // edit blijft open zodat gebruiker het opnieuw kan proberen
-    }
+    } catch {}
   }
 
   const cardClass = "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5"
@@ -418,31 +416,27 @@ function BorgTab() {
 
   return (
     <div className="space-y-5 max-w-2xl">
-      <div className={cardClass}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-bold text-slate-800 dark:text-white">Borg inschakelen</div>
-            <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              Als uit: borgvelden en borg-statistieken worden overal verborgen.
+      {vestigingen.map(v => (
+        <div key={v.id} className={cardClass}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="font-bold text-slate-800 dark:text-white">{v.naam}</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                {borgActiefVoor(v.id) ? 'Borg is ingeschakeld' : 'Borg is uitgeschakeld'}
+              </div>
             </div>
+            <button
+              onClick={() => handleToggle(v.id)}
+              disabled={saving === v.id}
+              className={`flex items-center w-14 h-7 rounded-full px-0.5 transition-colors focus:outline-none ${borgActiefVoor(v.id) ? 'bg-School' : 'bg-slate-300 dark:bg-slate-600'}`}
+            >
+              <span className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-200 ${borgActiefVoor(v.id) ? 'translate-x-7' : 'translate-x-0'}`} />
+            </button>
           </div>
-          <button
-            onClick={handleToggle}
-            disabled={saving}
-            className={`flex items-center w-14 h-7 rounded-full px-0.5 transition-colors focus:outline-none ${borgActief ? 'bg-School' : 'bg-slate-300 dark:bg-slate-600'}`}
-          >
-            <span className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-200 ${borgActief ? 'translate-x-7' : 'translate-x-0'}`} />
-          </button>
-        </div>
-      </div>
 
-      <div className={cardClass}>
-        <h2 className="text-base font-bold text-slate-800 dark:text-white mb-4">Standaard borgbedragen per cluster</h2>
-        {vestigingen.length === 0 && <p className="text-sm text-slate-400">Laden...</p>}
-        <div className="space-y-5">
-          {vestigingen.map(v => (
-            <div key={v.id}>
-              <div className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">{v.naam}</div>
+          {borgActiefVoor(v.id) && (clusters[v.id] || []).length > 0 && (
+            <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
+              <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Standaard borgbedragen</div>
               <div className="space-y-1">
                 {(clusters[v.id] || []).map(c => (
                   <div key={c.id} className="flex items-center justify-between border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-2">
@@ -477,14 +471,12 @@ function BorgTab() {
                     )}
                   </div>
                 ))}
-                {(clusters[v.id] || []).length === 0 && (
-                  <p className="text-xs text-slate-400 px-4">Geen clusters.</p>
-                )}
               </div>
             </div>
-          ))}
+          )}
         </div>
-      </div>
+      ))}
+      {vestigingen.length === 0 && <p className="text-sm text-slate-400">Laden...</p>}
     </div>
   )
 }
