@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS vestigingen (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     naam TEXT NOT NULL,
     adres TEXT DEFAULT '',
+    borg_actief INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT (datetime('now')),
     updated_at DATETIME DEFAULT (datetime('now'))
 );

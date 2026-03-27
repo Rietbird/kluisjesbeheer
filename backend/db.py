@@ -10,6 +10,12 @@ def init_db(db_path):
     conn.row_factory = sqlite3.Row
     with open(_SCHEMA_PATH) as f:
         conn.executescript(f.read())
+    # Migration: add borg_actief to vestigingen if not yet present
+    try:
+        conn.execute("ALTER TABLE vestigingen ADD COLUMN borg_actief INTEGER DEFAULT 1")
+        conn.commit()
+    except Exception:
+        pass  # kolom bestaat al
     return conn
 
 def get_db(db_path):

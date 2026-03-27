@@ -38,6 +38,15 @@ def update_vestiging(vid):
     row = g.db.execute('SELECT * FROM vestigingen WHERE id = ?', (vid,)).fetchone()
     return jsonify(dict(row))
 
+@vestigingen_bp.route('/vestigingen/<int:vid>/borg', methods=['PUT'])
+@login_required
+def update_borg(vid):
+    data = request.get_json()
+    borg_actief = 1 if data.get('borg_actief') else 0
+    g.db.execute('UPDATE vestigingen SET borg_actief=? WHERE id=?', (borg_actief, vid))
+    g.db.commit()
+    return jsonify({'ok': True, 'borg_actief': bool(borg_actief)})
+
 @vestigingen_bp.route('/vestigingen/<int:vid>', methods=['DELETE'])
 @login_required
 def delete_vestiging(vid):
