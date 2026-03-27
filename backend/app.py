@@ -85,6 +85,9 @@ def create_app(test_config=None):
     from api_instellingen import instellingen_bp
     app.register_blueprint(instellingen_bp)
 
+    from api_schooljaar import schooljaar_bp
+    app.register_blueprint(schooljaar_bp)
+
     # SPA catch-all
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
