@@ -17,8 +17,13 @@ export function InstellingenProvider({ children }) {
   }, [])
 
   async function setBorgActief(val) {
+    const prev = borgActief
     setBorgActiefState(val)
-    await api.put('/api/instellingen', { borg_actief: val ? 'true' : 'false' })
+    try {
+      await api.put('/api/instellingen', { borg_actief: val ? 'true' : 'false' })
+    } catch {
+      setBorgActiefState(prev)
+    }
   }
 
   if (!loaded) return null
