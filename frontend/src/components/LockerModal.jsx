@@ -128,6 +128,14 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
             </div>
           )}
 
+          {/* Forms */}
+          {mode === 'toewijzen' && (
+            <AssignForm kluisje={detail} onDone={() => onUpdate()} onCancel={() => setMode(null)} />
+          )}
+          {mode === 'beeindigen' && (
+            <EndRentalForm kluisje={detail} onDone={() => onUpdate()} onCancel={() => setMode(null)} />
+          )}
+
           {/* Opmerkingen */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -145,14 +153,6 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
               placeholder="Notities over dit kluisje..."
             />
           </div>
-
-          {/* Forms */}
-          {mode === 'toewijzen' && (
-            <AssignForm kluisje={detail} onDone={() => onUpdate()} onCancel={() => setMode(null)} />
-          )}
-          {mode === 'beeindigen' && (
-            <EndRentalForm kluisje={detail} onDone={() => onUpdate()} onCancel={() => setMode(null)} />
-          )}
 
           {/* Geschiedenis */}
           {geschiedenis.length > 0 && (

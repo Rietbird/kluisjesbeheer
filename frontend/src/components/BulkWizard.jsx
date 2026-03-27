@@ -54,6 +54,15 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
     }
   }, [selectedCluster])
 
+  useEffect(() => {
+    api.get('/api/schooljaar/periode')
+      .then(data => {
+        setPeriodeVan(data.periode_van || '')
+        setPeriodeTot(data.periode_tot || '')
+      })
+      .catch(() => {})
+  }, [])
+
   async function loadLeerlingen(klas) {
     setLoading(true)
     try {

@@ -28,6 +28,15 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
     return () => clearTimeout(debounceRef.current)
   }, [q])
 
+  useEffect(() => {
+    api.get('/api/schooljaar/periode')
+      .then(data => {
+        if (!periodeVan) setPeriodeVan(data.periode_van || '')
+        if (!periodeTot) setPeriodeTot(data.periode_tot || '')
+      })
+      .catch(() => {})
+  }, [])
+
   function selectLeerling(l) {
     setSelected(l)
     setQ(l.naam || l.leerling_naam || '')
@@ -74,21 +83,22 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
           <div className="absolute z-10 w-full bg-white border border-slate-200 rounded shadow-lg max-h-40 overflow-y-auto">
             {results.map((l, i) => (
               <button key={i} type="button"
-                className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b last:border-b-0"
+                className="w-full text-left px-4 py-3 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b last:border-b-0"
                 onClick={() => selectLeerling(l)}>
-                <span className="font-medium">{l.naam || l.leerling_naam}</span>
-                <span className="text-slate-400 ml-2 text-xs">{l.stamnr || l.leerling_stamnr}</span>
-                <span className="text-slate-400 ml-2 text-xs">{l.klas || l.leerling_klas}</span>
+                <div className="font-medium">{l.naam || l.leerling_naam}</div>
+                <div className="text-xs text-slate-400 mt-0.5">{l.stamnr || l.leerling_stamnr} — {l.klas || l.leerling_klas}</div>
               </button>
             ))}
           </div>
         )}
       </div>
       {selected && (
-        <div className="bg-blue-50 rounded p-2 text-xs space-y-1">
-          <div><span className="text-slate-500">Naam:</span> <span className="font-medium">{selected.naam || selected.leerling_naam}</span></div>
-          <div><span className="text-slate-500">Stamnr:</span> {selected.stamnr || selected.leerling_stamnr}</div>
-          <div><span className="text-slate-500">Klas:</span> {selected.klas || selected.leerling_klas}</div>
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-1.5">
+          <div className="font-semibold text-base text-slate-900 dark:text-white">{selected.naam || selected.leerling_naam}</div>
+          <div className="flex gap-4 text-sm">
+            <span><span className="text-slate-500">Stamnr:</span> <span className="font-medium">{selected.stamnr || selected.leerling_stamnr}</span></span>
+            <span><span className="text-slate-500">Klas:</span> <span className="font-medium">{selected.klas || selected.leerling_klas}</span></span>
+          </div>
         </div>
       )}
       <div className="grid grid-cols-2 gap-2">

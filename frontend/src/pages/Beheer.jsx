@@ -612,6 +612,7 @@ function ImportTab() {
 function BeheerInstellingenTab() {
   const [periodeVan, setPeriodeVan] = useState('')
   const [periodeTot, setPeriodeTot] = useState('')
+  const [regio, setRegio] = useState('noord')
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
   const [loaded, setLoaded] = useState(false)
@@ -621,6 +622,7 @@ function BeheerInstellingenTab() {
       .then(data => {
         setPeriodeVan(data.standaard_periode_van || '')
         setPeriodeTot(data.standaard_periode_tot || '')
+        setRegio(data.regio || 'noord')
       })
       .catch(() => {})
       .finally(() => setLoaded(true))
@@ -632,6 +634,7 @@ function BeheerInstellingenTab() {
       await api.put('/api/instellingen', {
         standaard_periode_van: periodeVan,
         standaard_periode_tot: periodeTot,
+        regio,
       })
       setSaveMsg('Opgeslagen!')
       setTimeout(() => setSaveMsg(''), 2000)
@@ -673,6 +676,18 @@ function BeheerInstellingenTab() {
             )}
           </div>
         </form>
+      </div>
+
+      <div className={cardClass}>
+        <h2 className="text-base font-bold text-slate-800 dark:text-white mb-2">Regio</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          De regio bepaalt de standaard uitleenperiode op basis van de zomervakantie.
+        </p>
+        <select className={inputClass} value={regio} onChange={e => setRegio(e.target.value)}>
+          <option value="noord">Noord</option>
+          <option value="midden">Midden</option>
+          <option value="zuid">Zuid</option>
+        </select>
       </div>
 
       <div className={cardClass}>
