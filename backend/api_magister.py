@@ -7,6 +7,9 @@ magister_bp = Blueprint('magister', __name__, url_prefix='/api')
 @magister_bp.route('/magister/leerlingen', methods=['GET'])
 @login_required
 def search_leerlingen():
+    klas = request.args.get('klas', '').strip()
+    if klas:
+        return jsonify(magister.get_leerlingen_by_klas(klas))
     q = request.args.get('q', '').strip()
     if len(q) < 2:
         return jsonify([])

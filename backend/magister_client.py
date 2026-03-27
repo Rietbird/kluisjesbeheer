@@ -153,6 +153,11 @@ class MagisterClient:
             })
         return leerlingen
 
+    def get_leerlingen_by_klas(self, klas):
+        """Get students by exact class match."""
+        all_leerlingen = self.get_leerlingen()
+        return [l for l in all_leerlingen if l['klas'] == klas]
+
     def search_leerlingen(self, query):
         """Search students by name, class, or stamnr. Uses cached full list."""
         all_leerlingen = self.get_leerlingen()

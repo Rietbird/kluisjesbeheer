@@ -57,7 +57,7 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
   async function loadLeerlingen(klas) {
     setLoading(true)
     try {
-      const data = await api.get(`/api/magister/leerlingen?q=${encodeURIComponent(klas)}`)
+      const data = await api.get(`/api/magister/leerlingen?klas=${encodeURIComponent(klas)}`)
       setLeerlingen(data)
       setSelectedLeerlingen(data.map((_, i) => i))
     } catch {
