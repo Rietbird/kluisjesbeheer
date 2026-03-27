@@ -11,7 +11,7 @@ import BulkEndWizard from '../components/BulkEndWizard'
 
 function RapportDropdown({ stats }) {
   const [open, setOpen] = useState(false)
-  const { borgActief } = useInstellingen()
+  const { borgActiefVoor } = useInstellingen()
 
   function download(type, vestigingId) {
     const params = new URLSearchParams({ type })
@@ -36,7 +36,7 @@ function RapportDropdown({ stats }) {
             <div className="px-4 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Alle vestigingen</div>
             <button onClick={() => download('toewijzingen')} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700">Actieve toewijzingen</button>
             <button onClick={() => download('sleutels')} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700">Openstaande sleutels</button>
-            {borgActief && <button onClick={() => download('borg')} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700">Openstaande borg</button>}
+            <button onClick={() => download('borg')} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700">Openstaande borg</button>
             {stats.length > 1 && (
               <>
                 <div className="border-t dark:border-slate-700 my-1" />
@@ -47,7 +47,7 @@ function RapportDropdown({ stats }) {
                     <div className="flex gap-3">
                       <button onClick={() => download('toewijzingen', v.vestiging_id)} className="text-xs text-School hover:underline">Toewijzingen</button>
                       <button onClick={() => download('sleutels', v.vestiging_id)} className="text-xs text-School hover:underline">Sleutels</button>
-                      {borgActief && <button onClick={() => download('borg', v.vestiging_id)} className="text-xs text-School hover:underline">Borg</button>}
+                      {borgActiefVoor(v.vestiging_id) && <button onClick={() => download('borg', v.vestiging_id)} className="text-xs text-School hover:underline">Borg</button>}
                     </div>
                   </div>
                 ))}
@@ -62,7 +62,7 @@ function RapportDropdown({ stats }) {
 
 function VestigingPicker({ vestigingen, onSelect }) {
   const [stats, setStats] = useState([])
-  const { borgActief } = useInstellingen()
+  const { borgActiefVoor } = useInstellingen()
 
   useEffect(() => {
     api.get('/api/dashboard/stats').then(setStats).catch(() => {})
@@ -142,7 +142,7 @@ function VestigingPicker({ vestigingen, onSelect }) {
                 )}
 
                 {/* Borg info */}
-                {borgActief && (s.borg_ontvangen > 0 || s.borg_niet_betaald > 0 || s.borg_niet_terug > 0) && (
+                {borgActiefVoor(v.id) && (s.borg_ontvangen > 0 || s.borg_niet_betaald > 0 || s.borg_niet_terug > 0) && (
                   <div className="flex gap-4 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs">
                     {s.borg_ontvangen > 0 && (
                       <span className="text-slate-600 dark:text-slate-400">Borg: <span className="font-semibold">€{s.borg_ontvangen.toFixed(0)}</span></span>
@@ -203,7 +203,6 @@ function VestigingTabs({ vestigingen, activeId, onChange }) {
 
 export default function Uitleenoverzicht() {
   const { vestigingen, clusters, kluisjes, loading, filters, setFilters, reload } = useKluisjes()
-  const { borgActief } = useInstellingen()
   const [selected, setSelected] = useState(null)
   const [showBulk, setShowBulk] = useState(false)
   const [showBulkEnd, setShowBulkEnd] = useState(false)

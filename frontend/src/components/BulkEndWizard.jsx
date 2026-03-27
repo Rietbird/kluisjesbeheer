@@ -18,7 +18,7 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
   const [opmerking, setOpmerking] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState(null)
-  const { borgActief } = useInstellingen()
+  const { borgActiefVoor } = useInstellingen()
 
   useEffect(() => {
     api.get(`/api/vestigingen/${vestigingId}/clusters`).then(setClusters).catch(() => {})
@@ -173,7 +173,7 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
                   <div className="text-xs text-slate-500">Markeer de sleutel als ingeleverd voor alle geselecteerde kluisjes</div>
                 </div>
               </label>
-              {borgActief && (
+              {borgActiefVoor(vestigingId) && (
                 <label className="flex items-center gap-3 p-4 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors">
                   <input type="checkbox" className="w-5 h-5 accent-School"
                     checked={borgTeruggestort} onChange={e => setBorgTeruggestort(e.target.checked)} />
@@ -209,7 +209,7 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
               <div className="text-sm space-y-1">
                 <div className="flex justify-between py-1"><span className="text-slate-500">Aantal</span><span className="font-semibold">{selected.size} kluisjes</span></div>
                 <div className="flex justify-between py-1"><span className="text-slate-500">Sleutel ingeleverd</span><span className="font-semibold">{sleutelIngeleverd ? 'Ja' : 'Nee'}</span></div>
-                {borgActief && <div className="flex justify-between py-1"><span className="text-slate-500">Borg teruggestort</span><span className="font-semibold">{borgTeruggestort ? 'Ja' : 'Nee'}</span></div>}
+                {borgActiefVoor(vestigingId) && <div className="flex justify-between py-1"><span className="text-slate-500">Borg teruggestort</span><span className="font-semibold">{borgTeruggestort ? 'Ja' : 'Nee'}</span></div>}
                 <div className="flex justify-between py-1"><span className="text-slate-500">Einddatum</span><span className="font-semibold">{einddatum}</span></div>
                 {opmerking && <div className="flex justify-between py-1"><span className="text-slate-500">Opmerking</span><span className="font-semibold">{opmerking}</span></div>}
               </div>

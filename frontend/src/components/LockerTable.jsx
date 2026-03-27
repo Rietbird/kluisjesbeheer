@@ -11,7 +11,8 @@ function StatusBadge({ kluisje }) {
 }
 
 export default function LockerTable({ kluisjes, onSelect, selectedId }) {
-  const { borgActief } = useInstellingen()
+  const { borgActiefVoor } = useInstellingen()
+  const vestigingId = kluisjes[0]?.vestiging_id
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
       <table className="w-full text-sm">
@@ -23,7 +24,7 @@ export default function LockerTable({ kluisjes, onSelect, selectedId }) {
             <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 hidden md:table-cell">Stamnr</th>
             <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 hidden lg:table-cell">Klas</th>
             <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600">Status</th>
-            {borgActief && <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 hidden lg:table-cell">Borg</th>}
+            {borgActiefVoor(vestigingId) && <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 hidden lg:table-cell">Borg</th>}
             <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600 hidden md:table-cell">Periode</th>
           </tr>
         </thead>
@@ -37,7 +38,7 @@ export default function LockerTable({ kluisjes, onSelect, selectedId }) {
               <td className="px-3 py-2 hidden md:table-cell text-slate-400 text-xs">{k.leerling_stamnr || '—'}</td>
               <td className="px-3 py-2 hidden lg:table-cell text-xs">{k.leerling_klas || '—'}</td>
               <td className="px-3 py-2"><StatusBadge kluisje={k} /></td>
-              {borgActief && (
+              {borgActiefVoor(vestigingId) && (
                 <td className="px-3 py-2 hidden lg:table-cell text-xs text-slate-500">
                   {k.borgbedrag > 0 ? (
                     <span className={k.borg_betaald ? 'text-green-600' : 'text-amber-600'}>

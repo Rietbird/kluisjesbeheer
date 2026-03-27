@@ -15,7 +15,7 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
   const [error, setError] = useState('')
   const debounceRef = useRef(null)
 
-  const { borgActief } = useInstellingen()
+  const { borgActiefVoor } = useInstellingen()
 
   useEffect(() => {
     if (q.length < 2) { setResults([]); setShowDropdown(false); return }
@@ -113,7 +113,7 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
             onChange={e => setPeriodeTot(e.target.value)} />
         </div>
       </div>
-      {borgActief && (
+      {borgActiefVoor(kluisje.vestiging_id) && (
         <>
           <div>
             <label className="block text-xs text-slate-500 mb-1">Borgbedrag (€)</label>

@@ -14,7 +14,7 @@ export default function EndRentalForm({ kluisje, onDone, onCancel }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const { borgActief } = useInstellingen()
+  const { borgActiefVoor } = useInstellingen()
 
   const toewijzingId = kluisje.toewijzing_id
 
@@ -44,7 +44,7 @@ export default function EndRentalForm({ kluisje, onDone, onCancel }) {
         <input type="checkbox" checked={sleutelIngeleverd} onChange={e => setSleutelIngeleverd(e.target.checked)} />
         Sleutel ingeleverd
       </label>
-      {borgActief && (
+      {borgActiefVoor(kluisje.vestiging_id) && (
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input type="checkbox" checked={borgTeruggestort} onChange={e => setBorgTeruggestort(e.target.checked)} />
           Borg teruggestort

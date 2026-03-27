@@ -27,7 +27,7 @@ export default function SidePanel({ kluisje, onClose, onUpdate }) {
   const [opmerkingen, setOpmerkingen] = useState(kluisje.opmerkingen || '')
   const [mode, setMode] = useState(null)
   const [savingStatus, setSavingStatus] = useState(null)
-  const { borgActief } = useInstellingen()
+  const { borgActiefVoor } = useInstellingen()
 
   useEffect(() => {
     setDetail(kluisje)
@@ -123,7 +123,7 @@ export default function SidePanel({ kluisje, onClose, onUpdate }) {
                   <span className="text-xs">{detail.periode_van} t/m {detail.periode_tot}</span>
                 </InfoRow>
               )}
-              {borgActief && detail.borgbedrag != null && (
+              {borgActiefVoor(detail.vestiging_id) && detail.borgbedrag != null && (
                 <InfoRow label="Borg">
                   <span className={detail.borg_betaald ? 'text-green-700' : 'text-amber-600 font-semibold'}>
                     €{Number(detail.borgbedrag).toFixed(2)}
@@ -173,7 +173,7 @@ export default function SidePanel({ kluisje, onClose, onUpdate }) {
                     </div>
                     <div className="text-slate-400 mt-0.5">{g.periode_van} t/m {g.periode_tot || g.einddatum || '...'}</div>
                     <div className="flex gap-3 mt-1.5">
-                      {borgActief && g.borgbedrag > 0 && (
+                      {borgActiefVoor(detail.vestiging_id) && g.borgbedrag > 0 && (
                         <span className={g.borg_teruggestort ? 'text-green-600' : g.borg_betaald ? 'text-amber-600' : 'text-slate-400'}>
                           €{Number(g.borgbedrag).toFixed(0)}
                           {g.borg_teruggestort ? ' terug' : g.borg_betaald ? ' niet terug' : ' niet betaald'}

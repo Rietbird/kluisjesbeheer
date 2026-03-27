@@ -27,7 +27,7 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
   const [opmerkingen, setOpmerkingen] = useState(kluisje.opmerkingen || '')
   const [mode, setMode] = useState(null)
   const [savingStatus, setSavingStatus] = useState(null)
-  const { borgActief } = useInstellingen()
+  const { borgActiefVoor } = useInstellingen()
 
   useEffect(() => {
     setDetail(kluisje)
@@ -116,7 +116,7 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                 {detail.periode_van && (
                   <InfoRow label="Periode">{detail.periode_van} t/m {detail.periode_tot}</InfoRow>
                 )}
-                {borgActief && detail.borgbedrag != null && detail.borgbedrag > 0 && (
+                {borgActiefVoor(detail.vestiging_id) && detail.borgbedrag != null && detail.borgbedrag > 0 && (
                   <InfoRow label="Borg">
                     <span className={detail.borg_betaald ? 'text-emerald-700 dark:text-emerald-400 font-semibold' : 'text-amber-600 dark:text-amber-400 font-bold'}>
                       €{Number(detail.borgbedrag).toFixed(2)}
@@ -167,7 +167,7 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                     </div>
                     <div className="text-slate-500 dark:text-slate-400 text-xs mt-1">{g.periode_van} t/m {g.periode_tot || g.einddatum || '...'}</div>
                     <div className="flex gap-4 mt-2 text-xs">
-                      {borgActief && g.borgbedrag > 0 && (
+                      {borgActiefVoor(detail.vestiging_id) && g.borgbedrag > 0 && (
                         <span className={g.borg_teruggestort ? 'text-emerald-600 dark:text-emerald-400' : g.borg_betaald ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}>
                           €{Number(g.borgbedrag).toFixed(0)}
                           {g.borg_teruggestort ? ' terug' : g.borg_betaald ? ' niet terug' : ' niet betaald'}
