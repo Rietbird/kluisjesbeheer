@@ -399,14 +399,15 @@ function BorgTab() {
     await api.put(`/api/clusters/${clusterId}`, {
       standaard_borg: editBorg !== '' ? Number(editBorg) : null
     })
-    api.get('/api/vestigingen').then(async (vList) => {
+    try {
+      const vList = await api.get('/api/vestigingen')
       const map = {}
       await Promise.all(vList.map(async v => {
         const c = await api.get(`/api/vestigingen/${v.id}/clusters`)
         map[v.id] = c
       }))
       setClusters(map)
-    }).catch(() => {})
+    } catch {}
     setEditId(null)
   }
 
