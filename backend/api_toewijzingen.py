@@ -93,6 +93,7 @@ def actieve_toewijzingen():
     """Get all active assignments, optionally filtered by vestiging_id and/or cluster_id."""
     vestiging_id = request.args.get('vestiging_id')
     cluster_id = request.args.get('cluster_id')
+    stamnr = request.args.get('stamnr', '').strip()
     query = '''
         SELECT t.*, k.kluisnummer, k.cluster_id, k.vestiging_id, c.naam as cluster_naam
         FROM toewijzingen t
@@ -101,6 +102,9 @@ def actieve_toewijzingen():
         WHERE t.actief = 1 AND k.verwijderd = 0
     '''
     params = []
+    if stamnr:
+        query += ' AND t.leerling_stamnr = ?'
+        params.append(stamnr)
     if vestiging_id:
         query += ' AND k.vestiging_id = ?'
         params.append(int(vestiging_id))

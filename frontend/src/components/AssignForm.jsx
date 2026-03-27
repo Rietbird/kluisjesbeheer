@@ -13,6 +13,7 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
   const [borgBetaald, setBorgBetaald] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [alHeeftKluisje, setAlHeeftKluisje] = useState(null)
   const debounceRef = useRef(null)
 
   const { borgActiefVoor } = useInstellingen()
@@ -29,9 +30,9 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
   }, [q])
 
   useEffect(() => {
+    setPeriodeVan(new Date().toISOString().slice(0, 10))
     api.get('/api/schooljaar/periode')
       .then(data => {
-        if (!periodeVan) setPeriodeVan(data.periode_van || '')
         if (!periodeTot) setPeriodeTot(data.periode_tot || '')
       })
       .catch(() => {})
@@ -42,6 +43,15 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
     setQ(l.naam || l.leerling_naam || '')
     setShowDropdown(false)
     setResults([])
+    setAlHeeftKluisje(null)
+    const stamnr = l.stamnr || l.leerling_stamnr
+    if (stamnr) {
+      api.get(`/api/toewijzingen/actief?stamnr=${encodeURIComponent(stamnr)}`)
+        .then(data => {
+          if (data.length > 0) setAlHeeftKluisje(data[0])
+        })
+        .catch(() => {})
+    }
   }
 
   async function handleSubmit(e) {
@@ -99,6 +109,11 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
             <span><span className="text-slate-500">Stamnr:</span> <span className="font-medium">{selected.stamnr || selected.leerling_stamnr}</span></span>
             <span><span className="text-slate-500">Klas:</span> <span className="font-medium">{selected.klas || selected.leerling_klas}</span></span>
           </div>
+        </div>
+      )}
+      {alHeeftKluisje && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl p-3 text-sm text-amber-800 dark:text-amber-300">
+          Deze leerling heeft al kluisje <strong>{alHeeftKluisje.kluisnummer}</strong> ({alHeeftKluisje.cluster_naam}).
         </div>
       )}
       <div className="grid grid-cols-2 gap-2">
