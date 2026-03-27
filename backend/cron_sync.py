@@ -1,22 +1,47 @@
 #!/usr/bin/env python3
-"""Daily cron: refresh student list from Magister so new students are available for assignment.
+"""Daily cron: refresh student list from Magister and store in database.
 Run via: /opt/kluisjesbeheer/.venv/bin/python /opt/kluisjesbeheer/backend/cron_sync.py
 """
+import os
 import sys
-sys.path.insert(0, '/opt/kluisjesbeheer/backend')
+sys.path.insert(0, os.path.dirname(__file__))
 from magister_client import MagisterClient
+from db import get_db
+
 
 def main():
     print('=== CRON MAGISTER LEERLINGEN SYNC ===')
     magister = MagisterClient()
+    db_path = os.path.join(os.path.dirname(__file__), 'kluisjesbeheer.db')
+    db = get_db(db_path)
+
     try:
         leerlingen = magister.get_leerlingen()
         klassen = sorted(set(l['klas'] for l in leerlingen if l['klas']))
         print(f'{len(leerlingen)} leerlingen opgehaald, {len(klassen)} klassen')
-        print('Done!')
+
+        for l in leerlingen:
+            db.execute('''
+                INSERT INTO leerlingen (stamnr, naam, roepnaam, tussenvoegsel, achternaam, email, klas, leerjaar, studie, locatie, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(stamnr) DO UPDATE SET
+                    naam=excluded.naam, roepnaam=excluded.roepnaam, tussenvoegsel=excluded.tussenvoegsel,
+                    achternaam=excluded.achternaam, email=excluded.email, klas=excluded.klas,
+                    leerjaar=excluded.leerjaar, studie=excluded.studie, locatie=excluded.locatie,
+                    updated_at=datetime('now')
+            ''', (
+                l['stamnr'], l['naam'], l.get('roepnaam', ''), l.get('tussenvoegsel', ''),
+                l.get('achternaam', ''), l.get('email', ''), l['klas'],
+                l.get('leerjaar', ''), l.get('studie', ''), l.get('locatie', ''),
+            ))
+        db.commit()
+        print(f'Database bijgewerkt. Done!')
     except Exception as e:
-        print(f'ERROR: Magister niet bereikbaar: {e}')
+        print(f'ERROR: {e}')
         sys.exit(1)
+    finally:
+        db.close()
+
 
 if __name__ == '__main__':
     main()

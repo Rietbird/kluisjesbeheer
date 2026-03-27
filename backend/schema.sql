@@ -56,6 +56,24 @@ CREATE TABLE IF NOT EXISTS toewijzingen (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_active_toewijzing_per_kluisje
     ON toewijzingen(kluisje_id) WHERE actief = 1;
 
+CREATE TABLE IF NOT EXISTS leerlingen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stamnr TEXT NOT NULL UNIQUE,
+    naam TEXT NOT NULL DEFAULT '',
+    roepnaam TEXT DEFAULT '',
+    tussenvoegsel TEXT DEFAULT '',
+    achternaam TEXT DEFAULT '',
+    email TEXT DEFAULT '',
+    klas TEXT DEFAULT '',
+    leerjaar TEXT DEFAULT '',
+    studie TEXT DEFAULT '',
+    locatie TEXT DEFAULT '',
+    updated_at DATETIME DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_leerlingen_klas ON leerlingen(klas);
+CREATE INDEX IF NOT EXISTS idx_leerlingen_naam ON leerlingen(naam COLLATE NOCASE);
+
 CREATE TABLE IF NOT EXISTS instellingen (
     key TEXT PRIMARY KEY,
     value TEXT DEFAULT ''
