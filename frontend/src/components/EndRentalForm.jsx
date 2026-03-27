@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../api'
+import { useInstellingen } from '../context/InstellingenContext'
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -12,6 +13,8 @@ export default function EndRentalForm({ kluisje, onDone, onCancel }) {
   const [opmerking, setOpmerking] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const { borgActief } = useInstellingen()
 
   const toewijzingId = kluisje.toewijzing_id
 
@@ -41,10 +44,12 @@ export default function EndRentalForm({ kluisje, onDone, onCancel }) {
         <input type="checkbox" checked={sleutelIngeleverd} onChange={e => setSleutelIngeleverd(e.target.checked)} />
         Sleutel ingeleverd
       </label>
-      <label className="flex items-center gap-2 text-sm cursor-pointer">
-        <input type="checkbox" checked={borgTeruggestort} onChange={e => setBorgTeruggestort(e.target.checked)} />
-        Borg teruggestort
-      </label>
+      {borgActief && (
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" checked={borgTeruggestort} onChange={e => setBorgTeruggestort(e.target.checked)} />
+          Borg teruggestort
+        </label>
+      )}
       <div>
         <label className="block text-xs text-slate-500 mb-1">Einddatum</label>
         <input type="date" className="w-full border rounded px-2 py-1 text-sm" value={einddatum}
