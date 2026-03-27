@@ -1,4 +1,5 @@
 import { useInstellingen } from '../context/InstellingenContext'
+import { formatDate } from '../utils/formatDate'
 
 function StatusBadge({ kluisje }) {
   const cls = kluisje.status === 'uitgeleend' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
@@ -48,7 +49,7 @@ export default function LockerTable({ kluisjes, onSelect, selectedId }) {
                 </td>
               )}
               <td className="px-3 py-2 hidden md:table-cell text-xs text-slate-400">
-                {k.periode_van && k.periode_tot ? `${k.periode_van} t/m ${k.periode_tot}` : '—'}
+                {k.periode_van && k.periode_tot ? `${formatDate(k.periode_van)} t/m ${formatDate(k.periode_tot)}` : '—'}
               </td>
             </tr>
           ))}

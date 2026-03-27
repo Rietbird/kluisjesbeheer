@@ -3,6 +3,7 @@ import { api } from '../api'
 import AssignForm from './AssignForm'
 import EndRentalForm from './EndRentalForm'
 import { useInstellingen } from '../context/InstellingenContext'
+import { formatDate } from '../utils/formatDate'
 
 function InfoRow({ label, children }) {
   return (
@@ -125,7 +126,7 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                 <InfoRow label="Stamnummer"><span className="text-base">{detail.leerling_stamnr || '—'}</span></InfoRow>
                 <InfoRow label="Klas"><span className="text-base">{detail.leerling_klas || '—'}</span></InfoRow>
                 {detail.periode_van && (
-                  <InfoRow label="Periode">{detail.periode_van} t/m {detail.periode_tot}</InfoRow>
+                  <InfoRow label="Periode">{formatDate(detail.periode_van)} t/m {formatDate(detail.periode_tot)}</InfoRow>
                 )}
                 {borgActiefVoor(detail.vestiging_id) && detail.borgbedrag != null && detail.borgbedrag > 0 && (
                   <InfoRow label="Borg">
@@ -176,7 +177,7 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                       <span className="font-semibold text-slate-800 dark:text-slate-200">{g.leerling_naam}</span>
                       <span className="text-slate-400 text-xs">{g.leerling_klas}</span>
                     </div>
-                    <div className="text-slate-500 dark:text-slate-400 text-xs mt-1">{g.periode_van} t/m {g.periode_tot || g.einddatum || '...'}</div>
+                    <div className="text-slate-500 dark:text-slate-400 text-xs mt-1">{formatDate(g.periode_van)} t/m {formatDate(g.periode_tot || g.einddatum) || '...'}</div>
                     <div className="flex gap-4 mt-2 text-xs">
                       {borgActiefVoor(detail.vestiging_id) && g.borgbedrag > 0 && (
                         <span className={g.borg_teruggestort ? 'text-emerald-600 dark:text-emerald-400' : g.borg_betaald ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}>

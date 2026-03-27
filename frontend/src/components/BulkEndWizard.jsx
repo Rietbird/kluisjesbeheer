@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { api } from '../api'
 import { useInstellingen } from '../context/InstellingenContext'
+import { formatDate } from '../utils/formatDate'
 
 const steps = ['Selectie', 'Opties', 'Bevestigen']
 
@@ -210,7 +211,7 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
                 <div className="flex justify-between py-1"><span className="text-slate-500">Aantal</span><span className="font-semibold">{selected.size} kluisjes</span></div>
                 <div className="flex justify-between py-1"><span className="text-slate-500">Sleutel ingeleverd</span><span className="font-semibold">{sleutelIngeleverd ? 'Ja' : 'Nee'}</span></div>
                 {borgActiefVoor(vestigingId) && <div className="flex justify-between py-1"><span className="text-slate-500">Borg teruggestort</span><span className="font-semibold">{borgTeruggestort ? 'Ja' : 'Nee'}</span></div>}
-                <div className="flex justify-between py-1"><span className="text-slate-500">Einddatum</span><span className="font-semibold">{einddatum}</span></div>
+                <div className="flex justify-between py-1"><span className="text-slate-500">Einddatum</span><span className="font-semibold">{formatDate(einddatum)}</span></div>
                 {opmerking && <div className="flex justify-between py-1"><span className="text-slate-500">Opmerking</span><span className="font-semibold">{opmerking}</span></div>}
               </div>
               <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-600 rounded-xl">

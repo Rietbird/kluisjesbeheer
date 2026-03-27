@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api'
+import { formatDate } from '../utils/formatDate'
 
 const STEPS = ['Klas', 'Leerlingen', 'Periode & Kluisjes', 'Toekenning', 'Bevestigen']
 
@@ -291,7 +292,7 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
               <div className="bg-slate-50 rounded p-3 text-sm space-y-1">
                 <div><span className="text-slate-500">Klas:</span> <strong>{selectedKlas}</strong></div>
                 <div><span className="text-slate-500">Leerlingen:</span> <strong>{selectedLeerlingen.length}</strong></div>
-                <div><span className="text-slate-500">Periode:</span> <strong>{periodeVan} t/m {periodeTot}</strong></div>
+                <div><span className="text-slate-500">Periode:</span> <strong>{formatDate(periodeVan)} t/m {formatDate(periodeTot)}</strong></div>
                 <div><span className="text-slate-500">Cluster:</span> <strong>{clusters.find(c => String(c.id) === String(selectedCluster))?.naam}</strong></div>
                 <div><span className="text-slate-500">Toekenning:</span> <strong>{toekenningWijze === 'volgorde' ? 'Op volgorde' : 'Willekeurig'}</strong></div>
               </div>
