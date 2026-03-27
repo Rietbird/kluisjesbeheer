@@ -23,6 +23,7 @@ def search_kluisjes():
 
     query = '''
         SELECT k.*, c.naam as cluster_naam,
+               t.id as toewijzing_id,
                t.leerling_naam, t.leerling_stamnr, t.leerling_klas,
                t.periode_van, t.periode_tot, t.borgbedrag, t.borg_betaald,
                CASE
