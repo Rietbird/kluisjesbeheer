@@ -89,9 +89,20 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
           {!!detail._sleutel_niet_ingeleverd && (
             <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
               <span className="text-xl">🔑</span>
-              <div>
+              <div className="flex-1">
                 <div className="font-semibold text-red-800 dark:text-red-300">Sleutel niet ingeleverd</div>
                 <div className="text-sm text-red-600 dark:text-red-400 mt-0.5">De vorige huurder heeft de sleutel nog niet teruggebracht.</div>
+                <button
+                  className="mt-2 px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 transition-colors"
+                  onClick={async () => {
+                    const laatste = geschiedenis.find(g => !g.actief && !g.sleutel_ingeleverd)
+                    if (laatste) {
+                      await api.post(`/api/toewijzingen/${laatste.id}/sleutel-ingeleverd`, {})
+                      onUpdate()
+                    }
+                  }}>
+                  Sleutel is ingeleverd
+                </button>
               </div>
             </div>
           )}

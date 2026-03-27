@@ -87,6 +87,21 @@ def bulk_beeindigen():
     g.db.commit()
     return jsonify({'ended': count, 'total': len(ids)})
 
+@toewijzingen_bp.route('/toewijzingen/<int:tid>/sleutel-ingeleverd', methods=['POST'])
+@login_required
+def sleutel_ingeleverd(tid):
+    """Mark key as returned on a (finished) assignment."""
+    row = g.db.execute('SELECT id FROM toewijzingen WHERE id = ?', (tid,)).fetchone()
+    if not row:
+        return jsonify({'error': 'Toewijzing niet gevonden'}), 404
+    g.db.execute(
+        "UPDATE toewijzingen SET sleutel_ingeleverd=1, updated_at=datetime('now') WHERE id=?",
+        (tid,)
+    )
+    g.db.commit()
+    return jsonify({'ok': True})
+
+
 @toewijzingen_bp.route('/toewijzingen/actief', methods=['GET'])
 @login_required
 def actieve_toewijzingen():
