@@ -45,8 +45,8 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
     setResults([])
     setAlHeeftKluisje(null)
     const stamnr = l.stamnr || l.leerling_stamnr
-    if (stamnr) {
-      api.get(`/api/toewijzingen/actief?stamnr=${encodeURIComponent(stamnr)}`)
+    if (stamnr && kluisje.vestiging_id) {
+      api.get(`/api/toewijzingen/actief?stamnr=${encodeURIComponent(stamnr)}&vestiging_id=${kluisje.vestiging_id}`)
         .then(data => {
           if (data.length > 0) setAlHeeftKluisje(data[0])
         })

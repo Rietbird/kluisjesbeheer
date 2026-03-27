@@ -15,8 +15,10 @@ export default function App() {
         <InstellingenProvider>
           <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 dark:text-white">
             <TopNav onOpenBeheer={() => setBeheerOpen(true)} />
-            <Uitleenoverzicht />
-            {beheerOpen && <Beheer onClose={() => setBeheerOpen(false)} />}
+            {beheerOpen
+              ? <Beheer onClose={() => setBeheerOpen(false)} />
+              : <Uitleenoverzicht />
+            }
           </div>
         </InstellingenProvider>
       </AuthProvider>

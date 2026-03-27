@@ -595,6 +595,11 @@ function ImportTab() {
           </button>
         </form>
       </div>
+
+      {/* Magister sync */}
+      <div className={cardClass} style={{ marginTop: '1.25rem' }}>
+        <MagisterSyncPanel />
+      </div>
     </div>
   )
 }
@@ -682,9 +687,6 @@ function BeheerInstellingenTab() {
         </select>
       </div>
 
-      <div className={cardClass}>
-        <MagisterSyncPanel />
-      </div>
     </div>
   )
 }
@@ -697,60 +699,49 @@ export default function Beheer({ onClose }) {
   const [selectedCluster, setSelectedCluster] = useState(null)
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+    <div className="p-6 sm:p-8 max-w-6xl mx-auto">
+      {/* Terug knop */}
+      <button onClick={onClose}
+        className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-School dark:hover:text-School transition-colors mb-4">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        Terug naar overzicht
+      </button>
 
-      {/* Modal */}
-      <div className="relative flex flex-col bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 w-full h-full overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
-          <h1 className="text-xl font-bold text-navy dark:text-white">Beheer</h1>
-          <button onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+      <h1 className="text-2xl font-bold text-navy dark:text-white mb-5">Beheer</h1>
+
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700 mb-6">
+        {TABS.map((tab, i) => (
+          <button key={tab} onClick={() => setActiveTab(i)}
+            className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+              activeTab === i
+                ? 'bg-white dark:bg-slate-800 border border-b-white dark:border-slate-700 dark:border-b-slate-800 text-School -mb-px'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}>
+            {tab}
           </button>
-        </div>
+        ))}
+      </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6 sm:p-8 max-w-6xl mx-auto">
-            {/* Tab bar */}
-            <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700 mb-6">
-              {TABS.map((tab, i) => (
-                <button key={tab} onClick={() => setActiveTab(i)}
-                  className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
-                    activeTab === i
-                      ? 'bg-white dark:bg-slate-800 border border-b-white dark:border-slate-700 dark:border-b-slate-800 text-School -mb-px'
-                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}>
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab content */}
-            {activeTab === 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
-                  <VestigingenPanel onSelect={id => { setSelectedVestiging(id); setSelectedCluster(null) }} selectedId={selectedVestiging} />
-                </div>
-                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
-                  <ClustersPanel vestigingId={selectedVestiging} onSelect={setSelectedCluster} selectedId={selectedCluster} />
-                </div>
-                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
-                  <KluisjesPanel clusterId={selectedCluster} />
-                </div>
-              </div>
-            )}
-            {activeTab === 1 && <BorgTab />}
-            {activeTab === 2 && <ImportTab />}
-            {activeTab === 3 && <BeheerInstellingenTab />}
+      {/* Tab content */}
+      {activeTab === 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
+            <VestigingenPanel onSelect={id => { setSelectedVestiging(id); setSelectedCluster(null) }} selectedId={selectedVestiging} />
+          </div>
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
+            <ClustersPanel vestigingId={selectedVestiging} onSelect={setSelectedCluster} selectedId={selectedCluster} />
+          </div>
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
+            <KluisjesPanel clusterId={selectedCluster} />
           </div>
         </div>
-      </div>
+      )}
+      {activeTab === 1 && <BorgTab />}
+      {activeTab === 2 && <ImportTab />}
+      {activeTab === 3 && <BeheerInstellingenTab />}
     </div>
   )
 }
