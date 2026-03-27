@@ -1,12 +1,6 @@
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useDarkMode } from '../hooks/useDarkMode'
-
-const links = [
-  { to: '/', label: 'Overzicht' },
-  { to: '/beheer', label: 'Beheer' },
-]
 
 function UserPhoto({ user }) {
   const [hasPhoto, setHasPhoto] = useState(true)
@@ -29,44 +23,22 @@ function UserPhoto({ user }) {
   )
 }
 
-export default function TopNav() {
+export default function TopNav({ onOpenBeheer }) {
   const user = useAuth()
-  const [menuOpen, setMenuOpen] = useState(false)
   const [dark, setDark] = useDarkMode()
-
-  const linkClass = ({ isActive }) =>
-    `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-      isActive
-        ? 'bg-School text-white shadow-sm'
-        : 'text-School-700 hover:text-School hover:bg-School-50'
-    }`
-
-  const mobileLinkClass = ({ isActive }) =>
-    `px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-      isActive
-        ? 'bg-School text-white'
-        : 'text-School-700 hover:bg-School-50'
-    }`
 
   return (
     <header className="bg-gradient-to-r from-white via-School-50 to-School-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 border-b border-School-100 dark:border-slate-700 shadow-sm">
       <div className="flex items-center justify-between px-5 py-2">
-        <div className="flex items-center gap-6">
-          <NavLink to="/" className="flex items-center gap-3">
-            <img src="/img/School-logo.png" alt="School" className="w-10 h-10 rounded-none" />
-            <div>
-              <div className="font-bold text-lg text-navy dark:text-white leading-tight">Kluisjesbeheer</div>
-              <div className="text-[10px] text-School-700 dark:text-School font-medium leading-tight">School</div>
-            </div>
-          </NavLink>
-          <nav className="hidden md:flex gap-1">
-            {links.map(l => (
-              <NavLink key={l.to} to={l.to} end={l.to === '/'} className={linkClass}>{l.label}</NavLink>
-            ))}
-          </nav>
+        <div className="flex items-center gap-3">
+          <img src="/img/School-logo.png" alt="School" className="w-10 h-10 rounded-none" />
+          <div>
+            <div className="font-bold text-lg text-navy dark:text-white leading-tight">Kluisjesbeheer</div>
+            <div className="text-[10px] text-School-700 dark:text-School font-medium leading-tight">School</div>
+          </div>
         </div>
         <div className="flex items-center gap-3">
-          {/* Dark mode toggle switch */}
+          {/* Dark mode toggle */}
           <button onClick={() => setDark(!dark)}
             className="flex items-center gap-1.5 bg-amber-200 dark:bg-indigo-900 rounded-full p-0.5 w-14 h-7 relative transition-colors"
             title={dark ? 'Lichte modus' : 'Donkere modus'}>
@@ -82,6 +54,18 @@ export default function TopNav() {
               )}
             </span>
           </button>
+
+          {/* Beheer tandwiel */}
+          <button onClick={onOpenBeheer}
+            className="p-2 rounded-lg hover:bg-School-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-School dark:hover:text-School transition-colors"
+            title="Beheer">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+
+          {/* User info */}
           <div className="hidden sm:flex items-center gap-2.5 bg-white/60 dark:bg-slate-700/60 backdrop-blur rounded-xl px-3 py-1.5 border border-School-100 dark:border-slate-600">
             <UserPhoto user={user} />
             <div>
@@ -90,22 +74,8 @@ export default function TopNav() {
             </div>
           </div>
           <a href="/auth/logout" className="sm:hidden text-xs text-School-700 dark:text-School hover:text-School">Uitloggen</a>
-          <button className="md:hidden p-2 rounded-lg hover:bg-School-50 dark:hover:bg-slate-700 text-School-700 dark:text-School transition-colors" onClick={() => setMenuOpen(!menuOpen)}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d={menuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} />
-            </svg>
-          </button>
         </div>
       </div>
-      {menuOpen && (
-        <nav className="md:hidden px-4 pb-3 flex flex-col gap-1 border-t border-School-100 pt-2 bg-white/50">
-          {links.map(l => (
-            <NavLink key={l.to} to={l.to} end={l.to === '/'} className={mobileLinkClass}
-              onClick={() => setMenuOpen(false)}>{l.label}</NavLink>
-          ))}
-        </nav>
-      )}
     </header>
   )
 }
