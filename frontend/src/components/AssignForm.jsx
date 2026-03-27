@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { api } from '../api'
+import { useInstellingen } from '../context/InstellingenContext'
 
 export default function AssignForm({ kluisje, onDone, onCancel }) {
   const [q, setQ] = useState('')
@@ -13,6 +14,8 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const debounceRef = useRef(null)
+
+  const { borgActief } = useInstellingen()
 
   useEffect(() => {
     if (q.length < 2) { setResults([]); setShowDropdown(false); return }
@@ -100,15 +103,19 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
             onChange={e => setPeriodeTot(e.target.value)} />
         </div>
       </div>
-      <div>
-        <label className="block text-xs text-slate-500 mb-1">Borgbedrag (€)</label>
-        <input type="number" step="0.01" className="w-full border rounded px-2 py-1 text-sm" value={borgbedrag}
-          onChange={e => setBorgbedrag(e.target.value)} placeholder="0.00" />
-      </div>
-      <label className="flex items-center gap-2 text-sm cursor-pointer">
-        <input type="checkbox" checked={borgBetaald} onChange={e => setBorgBetaald(e.target.checked)} />
-        Borg betaald
-      </label>
+      {borgActief && (
+        <>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Borgbedrag (€)</label>
+            <input type="number" step="0.01" className="w-full border rounded px-2 py-1 text-sm" value={borgbedrag}
+              onChange={e => setBorgbedrag(e.target.value)} placeholder="0.00" />
+          </div>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={borgBetaald} onChange={e => setBorgBetaald(e.target.checked)} />
+            Borg betaald
+          </label>
+        </>
+      )}
       {error && <p className="text-red-500 text-xs">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={loading}
