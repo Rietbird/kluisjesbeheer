@@ -1,24 +1,23 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
+import { InstellingenProvider } from './context/InstellingenContext'
 import TopNav from './components/TopNav'
-import Dashboard from './pages/Dashboard'
 import Uitleenoverzicht from './pages/Uitleenoverzicht'
 import Beheer from './pages/Beheer'
-import Instellingen from './pages/Instellingen'
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <div className="min-h-screen bg-slate-50">
-          <TopNav />
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/uitleenoverzicht" element={<Uitleenoverzicht />} />
-            <Route path="/beheer" element={<Beheer />} />
-            <Route path="/instellingen" element={<Instellingen />} />
-          </Routes>
-        </div>
+        <InstellingenProvider>
+          <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 dark:text-white">
+            <TopNav />
+            <Routes>
+              <Route path="/" element={<Uitleenoverzicht />} />
+              <Route path="/beheer" element={<Beheer />} />
+            </Routes>
+          </div>
+        </InstellingenProvider>
       </AuthProvider>
     </BrowserRouter>
   )
