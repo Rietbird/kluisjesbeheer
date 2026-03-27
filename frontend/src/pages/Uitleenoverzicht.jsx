@@ -62,6 +62,7 @@ function RapportDropdown({ stats }) {
 
 function VestigingPicker({ vestigingen, onSelect }) {
   const [stats, setStats] = useState([])
+  const { borgActief } = useInstellingen()
 
   useEffect(() => {
     api.get('/api/dashboard/stats').then(setStats).catch(() => {})

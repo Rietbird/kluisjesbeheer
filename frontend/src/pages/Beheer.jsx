@@ -396,10 +396,10 @@ function BorgTab() {
   }
 
   async function handleSaveBorg(clusterId) {
-    await api.put(`/api/clusters/${clusterId}`, {
-      standaard_borg: editBorg !== '' ? Number(editBorg) : null
-    })
     try {
+      await api.put(`/api/clusters/${clusterId}`, {
+        standaard_borg: editBorg !== '' ? Number(editBorg) : null
+      })
       const vList = await api.get('/api/vestigingen')
       const map = {}
       await Promise.all(vList.map(async v => {
@@ -407,8 +407,10 @@ function BorgTab() {
         map[v.id] = c
       }))
       setClusters(map)
-    } catch {}
-    setEditId(null)
+      setEditId(null)
+    } catch {
+      // edit blijft open zodat gebruiker het opnieuw kan proberen
+    }
   }
 
   const cardClass = "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5"
