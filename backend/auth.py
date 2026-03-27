@@ -77,6 +77,7 @@ def callback():
         'email': user_data.get('mail', user_data.get('userPrincipalName', '')),
         'givenName': user_data.get('givenName', ''),
     }
+    session['access_token'] = token
 
     return redirect('/')
 
@@ -86,6 +87,27 @@ def me():
     if not user:
         return jsonify({'error': 'Niet ingelogd'}), 401
     return jsonify(user)
+
+@auth_bp.route('/photo')
+def photo():
+    """Proxy the user's profile photo from Microsoft Graph."""
+    token = session.get('access_token')
+    if not token:
+        return jsonify({'error': 'Niet ingelogd'}), 401
+    import requests as http_requests
+    try:
+        resp = http_requests.get(
+            'https://graph.microsoft.com/v1.0/me/photo/$value',
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=10,
+        )
+        if resp.ok:
+            from flask import Response
+            return Response(resp.content, content_type=resp.headers.get('Content-Type', 'image/jpeg'))
+    except Exception:
+        pass
+    # Return a 1x1 transparent PNG as fallback
+    return '', 204
 
 @auth_bp.route('/logout')
 def logout():

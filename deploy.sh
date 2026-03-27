@@ -26,9 +26,9 @@ fi
 # 3. Copy project files
 echo "[3/7] Copying project files..."
 mkdir -p "$APP_DIR"
-rsync -a --exclude='.venv' --exclude='node_modules' --exclude='*.db' --exclude='__pycache__' \
-    --exclude='.git' --exclude='config.json' \
-    . "$APP_DIR/"
+cp -r backend frontend deploy.sh CLAUDE.md "$APP_DIR/" 2>/dev/null || true
+rm -rf "$APP_DIR/backend/.venv" "$APP_DIR/frontend/node_modules" "$APP_DIR/backend/__pycache__"
+find "$APP_DIR" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
 
 # 4. Python venv + dependencies
 echo "[4/7] Setting up Python venv..."

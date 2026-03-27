@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" fill="none">
+  <!-- Row of lockers -->
+  <rect x="20" y="40" width="50" height="140" rx="6" fill="#FFEDD5" stroke="#FF8200" stroke-width="2"/>
+  <rect x="25" y="50" width="40" height="55" rx="3" fill="#FFF7ED" stroke="#EA7600" stroke-width="1.5"/>
+  <rect x="25" y="115" width="40" height="55" rx="3" fill="#FFF7ED" stroke="#EA7600" stroke-width="1.5"/>
+  <circle cx="58" cy="77" r="3" fill="#FF8200"/>
+  <circle cx="58" cy="142" r="3" fill="#FF8200"/>
+
+  <rect x="80" y="40" width="50" height="140" rx="6" fill="#DCFCE7" stroke="#22C55E" stroke-width="2"/>
+  <rect x="85" y="50" width="40" height="55" rx="3" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5"/>
+  <rect x="85" y="115" width="40" height="55" rx="3" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5"/>
+  <circle cx="118" cy="77" r="3" fill="#22C55E"/>
+  <circle cx="118" cy="142" r="3" fill="#22C55E"/>
+
+  <rect x="140" y="40" width="50" height="140" rx="6" fill="#E0F2FE" stroke="#0EA5E9" stroke-width="2"/>
+  <rect x="145" y="50" width="40" height="55" rx="3" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5"/>
+  <rect x="145" y="115" width="40" height="55" rx="3" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5"/>
+  <circle cx="178" cy="77" r="3" fill="#0EA5E9"/>
+  <circle cx="178" cy="142" r="3" fill="#0EA5E9"/>
+
+  <rect x="200" y="40" width="30" height="140" rx="6" fill="#FFEDD5" stroke="#FF8200" stroke-width="2" stroke-dasharray="4 3" opacity="0.5"/>
+
+  <!-- Key icon floating -->
+  <g transform="translate(185, 15) rotate(25)">
+    <circle cx="10" cy="10" r="8" fill="none" stroke="#FF8200" stroke-width="2.5"/>
+    <line x1="18" y1="10" x2="35" y2="10" stroke="#FF8200" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="30" y1="10" x2="30" y2="16" stroke="#FF8200" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="35" y1="10" x2="35" y2="16" stroke="#FF8200" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+</svg>

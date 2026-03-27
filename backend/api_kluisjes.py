@@ -24,7 +24,7 @@ def search_kluisjes():
     query = '''
         SELECT k.*, c.naam as cluster_naam,
                t.leerling_naam, t.leerling_stamnr, t.leerling_klas,
-               t.periode_van, t.periode_tot,
+               t.periode_van, t.periode_tot, t.borgbedrag, t.borg_betaald,
                CASE
                  WHEN k.status = 'vrij' AND EXISTS (
                    SELECT 1 FROM toewijzingen t2
@@ -107,6 +107,8 @@ def update_kluisje(kid):
     locatie = data.get('locatie', row['locatie'])
     opmerkingen = data.get('opmerkingen', row['opmerkingen'])
     status = data.get('status', row['status'])
+    if status not in ('vrij', 'uitgeleend', 'defect'):
+        return jsonify({'error': 'Ongeldige status'}), 400
 
     g.db.execute(
         "UPDATE kluisjes SET sleutelnummer=?, locatie=?, opmerkingen=?, status=?, updated_at=datetime('now') WHERE id=?",
@@ -145,30 +147,39 @@ def import_kluisjes():
     vestiging_id = cluster['vestiging_id']
     file = request.files.get('file')
     if not file:
-        return jsonify({'error': 'CSV-bestand is verplicht'}), 400
+        return jsonify({'error': 'Bestand is verplicht'}), 400
 
-    content = file.read().decode('utf-8')
-    reader = csv.DictReader(io.StringIO(content), delimiter=';')
+    filename = file.filename or ''
+    if not filename.lower().endswith('.xlsx'):
+        return jsonify({'error': 'Alleen .xlsx bestanden worden geaccepteerd'}), 400
 
     count = 0
     try:
-        for i, row in enumerate(reader, start=2):
-            kluisnummer = row.get('kluisnummer', '').strip()
-            sleutelnummer = row.get('sleutelnummer', '').strip()
-            locatie = row.get('locatie', '').strip()
+        import openpyxl
+        wb = openpyxl.load_workbook(file, read_only=True)
+        ws = wb.active
+        headers = None
+        for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
+            if i == 1:
+                headers = [str(c or '').strip().lower() for c in row]
+                continue
+            row_dict = dict(zip(headers, [str(c or '').strip() for c in row]))
+            kluisnummer = row_dict.get('kluisnummer', '') or row_dict.get('kluis', '')
+            sleutelnummer = row_dict.get('sleutelnummer', '') or row_dict.get('sleutel', '')
+            locatie = row_dict.get('locatie', '')
             if not kluisnummer:
-                g.db.rollback()
-                return jsonify({'error': f'Regel {i}: kluisnummer is leeg'}), 400
+                continue
             g.db.execute(
                 'INSERT INTO kluisjes (cluster_id, vestiging_id, kluisnummer, sleutelnummer, locatie, status) VALUES (?, ?, ?, ?, ?, ?)',
                 (int(cluster_id), vestiging_id, kluisnummer, sleutelnummer, locatie, 'vrij')
             )
             count += 1
+        wb.close()
         g.db.commit()
     except Exception as e:
         g.db.rollback()
         if 'UNIQUE' in str(e):
-            return jsonify({'error': f'Duplicaat kluisnummer gevonden'}), 400
+            return jsonify({'error': 'Duplicaat kluisnummer gevonden'}), 400
         raise
 
     return jsonify({'imported': count}), 201
