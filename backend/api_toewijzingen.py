@@ -85,8 +85,8 @@ def bulk_beeindigen():
     """Bulk end assignments. Body: { toewijzing_ids: [...], sleutel_ingeleverd, borg_teruggestort, einddatum }"""
     data = request.get_json() or {}
     ids = data.get('toewijzing_ids', [])
-    if not ids or len(ids) > 500:
-        return jsonify({'error': 'Maximaal 500 toewijzingen per keer'}), 400
+    if not ids or len(ids) > 5000:
+        return jsonify({'error': 'Maximaal 5000 toewijzingen per keer'}), 400
     borg_terug = 1 if data.get('borg_teruggestort') else 0
     einddatum = data.get('einddatum', '')
     opmerking = data.get('opmerking', '')

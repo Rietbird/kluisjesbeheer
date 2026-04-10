@@ -703,48 +703,59 @@ function BorgTab() {
 // ── Import Tab ────────────────────────────────────────────────────────────────
 
 function ImportTab() {
-  const [vestigingen, setVestigingen] = useState([])
-  const [clusters, setClusters] = useState([])
-  const [importVestiging, setImportVestiging] = useState('')
-  const [importCluster, setImportCluster] = useState('')
   const [importFile, setImportFile] = useState(null)
   const [importing, setImporting] = useState(false)
   const [importMsg, setImportMsg] = useState('')
   const [importError, setImportError] = useState('')
+  const [preview, setPreview] = useState(null) // result from /import/preview
+  const [prefixNames, setPrefixNames] = useState({}) // prefix -> vestigingnaam
 
-  useEffect(() => {
-    api.get('/api/vestigingen').then(setVestigingen).catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    if (importVestiging) {
-      api.get(`/api/vestigingen/${importVestiging}/clusters`).then(setClusters).catch(() => {})
-    } else { setClusters([]) }
-    setImportCluster('')
-  }, [importVestiging])
+  async function handlePreview() {
+    if (!importFile) { setImportError('Kies een bestand.'); return }
+    setImporting(true); setImportMsg(''); setImportError(''); setPreview(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', importFile)
+      const res = await api.upload('/api/kluisjes/import/preview', formData)
+      setPreview(res)
+      // Pre-fill prefix names: use locatie if available, otherwise prefix itself
+      const names = {}
+      if (res.has_locaties) {
+        res.locaties.forEach(l => { names[l.locatie] = l.locatie })
+      } else {
+        res.prefixes.forEach(p => { names[p.prefix] = p.prefix })
+      }
+      setPrefixNames(names)
+    } catch (err) { setImportError(`Preview mislukt: ${err.message}`) }
+    finally { setImporting(false) }
+  }
 
   async function handleImport(e) {
     e.preventDefault()
-    if (!importCluster || !importFile) { setImportError('Kies een cluster en een bestand.'); return }
+    if (!importFile) { setImportError('Kies een bestand.'); return }
     setImporting(true); setImportMsg(''); setImportError('')
     try {
       const formData = new FormData()
-      formData.append('cluster_id', importCluster)
       formData.append('file', importFile)
+      if (preview?.has_locaties) {
+        formData.append('auto_vestiging', '1')
+      } else {
+        formData.append('prefix_mapping', JSON.stringify(prefixNames))
+      }
       const res = await api.upload('/api/kluisjes/import', formData)
       const fmt = res.format === 'mx' ? 'Magister MX' : res.format === 'desktop' ? 'Magister Desktop' : 'standaard'
       let msg = `Import geslaagd (${fmt}): ${res.imported} kluisjes aangemaakt`
       if (res.toewijzingen > 0) msg += `, ${res.toewijzingen} toewijzingen`
       if (res.skipped > 0) msg += `, ${res.skipped} overgeslagen (al bestaand)`
       setImportMsg(msg + '.')
-      setImportFile(null)
+      setImportFile(null); setPreview(null)
       const fileInput = document.getElementById('xlsx-file-input-beheer')
       if (fileInput) fileInput.value = ''
     } catch (err) { setImportError(`Import mislukt: ${err.message}`) }
     finally { setImporting(false) }
   }
 
-  const selectClass = "w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none"
+  const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none"
   const btnClass = "bg-primary text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors"
   const cardClass = "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6"
 
@@ -755,53 +766,84 @@ function ImportTab() {
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
           Importeer kluisjes vanuit een Magister Excel-export (.xlsx). Zowel Magister MX als Desktop formaat wordt automatisch herkend. Kluisjes die al uitgeleend zijn worden inclusief toewijzing geïmporteerd.
         </p>
-        <form onSubmit={handleImport} className="space-y-4">
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">Vestiging</label>
-            <select className={selectClass} value={importVestiging} onChange={e => setImportVestiging(e.target.value)}>
-              <option value="">Kies vestiging...</option>
-              {vestigingen.map(v => <option key={v.id} value={v.id}>{v.naam}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">Cluster</label>
-            <select className={selectClass} value={importCluster} onChange={e => setImportCluster(e.target.value)} disabled={!importVestiging}>
-              <option value="">Kies cluster...</option>
-              {clusters.map(c => <option key={c.id} value={c.id}>{c.naam}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">Excel-bestand (.xlsx)</label>
+            <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">Stap 1: Excel-bestand kiezen (.xlsx)</label>
             <input id="xlsx-file-input-beheer" type="file" accept=".xlsx"
               className="w-full text-sm text-slate-600 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 dark:file:bg-primary-700 file:text-primary-700 dark:file:text-white hover:file:bg-primary-100"
-              onChange={e => setImportFile(e.target.files[0] || null)} />
+              onChange={e => { setImportFile(e.target.files[0] || null); setPreview(null); setImportMsg(''); setImportError('') }} />
           </div>
 
-          <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4">
-            <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Ondersteunde formaten</div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Het formaat wordt automatisch herkend aan de kolomnamen.</p>
-            <div className="space-y-3">
-              <div>
-                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Magister MX</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-mono bg-white dark:bg-slate-800 rounded px-2 py-1.5 border border-slate-200 dark:border-slate-600">
-                  Cluster | Kluis | Naam | Stamnummer | Klas | Uitleenperiode | Status | Borgbedrag | Locatie | Sleutel
-                </div>
+          {!preview && (
+            <button type="button" onClick={handlePreview} disabled={importing || !importFile} className={btnClass}>
+              {importing ? 'Bestand analyseren...' : 'Bestand analyseren'}
+            </button>
+          )}
+
+          {preview && (
+            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 space-y-4">
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Stap 2: Controleer de indeling
+                <span className="ml-2 text-xs font-normal text-slate-400">
+                  {preview.format === 'mx' ? 'Magister MX' : preview.format === 'desktop' ? 'Magister Desktop' : 'Standaard'} — {preview.total} kluisjes gevonden
+                </span>
               </div>
-              <div>
-                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Magister Desktop</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-mono bg-white dark:bg-slate-800 rounded px-2 py-1.5 border border-slate-200 dark:border-slate-600">
-                  Stamnr | Omschrijving Kluisje | Slotnummer | Achternaam | Tussenv | Roepnaam | Verhuur vanaf | Verhuur tot/met
+
+              {preview.has_locaties ? (
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">Vestigingen uit bestand (Locatie kolom)</div>
+                  <div className="space-y-1">
+                    {preview.locaties.map(l => (
+                      <div key={l.locatie} className="flex items-center gap-3 text-sm">
+                        <span className="text-slate-500 w-8 text-right">{l.count}x</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300">{l.locatie}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2">Vestigingen worden automatisch aangemaakt.</p>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">Gevonden prefixen — geef per prefix een vestigingnaam op</div>
+                  <div className="space-y-2">
+                    {preview.prefixes.map(p => (
+                      <div key={p.prefix} className="flex items-center gap-3">
+                        <span className="text-xs text-slate-400 w-8 text-right">{p.count}x</span>
+                        <span className="text-sm font-mono font-bold text-slate-600 dark:text-slate-300 w-16">{p.prefix}</span>
+                        <span className="text-slate-400">→</span>
+                        <input className={inputClass + ' flex-1'} value={prefixNames[p.prefix] || ''}
+                          onChange={e => setPrefixNames(m => ({ ...m, [p.prefix]: e.target.value }))}
+                          placeholder={`Vestigingnaam voor ${p.prefix}`} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {preview.clusters.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Clusters uit bestand</div>
+                  <div className="flex flex-wrap gap-2">
+                    {preview.clusters.map(c => (
+                      <span key={c.cluster} className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded px-2 py-1">
+                        {c.cluster} ({c.count})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
           {importError && <p className="text-red-500 text-sm">{importError}</p>}
           {importMsg && <p className="text-emerald-600 text-sm font-medium">{importMsg}</p>}
-          <button type="submit" disabled={importing} className={btnClass}>
-            {importing ? 'Importeren...' : 'Importeren'}
-          </button>
-        </form>
+
+          {preview && (
+            <button type="button" onClick={handleImport} disabled={importing} className={btnClass}>
+              {importing ? 'Importeren...' : `Importeren (${preview.total} kluisjes)`}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Magister sync */}

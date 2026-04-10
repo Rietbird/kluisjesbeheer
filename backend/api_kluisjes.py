@@ -264,18 +264,135 @@ def _detect_format(headers):
     return None
 
 
+def _extract_prefix(kluisnummer):
+    """Extract prefix from locker number (e.g. 'BL-001' -> 'BL', 'ISK1-0003' -> 'ISK1')."""
+    import re
+    m = re.match(r'^([A-Za-z]+\d*)', kluisnummer)
+    return m.group(1) if m else 'Overig'
+
+
+@kluisjes_bp.route('/kluisjes/import/preview', methods=['POST'])
+@login_required
+def import_preview():
+    """Scan an XLSX file and return a summary of prefixes, clusters, and locaties found."""
+    file = request.files.get('file')
+    if not file:
+        return jsonify({'error': 'Bestand is verplicht'}), 400
+
+    filename = file.filename or ''
+    if not filename.lower().endswith('.xlsx'):
+        return jsonify({'error': 'Alleen .xlsx bestanden worden geaccepteerd'}), 400
+
+    import openpyxl
+    try:
+        wb = openpyxl.load_workbook(file, read_only=True)
+        ws = wb.active
+        headers = None
+        fmt = None
+        prefixes = {}  # prefix -> count
+        locaties = {}  # locatie -> count
+        clusters = {}  # cluster -> count
+        total = 0
+
+        for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
+            if i == 1:
+                headers = [str(c or '').strip().lower() for c in row]
+                fmt = _detect_format(headers)
+                if not fmt:
+                    wb.close()
+                    return jsonify({'error': f'Onbekend bestandsformaat'}), 400
+                continue
+
+            row_dict = dict(zip(headers, [str(c or '').strip() for c in row]))
+
+            if fmt == 'mx':
+                kluisnummer = row_dict.get('kluis', '')
+                locatie = row_dict.get('locatie', '')
+                cluster = row_dict.get('cluster', '')
+            elif fmt == 'desktop':
+                kluisnummer = row_dict.get('omschrijving kluisje', '') or row_dict.get('omschrijving\nkluisje', '')
+                locatie = ''
+                cluster = ''
+            else:
+                kluisnummer = row_dict.get('kluisnummer', '') or row_dict.get('kluis', '')
+                locatie = ''
+                cluster = ''
+
+            if not kluisnummer:
+                continue
+
+            total += 1
+            prefix = _extract_prefix(kluisnummer)
+            prefixes[prefix] = prefixes.get(prefix, 0) + 1
+            if locatie:
+                locaties[locatie] = locaties.get(locatie, 0) + 1
+            if cluster and cluster.lower() != 'zonder cluster':
+                clusters[cluster] = clusters.get(cluster, 0) + 1
+
+        wb.close()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+    return jsonify({
+        'format': fmt,
+        'total': total,
+        'prefixes': [{'prefix': k, 'count': v} for k, v in sorted(prefixes.items())],
+        'locaties': [{'locatie': k, 'count': v} for k, v in sorted(locaties.items())],
+        'clusters': [{'cluster': k, 'count': v} for k, v in sorted(clusters.items())],
+        'has_locaties': len(locaties) > 0,
+    })
+
+
+def _get_or_create_vestiging(naam):
+    """Find existing vestiging by name, or create it."""
+    row = g.db.execute('SELECT id FROM vestigingen WHERE naam = ?', (naam,)).fetchone()
+    if row:
+        return row['id']
+    cur = g.db.execute('INSERT INTO vestigingen (naam) VALUES (?)', (naam,))
+    return cur.lastrowid
+
+
+def _get_or_create_cluster(vestiging_id, cluster_naam):
+    """Find existing cluster by name + vestiging, or create it."""
+    row = g.db.execute(
+        'SELECT id FROM clusters WHERE vestiging_id = ? AND naam = ?',
+        (vestiging_id, cluster_naam)
+    ).fetchone()
+    if row:
+        return row['id']
+    cur = g.db.execute(
+        'INSERT INTO clusters (vestiging_id, naam) VALUES (?, ?)',
+        (vestiging_id, cluster_naam)
+    )
+    return cur.lastrowid
+
+
 @kluisjes_bp.route('/kluisjes/import', methods=['POST'])
 @login_required
 def import_kluisjes():
-    cluster_id = request.form.get('cluster_id')
-    if not cluster_id:
-        return jsonify({'error': 'cluster_id is verplicht'}), 400
+    import json as json_mod
+    cluster_id = request.form.get('cluster_id') or None
+    vestiging_id = request.form.get('vestiging_id') or None
+    auto_vestiging = request.form.get('auto_vestiging') == '1'
+    # prefix_mapping: JSON string {"BL": "Blauwlaken", "MO": "Molenstraat"}
+    prefix_mapping = {}
+    pm_raw = request.form.get('prefix_mapping', '')
+    if pm_raw:
+        try:
+            prefix_mapping = json_mod.loads(pm_raw)
+        except Exception:
+            pass
 
-    cluster = g.db.execute('SELECT vestiging_id FROM clusters WHERE id = ?', (int(cluster_id),)).fetchone()
-    if not cluster:
-        return jsonify({'error': 'Cluster niet gevonden'}), 404
+    if not auto_vestiging and not vestiging_id and not prefix_mapping:
+        if not cluster_id:
+            return jsonify({'error': 'Kies een vestiging of gebruik automatisch uit bestand'}), 400
+        cluster = g.db.execute('SELECT vestiging_id FROM clusters WHERE id = ?', (int(cluster_id),)).fetchone()
+        if not cluster:
+            return jsonify({'error': 'Cluster niet gevonden'}), 404
+        vestiging_id = cluster['vestiging_id']
+    elif vestiging_id:
+        vestiging_id = int(vestiging_id)
 
-    vestiging_id = cluster['vestiging_id']
     file = request.files.get('file')
     if not file:
         return jsonify({'error': 'Bestand is verplicht'}), 400
@@ -352,13 +469,45 @@ def import_kluisjes():
             if not kluisnummer:
                 continue
 
+            # Determine vestiging for this row
+            if prefix_mapping:
+                prefix = _extract_prefix(kluisnummer)
+                vest_naam = prefix_mapping.get(prefix, prefix_mapping.get('_default', ''))
+                if vest_naam:
+                    row_vestiging_id = _get_or_create_vestiging(vest_naam)
+                elif vestiging_id:
+                    row_vestiging_id = int(vestiging_id)
+                else:
+                    row_vestiging_id = _get_or_create_vestiging(prefix)
+            elif auto_vestiging:
+                row_locatie = row_dict.get('locatie', '').strip() if fmt == 'mx' else ''
+                if row_locatie:
+                    row_vestiging_id = _get_or_create_vestiging(row_locatie)
+                elif vestiging_id:
+                    row_vestiging_id = int(vestiging_id)
+                else:
+                    row_vestiging_id = _get_or_create_vestiging('Onbekend')
+            elif vestiging_id:
+                row_vestiging_id = int(vestiging_id)
+            else:
+                row_vestiging_id = _get_or_create_vestiging('Onbekend')
+
+            # Determine cluster for this row
+            row_cluster_naam = row_dict.get('cluster', '').strip() if fmt == 'mx' else ''
+            if row_cluster_naam and row_cluster_naam.lower() != 'zonder cluster':
+                row_cluster_id = _get_or_create_cluster(row_vestiging_id, row_cluster_naam)
+            elif cluster_id:
+                row_cluster_id = int(cluster_id)
+            else:
+                row_cluster_id = _get_or_create_cluster(row_vestiging_id, 'Standaard')
+
             # Determine status
             db_status = 'defect' if is_defect else ('uitgeleend' if is_uitgeleend else 'vrij')
 
             # Check for duplicate kluisnummer in this vestiging
             existing = g.db.execute(
                 'SELECT id FROM kluisjes WHERE kluisnummer = ? AND vestiging_id = ? AND verwijderd = 0',
-                (kluisnummer, vestiging_id)
+                (kluisnummer, row_vestiging_id)
             ).fetchone()
             if existing:
                 skipped += 1
@@ -367,7 +516,7 @@ def import_kluisjes():
             # Insert kluisje
             cur = g.db.execute(
                 'INSERT INTO kluisjes (cluster_id, vestiging_id, kluisnummer, sleutelnummer, locatie, status) VALUES (?, ?, ?, ?, ?, ?)',
-                (int(cluster_id), vestiging_id, kluisnummer, sleutelnummer, locatie, db_status)
+                (row_cluster_id, row_vestiging_id, kluisnummer, sleutelnummer, locatie, db_status)
             )
             kluisjes_created += 1
 

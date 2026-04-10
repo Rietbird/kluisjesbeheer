@@ -112,13 +112,21 @@ function VestigingPicker({ vestigingen, onSelect, onSelectWithFilter }) {
       {/* Illustration + title below cards */}
       <div className="text-center">
         <img src="/img/locker-illustration.svg" alt="" className="w-44 mx-auto mb-5 opacity-60" />
-        <h2 className="text-2xl font-bold text-navy dark:text-white">Kies een vestiging</h2>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">
-          {stats.length > 0
-            ? <>{t.totaal} kluisjes totaal, {t.uitgeleend} uitgeleend{t.sleutel > 0 && <span className="text-red-600 dark:text-red-400 font-medium"> — {t.sleutel} sleutel(s) niet ingeleverd</span>}</>
-            : 'Selecteer een vestiging om de kluisjes te beheren'
-          }
-        </p>
+        {stats.length > 0 ? (
+          <>
+            <h2 className="text-2xl font-bold text-navy dark:text-white">Kies een vestiging</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">
+              {t.totaal} kluisjes totaal, {t.uitgeleend} uitgeleend{t.sleutel > 0 && <span className="text-red-600 dark:text-red-400 font-medium"> — {t.sleutel} sleutel(s) niet ingeleverd</span>}
+            </p>
+          </>
+        ) : (
+          <>
+            <h2 className="text-2xl font-bold text-navy dark:text-white">Welkom bij Kluisjesbeheer</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+              Er zijn nog geen vestigingen of kluisjes aangemaakt. Ga naar <strong>Beheer</strong> om vestigingen en clusters aan te maken, of importeer kluisjes via een Excel-bestand.
+            </p>
+          </>
+        )}
       </div>
     </div>
   )
