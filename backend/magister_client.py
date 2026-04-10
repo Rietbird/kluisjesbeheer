@@ -1,7 +1,20 @@
+import os
 import time
+import urllib3
 import xml.etree.ElementTree as ET
 import requests
 from config import config
+
+# Magister/SWP servers often have self-signed or outdated certificates.
+# Set MAGISTER_VERIFY_SSL=1 to enable verification, or provide a CA bundle path.
+_verify_ssl = os.environ.get('MAGISTER_VERIFY_SSL', '')
+if _verify_ssl == '1' or _verify_ssl.lower() == 'true':
+    MAGISTER_SSL_VERIFY = True
+elif _verify_ssl and os.path.isfile(_verify_ssl):
+    MAGISTER_SSL_VERIFY = _verify_ssl  # path to CA bundle
+else:
+    MAGISTER_SSL_VERIFY = False
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class MagisterClient:
@@ -30,7 +43,7 @@ class MagisterClient:
             'Type': 'XML',
         }
         try:
-            resp = requests.get(self.url, params=params, timeout=10, verify=False)
+            resp = requests.get(self.url, params=params, timeout=10, verify=MAGISTER_SSL_VERIFY)
             root = ET.fromstring(resp.text)
             result = root.findtext('Result')
             if result != 'True':
@@ -60,7 +73,7 @@ class MagisterClient:
         if stamnr:
             params['StamNr'] = stamnr
 
-        resp = requests.get(self.url, params=params, timeout=15, verify=False)
+        resp = requests.get(self.url, params=params, timeout=15, verify=MAGISTER_SSL_VERIFY)
         root = ET.fromstring(resp.text)
 
         # Check for exceptions in the response
@@ -88,7 +101,7 @@ class MagisterClient:
             'Layout': layout,
             'Type': 'XML',
         }
-        resp = requests.get(self.url, params=params, timeout=60, verify=False)
+        resp = requests.get(self.url, params=params, timeout=60, verify=MAGISTER_SSL_VERIFY)
         root = ET.fromstring(resp.text)
 
         result = root.findtext('Result')

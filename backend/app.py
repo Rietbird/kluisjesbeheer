@@ -21,6 +21,7 @@ def create_app(test_config=None):
     app.config.update(
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE='Lax',
+        SESSION_COOKIE_SECURE=True,
         MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max upload
     )
 
@@ -45,6 +46,17 @@ def create_app(test_config=None):
         db = g.pop('db', None)
         close_db(db)
 
+    # CSRF protection: require X-Requested-With header on state-changing requests.
+    # Browsers enforce CORS preflight for custom headers, blocking cross-origin POST/PUT/DELETE.
+    @app.before_request
+    def csrf_check():
+        if app.config.get('TESTING'):
+            return
+        if request.method in ('POST', 'PUT', 'DELETE') and request.path.startswith('/api/'):
+            if not request.headers.get('X-Requested-With'):
+                from flask import jsonify as _jsonify
+                return _jsonify({'error': 'CSRF check failed'}), 403
+
     # Security headers
     @app.after_request
     def add_security_headers(response):
@@ -62,15 +74,12 @@ def create_app(test_config=None):
 
     @app.route('/api/branding')
     def branding():
-        # Read from database first, fall back to config.json
-        db = get_db(db_path)
+        # No login_required: branding must be visible on the login page
         try:
-            rows = db.execute('SELECT key, value FROM instellingen').fetchall()
+            rows = g.db.execute('SELECT key, value FROM instellingen').fetchall()
             inst = {r['key']: r['value'] for r in rows}
         except Exception:
             inst = {}
-        finally:
-            close_db(db)
         return {
             'schoolNaam': inst.get('schoolNaam') or config.get('SchoolNaam', 'Kluisjesbeheer'),
             'schoolSubtitel': inst.get('schoolSubtitel') or config.get('SchoolSubtitel', ''),

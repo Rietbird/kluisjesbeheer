@@ -66,19 +66,20 @@ def search_leerlingen():
     if len(q) < 2:
         return jsonify([])
 
-    like = f'%{q}%'
+    q_escaped = q.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+    like = f'%{q_escaped}%'
     if vestiging_locaties is not None:
         placeholders = ','.join('?' * len(vestiging_locaties))
         rows = g.db.execute(f'''
             SELECT * FROM leerlingen
-            WHERE (naam LIKE ? OR stamnr LIKE ? OR email LIKE ?)
+            WHERE (naam LIKE ? ESCAPE '\\' OR stamnr LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\')
               AND locatie IN ({placeholders})
             ORDER BY naam LIMIT 50
         ''', (like, like, like, *vestiging_locaties)).fetchall()
     else:
         rows = g.db.execute('''
             SELECT * FROM leerlingen
-            WHERE naam LIKE ? OR klas LIKE ? OR stamnr LIKE ? OR email LIKE ?
+            WHERE naam LIKE ? ESCAPE '\\' OR klas LIKE ? ESCAPE '\\' OR stamnr LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\'
             ORDER BY naam LIMIT 50
         ''', (like, like, like, like)).fetchall()
     return jsonify([dict(r) for r in rows])

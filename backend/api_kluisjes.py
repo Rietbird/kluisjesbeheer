@@ -330,8 +330,8 @@ def import_preview():
                 clusters[cluster] = clusters.get(cluster, 0) + 1
 
         wb.close()
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
+    except Exception:
+        return jsonify({'error': 'Kan bestand niet verwerken. Controleer het formaat.'}), 400
 
     return jsonify({
         'format': fmt,
