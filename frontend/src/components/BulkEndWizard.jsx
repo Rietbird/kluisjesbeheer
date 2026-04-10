@@ -13,7 +13,7 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
   const [clusterId, setClusterId] = useState('')
   const [klasFilter, setKlasFilter] = useState('')
   const [selected, setSelected] = useState(new Set())
-  const [sleutelIngeleverd, setSleutelIngeleverd] = useState(true)
+  const [sleutelMap, setSleutelMap] = useState({}) // { [toewijzing_id]: boolean }
   const [borgTeruggestort, setBorgTeruggestort] = useState(false)
   const [einddatum, setEinddatum] = useState(new Date().toISOString().slice(0, 10))
   const [opmerking, setOpmerking] = useState('')
@@ -41,8 +41,10 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
   }, [toewijzingen])
 
   const filtered = useMemo(() => {
-    if (!klasFilter) return toewijzingen
-    return toewijzingen.filter(t => t.leerling_klas === klasFilter)
+    const list = klasFilter
+      ? toewijzingen.filter(t => t.leerling_klas === klasFilter)
+      : toewijzingen
+    return [...list].sort((a, b) => (a.leerling_naam || '').localeCompare(b.leerling_naam || '', 'nl'))
   }, [toewijzingen, klasFilter])
 
   function toggleAll() {
@@ -59,12 +61,26 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
     setSelected(next)
   }
 
+  // When moving to step 1, initialize sleutelMap for all selected toewijzingen (default: true)
+  function goToStep1() {
+    const map = {}
+    for (const id of selected) {
+      map[id] = sleutelMap[id] !== undefined ? sleutelMap[id] : true
+    }
+    setSleutelMap(map)
+    setStep(1)
+  }
+
+  function toggleSleutel(id) {
+    setSleutelMap(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
   async function handleSubmit() {
     setSubmitting(true)
     try {
       const res = await api.post('/api/toewijzingen/bulk-beeindigen', {
         toewijzing_ids: [...selected],
-        sleutel_ingeleverd: sleutelIngeleverd,
+        sleutel_map: Object.fromEntries(Object.entries(sleutelMap).map(([k, v]) => [k, v])),
         borg_teruggestort: borgTeruggestort,
         einddatum,
         opmerking,
@@ -78,7 +94,10 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
     }
   }
 
-  const selectedList = toewijzingen.filter(t => selected.has(t.id))
+  const selectedList = useMemo(() =>
+    filtered.filter(t => selected.has(t.id)),
+    [filtered, selected]
+  )
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -99,9 +118,9 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
           {step < 3 && (
             <div className="flex gap-2 mt-3">
               {steps.map((s, i) => (
-                <div key={i} className={`flex items-center gap-1.5 text-xs font-medium ${i <= step ? 'text-School' : 'text-slate-400'}`}>
+                <div key={i} className={`flex items-center gap-1.5 text-xs font-medium ${i <= step ? 'text-primary' : 'text-slate-400'}`}>
                   <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                    i < step ? 'bg-School text-white' : i === step ? 'bg-School text-white' : 'bg-slate-200 dark:bg-slate-600 text-slate-500'
+                    i < step ? 'bg-primary text-white' : i === step ? 'bg-primary text-white' : 'bg-slate-200 dark:bg-slate-600 text-slate-500'
                   }`}>{i < step ? '✓' : i + 1}</span>
                   {s}
                 </div>
@@ -113,7 +132,7 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
 
-          {/* Step 0: Selectie */}
+          {/* Step 0: Selectie — gesorteerd op leerling_naam */}
           {step === 0 && (
             <div className="space-y-4">
               <div className="flex gap-3">
@@ -137,21 +156,21 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
                 <>
                   <div className="flex items-center justify-between">
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="checkbox" className="w-4 h-4 accent-School"
+                      <input type="checkbox" className="w-4 h-4 accent-primary"
                         checked={selected.size === filtered.length && filtered.length > 0}
                         onChange={toggleAll} />
                       <span className="font-medium">Alles selecteren ({filtered.length})</span>
                     </label>
-                    <span className="text-sm text-School font-semibold">{selected.size} geselecteerd</span>
+                    <span className="text-sm text-primary font-semibold">{selected.size} geselecteerd</span>
                   </div>
                   <div className="max-h-72 overflow-y-auto border border-slate-200 dark:border-slate-600 rounded-xl divide-y divide-slate-100 dark:divide-slate-700">
                     {filtered.map(t => (
                       <label key={t.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors">
-                        <input type="checkbox" className="w-4 h-4 accent-School"
+                        <input type="checkbox" className="w-4 h-4 accent-primary"
                           checked={selected.has(t.id)} onChange={() => toggle(t.id)} />
-                        <span className="font-medium text-sm text-navy dark:text-white w-20">{t.kluisnummer}</span>
                         <span className="text-sm flex-1">{t.leerling_naam}</span>
-                        <span className="text-xs text-slate-500">{t.leerling_klas}</span>
+                        <span className="text-xs text-slate-500 w-16">{t.leerling_klas}</span>
+                        <span className="font-medium text-sm text-navy dark:text-white w-20 text-right">{t.kluisnummer}</span>
                       </label>
                     ))}
                   </div>
@@ -166,21 +185,13 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 Stel de opties in voor het beëindigen van <strong>{selected.size} toewijzing(en)</strong>.
               </p>
-              <label className="flex items-center gap-3 p-4 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors">
-                <input type="checkbox" className="w-5 h-5 accent-School"
-                  checked={sleutelIngeleverd} onChange={e => setSleutelIngeleverd(e.target.checked)} />
-                <div>
-                  <div className="font-medium text-sm">Sleutel ingeleverd</div>
-                  <div className="text-xs text-slate-500">Markeer de sleutel als ingeleverd voor alle geselecteerde kluisjes</div>
-                </div>
-              </label>
               {borgActiefVoor(vestigingId) && (
                 <label className="flex items-center gap-3 p-4 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors">
-                  <input type="checkbox" className="w-5 h-5 accent-School"
+                  <input type="checkbox" className="w-5 h-5 accent-primary"
                     checked={borgTeruggestort} onChange={e => setBorgTeruggestort(e.target.checked)} />
                   <div>
                     <div className="font-medium text-sm">Borg teruggestort</div>
-                    <div className="text-xs text-slate-500">Markeer de borg als teruggestort</div>
+                    <div className="text-xs text-slate-500">Markeer de borg als teruggestort voor alle geselecteerde leerlingen</div>
                   </div>
                 </label>
               )}
@@ -198,7 +209,7 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
             </div>
           )}
 
-          {/* Step 2: Bevestigen */}
+          {/* Step 2: Bevestigen — per leerling sleutel ingeleverd */}
           {step === 2 && (
             <div className="space-y-4">
               <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl p-4">
@@ -209,21 +220,44 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
               </div>
               <div className="text-sm space-y-1">
                 <div className="flex justify-between py-1"><span className="text-slate-500">Aantal</span><span className="font-semibold">{selected.size} kluisjes</span></div>
-                <div className="flex justify-between py-1"><span className="text-slate-500">Sleutel ingeleverd</span><span className="font-semibold">{sleutelIngeleverd ? 'Ja' : 'Nee'}</span></div>
                 {borgActiefVoor(vestigingId) && <div className="flex justify-between py-1"><span className="text-slate-500">Borg teruggestort</span><span className="font-semibold">{borgTeruggestort ? 'Ja' : 'Nee'}</span></div>}
                 <div className="flex justify-between py-1"><span className="text-slate-500">Einddatum</span><span className="font-semibold">{formatDate(einddatum)}</span></div>
                 {opmerking && <div className="flex justify-between py-1"><span className="text-slate-500">Opmerking</span><span className="font-semibold">{opmerking}</span></div>}
               </div>
-              <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-600 rounded-xl">
+              <div className="overflow-x-auto border border-slate-200 dark:border-slate-600 rounded-xl max-h-64 overflow-y-auto">
                 <table className="w-full text-xs">
-                  <thead><tr className="bg-slate-50 dark:bg-slate-700 text-slate-500"><th className="px-3 py-1.5 text-left">Kluisnr</th><th className="px-3 py-1.5 text-left">Leerling</th><th className="px-3 py-1.5 text-left">Klas</th></tr></thead>
+                  <thead className="sticky top-0">
+                    <tr className="bg-slate-50 dark:bg-slate-700 text-slate-500">
+                      <th className="px-3 py-2 text-left font-medium">Naam</th>
+                      <th className="px-3 py-2 text-left font-medium">Klas</th>
+                      <th className="px-3 py-2 text-left font-medium">Kluisnr</th>
+                      <th className="px-3 py-2 text-left font-medium">Sleutelnr</th>
+                      <th className="px-3 py-2 text-center font-medium">Sleutel ingeleverd</th>
+                    </tr>
+                  </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                     {selectedList.map(t => (
-                      <tr key={t.id}><td className="px-3 py-1.5 font-medium">{t.kluisnummer}</td><td className="px-3 py-1.5">{t.leerling_naam}</td><td className="px-3 py-1.5">{t.leerling_klas}</td></tr>
+                      <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td className="px-3 py-2">{t.leerling_naam}</td>
+                        <td className="px-3 py-2 text-slate-500">{t.leerling_klas}</td>
+                        <td className="px-3 py-2 font-medium">{t.kluisnummer}</td>
+                        <td className="px-3 py-2 text-slate-500">{t.sleutelnummer || '—'}</td>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 accent-primary cursor-pointer"
+                            checked={!!sleutelMap[t.id]}
+                            onChange={() => toggleSleutel(t.id)}
+                          />
+                        </td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              <p className="text-xs text-slate-400">
+                {Object.values(sleutelMap).filter(Boolean).length} van {selected.size} sleutels worden als ingeleverd gemarkeerd.
+              </p>
             </div>
           )}
 
@@ -246,8 +280,10 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
                 {step === 0 ? 'Annuleren' : 'Vorige'}
               </button>
               {step < 2 ? (
-                <button onClick={() => setStep(step + 1)} disabled={step === 0 && selected.size === 0}
-                  className="px-5 py-2.5 bg-School text-white rounded-lg text-sm font-semibold hover:bg-School-600 disabled:opacity-40 transition-colors">
+                <button
+                  onClick={step === 0 ? goToStep1 : () => setStep(step + 1)}
+                  disabled={step === 0 && selected.size === 0}
+                  className="px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-600 disabled:opacity-40 transition-colors">
                   Volgende
                 </button>
               ) : (
@@ -260,7 +296,7 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
           ) : (
             <div className="w-full flex justify-end">
               <button onClick={onDone}
-                className="px-5 py-2.5 bg-School text-white rounded-lg text-sm font-semibold hover:bg-School-600 transition-colors">
+                className="px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-600 transition-colors">
                 Sluiten
               </button>
             </div>

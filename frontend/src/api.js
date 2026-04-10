@@ -21,8 +21,12 @@ export const api = {
   post: (path, body) => apiFetch(path, { method: 'POST', body: JSON.stringify(body) }),
   put: (path, body) => apiFetch(path, { method: 'PUT', body: JSON.stringify(body) }),
   del: (path) => apiFetch(path, { method: 'DELETE' }),
-  upload: (path, formData) => fetch(path, { method: 'POST', body: formData }).then(r => {
+  upload: (path, formData) => fetch(path, { method: 'POST', body: formData }).then(async r => {
     if (r.status === 401) { window.location.href = '/auth/login'; throw new Error('Niet ingelogd') }
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}))
+      throw new Error(err.error || `HTTP ${r.status}`)
+    }
     return r.json()
   }),
 }

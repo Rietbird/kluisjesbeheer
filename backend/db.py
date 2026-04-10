@@ -16,6 +16,36 @@ def init_db(db_path):
         conn.commit()
     except Exception:
         pass  # kolom bestaat al
+    # Migration: add kleur to vestigingen if not yet present
+    try:
+        conn.execute("ALTER TABLE vestigingen ADD COLUMN kleur TEXT DEFAULT NULL")
+        conn.commit()
+    except Exception:
+        pass  # kolom bestaat al
+    # Migration: vestigingen_klassen koppeltabel
+    try:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS vestigingen_klassen (
+                vestiging_id INTEGER NOT NULL REFERENCES vestigingen(id) ON DELETE CASCADE,
+                klas TEXT NOT NULL,
+                PRIMARY KEY (vestiging_id, klas)
+            )
+        ''')
+        conn.commit()
+    except Exception:
+        pass
+    # Migration: vestigingen_locaties koppeltabel (Magister locatie → vestiging)
+    try:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS vestigingen_locaties (
+                vestiging_id INTEGER NOT NULL REFERENCES vestigingen(id) ON DELETE CASCADE,
+                locatie TEXT NOT NULL,
+                PRIMARY KEY (vestiging_id, locatie)
+            )
+        ''')
+        conn.commit()
+    except Exception:
+        pass
     return conn
 
 def get_db(db_path):

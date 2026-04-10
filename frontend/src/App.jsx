@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
 import { InstellingenProvider } from './context/InstellingenContext'
+import { BrandingProvider } from './context/BrandingContext'
 import TopNav from './components/TopNav'
 import Uitleenoverzicht from './pages/Uitleenoverzicht'
 import Beheer from './pages/Beheer'
@@ -11,6 +12,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <BrandingProvider>
       <AuthProvider>
         <InstellingenProvider>
           <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 dark:text-white">
@@ -22,6 +24,7 @@ export default function App() {
           </div>
         </InstellingenProvider>
       </AuthProvider>
+      </BrandingProvider>
     </BrowserRouter>
   )
 }

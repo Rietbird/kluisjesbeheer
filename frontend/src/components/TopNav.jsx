@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useDarkMode } from '../hooks/useDarkMode'
+import { useBranding } from '../context/BrandingContext'
 
 function UserPhoto({ user }) {
   const [hasPhoto, setHasPhoto] = useState(true)
@@ -17,7 +18,7 @@ function UserPhoto({ user }) {
     )
   }
   return (
-    <div className="w-9 h-9 bg-School-700 rounded-full flex items-center justify-center text-sm font-bold text-white border-2 border-white/30">
+    <div className="w-9 h-9 bg-primary-700 rounded-full flex items-center justify-center text-sm font-bold text-white border-2 border-white/30">
       {initial}
     </div>
   )
@@ -26,15 +27,16 @@ function UserPhoto({ user }) {
 export default function TopNav({ onOpenBeheer }) {
   const user = useAuth()
   const [dark, setDark] = useDarkMode()
+  const { schoolNaam, schoolSubtitel, schoolLogo } = useBranding()
 
   return (
-    <header className="bg-gradient-to-r from-white via-School-50 to-School-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 border-b border-School-100 dark:border-slate-700 shadow-sm">
+    <header className="bg-gradient-to-r from-white via-primary-50 to-primary-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 border-b border-primary-100 dark:border-slate-700 shadow-sm">
       <div className="flex items-center justify-between px-5 py-2">
         <div className="flex items-center gap-3">
-          <img src="/img/School-logo.png" alt="School" className="w-10 h-10 rounded-none" />
+          <img src={schoolLogo} alt={schoolNaam} className="h-9 w-auto rounded-none" />
           <div>
             <div className="font-bold text-lg text-navy dark:text-white leading-tight">Kluisjesbeheer</div>
-            <div className="text-[10px] text-School-700 dark:text-School font-medium leading-tight">School</div>
+            {(schoolSubtitel || schoolNaam) && <div className="text-[10px] text-primary-700 dark:text-primary font-medium leading-tight">{schoolSubtitel || schoolNaam}</div>}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -57,7 +59,7 @@ export default function TopNav({ onOpenBeheer }) {
 
           {/* Beheer tandwiel */}
           <button onClick={onOpenBeheer}
-            className="p-2 rounded-lg hover:bg-School-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-School dark:hover:text-School transition-colors"
+            className="p-2 rounded-lg hover:bg-primary-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors"
             title="Beheer">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -66,14 +68,14 @@ export default function TopNav({ onOpenBeheer }) {
           </button>
 
           {/* User info */}
-          <div className="hidden sm:flex items-center gap-2.5 bg-white/60 dark:bg-slate-700/60 backdrop-blur rounded-xl px-3 py-1.5 border border-School-100 dark:border-slate-600">
+          <div className="hidden sm:flex items-center gap-2.5 bg-white/60 dark:bg-slate-700/60 backdrop-blur rounded-xl px-3 py-1.5 border border-primary-100 dark:border-slate-600">
             <UserPhoto user={user} />
             <div>
               <div className="text-sm font-semibold text-navy dark:text-white leading-tight">{user?.displayName}</div>
-              <a href="/auth/logout" className="text-[11px] text-School-700 dark:text-School hover:text-School transition-colors">Uitloggen</a>
+              <a href="/auth/logout" className="text-[11px] text-primary-700 dark:text-primary hover:text-primary transition-colors">Uitloggen</a>
             </div>
           </div>
-          <a href="/auth/logout" className="sm:hidden text-xs text-School-700 dark:text-School hover:text-School">Uitloggen</a>
+          <a href="/auth/logout" className="sm:hidden text-xs text-primary-700 dark:text-primary hover:text-primary">Uitloggen</a>
         </div>
       </div>
     </header>

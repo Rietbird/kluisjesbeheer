@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS vestigingen (
     naam TEXT NOT NULL,
     adres TEXT DEFAULT '',
     borg_actief INTEGER DEFAULT 1,
+    kleur TEXT DEFAULT NULL,
     created_at DATETIME DEFAULT (datetime('now')),
     updated_at DATETIME DEFAULT (datetime('now'))
 );

@@ -12,21 +12,42 @@ def toewijzen(kid):
     if kluisje['status'] == 'uitgeleend':
         return jsonify({'error': 'Kluisje is al uitgeleend'}), 409
 
+    # Blokkeer toewijzing als er openstaande borg of sleutel is van de vorige verhuur
+    laatste = g.db.execute(
+        'SELECT * FROM toewijzingen WHERE kluisje_id = ? ORDER BY id DESC LIMIT 1', (kid,)
+    ).fetchone()
+    if laatste and not laatste['actief']:
+        if not laatste['sleutel_ingeleverd']:
+            return jsonify({'error': 'Kluisje heeft een openstaande sleutel — lever eerst de sleutel in'}), 409
+        if laatste['borg_betaald'] and not laatste['borg_teruggestort']:
+            return jsonify({'error': 'Kluisje heeft openstaande borg — stort eerst de borg terug'}), 409
+
     data = request.get_json() or {}
     for field in ('leerling_stamnr', 'leerling_naam', 'periode_van', 'periode_tot'):
         if not data.get(field):
             return jsonify({'error': f'{field} is verplicht'}), 400
+
+    # Blokkeer als leerling al een actief kluisje heeft in dezelfde vestiging
+    stamnr = str(data['leerling_stamnr']).strip()
+    bestaand = g.db.execute('''
+        SELECT k.kluisnummer FROM toewijzingen t
+        JOIN kluisjes k ON t.kluisje_id = k.id
+        WHERE t.leerling_stamnr = ? AND t.actief = 1 AND k.vestiging_id = ?
+    ''', (stamnr, kluisje['vestiging_id'])).fetchone()
+    if bestaand:
+        return jsonify({'error': f'Leerling heeft al kluisje {bestaand["kluisnummer"]} in deze vestiging'}), 409
     user = session.get('user', {})
     cur = g.db.execute('''
         INSERT INTO toewijzingen
         (kluisje_id, leerling_stamnr, leerling_naam, leerling_klas,
-         periode_van, periode_tot, borgbedrag, borg_betaald, actief, aangemaakt_door)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+         periode_van, periode_tot, borgbedrag, borg_betaald, borg_teruggestort, actief, aangemaakt_door)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
     ''', (
         kid, str(data['leerling_stamnr']).strip(), str(data['leerling_naam']).strip(),
         str(data.get('leerling_klas', '')).strip(),
         data['periode_van'], data['periode_tot'], data.get('borgbedrag', 0),
         1 if data.get('borg_betaald') else 0,
+        1 if data.get('borg_teruggestort') else 0,
         user.get('displayName', ''),
     ))
     g.db.execute("UPDATE kluisjes SET status='uitgeleend', updated_at=datetime('now') WHERE id=?", (kid,))
@@ -66,16 +87,19 @@ def bulk_beeindigen():
     ids = data.get('toewijzing_ids', [])
     if not ids or len(ids) > 500:
         return jsonify({'error': 'Maximaal 500 toewijzingen per keer'}), 400
-    sleutel = 1 if data.get('sleutel_ingeleverd') else 0
     borg_terug = 1 if data.get('borg_teruggestort') else 0
     einddatum = data.get('einddatum', '')
     opmerking = data.get('opmerking', '')
+    # Per-toewijzing sleutel_ingeleverd override: { toewijzing_id: bool }
+    sleutel_map = {int(k): v for k, v in data.get('sleutel_map', {}).items()}
+    globaal_sleutel = 1 if data.get('sleutel_ingeleverd') else 0
 
     count = 0
     for tid in ids:
         toewijzing = g.db.execute('SELECT * FROM toewijzingen WHERE id = ? AND actief = 1', (tid,)).fetchone()
         if not toewijzing:
             continue
+        sleutel = 1 if sleutel_map.get(tid, globaal_sleutel) else 0
         g.db.execute('''
             UPDATE toewijzingen SET actief=0, sleutel_ingeleverd=?, borg_teruggestort=?,
             einddatum=?, opmerking=?, updated_at=datetime('now') WHERE id=?
@@ -101,6 +125,20 @@ def sleutel_ingeleverd(tid):
     g.db.commit()
     return jsonify({'ok': True})
 
+@toewijzingen_bp.route('/toewijzingen/<int:tid>/borg-teruggestort', methods=['POST'])
+@login_required
+def borg_teruggestort(tid):
+    """Mark deposit as refunded on a (finished) assignment."""
+    row = g.db.execute('SELECT id FROM toewijzingen WHERE id = ?', (tid,)).fetchone()
+    if not row:
+        return jsonify({'error': 'Toewijzing niet gevonden'}), 404
+    g.db.execute(
+        "UPDATE toewijzingen SET borg_teruggestort=1, updated_at=datetime('now') WHERE id=?",
+        (tid,)
+    )
+    g.db.commit()
+    return jsonify({'ok': True})
+
 
 @toewijzingen_bp.route('/toewijzingen/actief', methods=['GET'])
 @login_required
@@ -110,7 +148,7 @@ def actieve_toewijzingen():
     cluster_id = request.args.get('cluster_id')
     stamnr = request.args.get('stamnr', '').strip()
     query = '''
-        SELECT t.*, k.kluisnummer, k.cluster_id, k.vestiging_id, c.naam as cluster_naam
+        SELECT t.*, k.kluisnummer, k.sleutelnummer, k.cluster_id, k.vestiging_id, c.naam as cluster_naam
         FROM toewijzingen t
         JOIN kluisjes k ON t.kluisje_id = k.id
         JOIN clusters c ON k.cluster_id = c.id
@@ -151,13 +189,41 @@ def bulk_toewijzen():
 
     count = 0
     skipped = []
+    assigned_stamnrs = {}  # stamnr -> kluisnummer, bijhouden binnen deze batch
     for item in toewijzingen:
         kid = item['kluisje_id']
+        stamnr = str(item.get('leerling_stamnr', '')).strip()
+        # Check of leerling al in deze batch is toegewezen
+        if stamnr and stamnr in assigned_stamnrs:
+            skipped.append({'kluisje_id': kid, 'leerling_stamnr': stamnr, 'reden': f'Leerling heeft al kluisje {assigned_stamnrs[stamnr]} (in deze batch)'})
+            continue
+        # Check of leerling al een actief kluisje heeft in dezelfde vestiging
+        if stamnr:
+            actief_leerling = g.db.execute('''
+                SELECT k.kluisnummer FROM toewijzingen t
+                JOIN kluisjes k ON t.kluisje_id = k.id
+                WHERE t.leerling_stamnr = ? AND t.actief = 1 AND k.vestiging_id = (
+                    SELECT vestiging_id FROM kluisjes WHERE id = ?
+                )
+            ''', (stamnr, kid)).fetchone()
+            if actief_leerling:
+                skipped.append({'kluisje_id': kid, 'leerling_stamnr': stamnr, 'reden': f'Leerling heeft al kluisje {actief_leerling["kluisnummer"]} in deze vestiging'})
+                continue
         kluisje = g.db.execute('SELECT * FROM kluisjes WHERE id = ? AND verwijderd = 0 AND status != ?',
                                (kid, 'uitgeleend')).fetchone()
         if not kluisje:
             skipped.append({'kluisje_id': kid, 'reden': 'Niet beschikbaar of al uitgeleend'})
             continue
+        laatste = g.db.execute(
+            'SELECT * FROM toewijzingen WHERE kluisje_id = ? ORDER BY id DESC LIMIT 1', (kid,)
+        ).fetchone()
+        if laatste and not laatste['actief']:
+            if not laatste['sleutel_ingeleverd']:
+                skipped.append({'kluisje_id': kid, 'reden': 'Openstaande sleutel'})
+                continue
+            if laatste['borg_betaald'] and not laatste['borg_teruggestort']:
+                skipped.append({'kluisje_id': kid, 'reden': 'Openstaande borg'})
+                continue
         g.db.execute('''
             INSERT INTO toewijzingen
             (kluisje_id, leerling_stamnr, leerling_naam, leerling_klas,
@@ -168,6 +234,8 @@ def bulk_toewijzen():
             periode_van, periode_tot, borgbedrag, user.get('displayName', ''),
         ))
         g.db.execute("UPDATE kluisjes SET status='uitgeleend', updated_at=datetime('now') WHERE id=?", (kid,))
+        if stamnr:
+            assigned_stamnrs[stamnr] = item['leerling_stamnr']
         count += 1
 
     g.db.commit()

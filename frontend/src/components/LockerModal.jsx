@@ -108,6 +108,28 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
             </div>
           )}
 
+          {/* Borg niet teruggestort warning */}
+          {!!detail._borg_niet_teruggestort && borgActiefVoor(detail.vestiging_id) && (
+            <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3">
+              <span className="text-xl">💰</span>
+              <div className="flex-1">
+                <div className="font-semibold text-amber-800 dark:text-amber-300">Borg niet teruggestort</div>
+                <div className="text-sm text-amber-600 dark:text-amber-400 mt-0.5">De borg van de vorige huurder is nog niet terugbetaald.</div>
+                <button
+                  className="mt-2 px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 transition-colors"
+                  onClick={async () => {
+                    const laatste = geschiedenis.find(g => !g.actief && g.borg_betaald && !g.borg_teruggestort)
+                    if (laatste) {
+                      await api.post(`/api/toewijzingen/${laatste.id}/borg-teruggestort`, {})
+                      onUpdate()
+                    }
+                  }}>
+                  Borg is teruggestort
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Basic info */}
           <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 text-sm">
             <InfoRow label="Sleutelnummer">{detail.sleutelnummer || '—'}</InfoRow>
@@ -122,7 +144,7 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                 Huidige huurder
               </div>
               <div className="text-sm space-y-0">
-                <InfoRow label="Naam"><span className="font-bold text-base text-slate-900 dark:text-white">{detail.leerling_naam}</span></InfoRow>
+                <InfoRow label="Naam"><span className="font-bold text-base text-slate-900 dark:text-slate-100">{detail.leerling_naam}</span></InfoRow>
                 <InfoRow label="Stamnummer"><span className="text-base">{detail.leerling_stamnr || '—'}</span></InfoRow>
                 <InfoRow label="Klas"><span className="text-base">{detail.leerling_klas || '—'}</span></InfoRow>
                 {detail.periode_van && (
@@ -178,12 +200,26 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                       <span className="text-slate-400 text-xs">{g.leerling_klas}</span>
                     </div>
                     <div className="text-slate-500 dark:text-slate-400 text-xs mt-1">{formatDate(g.periode_van)} t/m {formatDate(g.periode_tot || g.einddatum) || '...'}</div>
-                    <div className="flex gap-4 mt-2 text-xs">
+                    <div className="flex flex-wrap gap-2 mt-2 text-xs">
                       {borgActiefVoor(detail.vestiging_id) && g.borgbedrag > 0 && (
-                        <span className={g.borg_teruggestort ? 'text-emerald-600 dark:text-emerald-400' : g.borg_betaald ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}>
-                          €{Number(g.borgbedrag).toFixed(0)}
-                          {g.borg_teruggestort ? ' terug' : g.borg_betaald ? ' niet terug' : ' niet betaald'}
-                        </span>
+                        g.borg_teruggestort ? (
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            €{Number(g.borgbedrag).toFixed(0)} terug
+                          </span>
+                        ) : g.borg_betaald && !g.actief ? (
+                          <button
+                            className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/40 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors font-medium"
+                            onClick={async () => {
+                              await api.post(`/api/toewijzingen/${g.id}/borg-teruggestort`, {})
+                              onUpdate()
+                            }}>
+                            €{Number(g.borgbedrag).toFixed(0)} niet terug ✓
+                          </button>
+                        ) : (
+                          <span className="text-slate-400">
+                            €{Number(g.borgbedrag).toFixed(0)} niet betaald
+                          </span>
+                        )
                       )}
                       <span className={g.sleutel_ingeleverd ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
                         🔑 {g.sleutel_ingeleverd ? 'Ingeleverd' : 'Niet ingeleverd'}

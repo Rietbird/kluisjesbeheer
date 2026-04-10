@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useInstellingen } from '../context/InstellingenContext'
 
 const statusOptions = [
   { value: '', label: 'Alles' },
@@ -7,10 +8,74 @@ const statusOptions = [
   { value: 'defect', label: 'Defect', dot: 'bg-amber-500' },
 ]
 
-export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, onBulkEnd }) {
+const EyeIcon = () => (
+  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+  </svg>
+)
+
+function RapportRij({ label, type, onDownload, onPreview }) {
+  return (
+    <div className="flex items-center justify-between pr-2">
+      <button onClick={() => onDownload(type)} className="flex-1 text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700">{label}</button>
+      <button onClick={() => onPreview(type)} className="text-slate-400 hover:text-primary px-2 py-1" title="Preview"><EyeIcon /></button>
+    </div>
+  )
+}
+
+function RapportDropdown({ vestigingId }) {
+  const [open, setOpen] = useState(false)
+  const { borgActiefVoor } = useInstellingen()
+
+  function download(type) {
+    const params = new URLSearchParams({ type })
+    if (vestigingId) params.set('vestiging_id', vestigingId)
+    window.open(`/api/dashboard/rapport?${params}`, '_blank')
+    setOpen(false)
+  }
+
+  function preview(type) {
+    const params = new URLSearchParams({ type })
+    if (vestigingId) params.set('vestiging_id', vestigingId)
+    window.open(`/api/dashboard/rapport/preview?${params}`, '_blank')
+    setOpen(false)
+  }
+
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(!open)}
+        className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Rapport
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 mt-2 z-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-2 w-64">
+            <div className="px-4 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Overzichten</div>
+            <RapportRij label="Actieve toewijzingen" type="toewijzingen" onDownload={download} onPreview={preview} />
+            <RapportRij label="Innameoverzicht (afvinklijst)" type="inname" onDownload={download} onPreview={preview} />
+            <RapportRij label="Defecte kluisjes" type="defect" onDownload={download} onPreview={preview} />
+            <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
+            <div className="px-4 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Openstaand</div>
+            <RapportRij label="Openstaande sleutels" type="sleutels" onDownload={download} onPreview={preview} />
+            {borgActiefVoor(vestigingId) && (
+              <RapportRij label="Openstaande borg" type="borg" onDownload={download} onPreview={preview} />
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, onBulkEnd, vestigingId }) {
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const selectClass = "border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-School/30 focus:border-School outline-none"
+  const selectClass = "border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none"
 
   return (
     <div className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5">
@@ -28,7 +93,7 @@ export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, o
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
-            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg pl-8 pr-3 py-1.5 text-sm dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-School/30 focus:border-School outline-none"
+            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg pl-8 pr-3 py-1.5 text-sm dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none"
             placeholder="Zoek kluisnr, naam, stamnr..."
             value={filters.q}
             onChange={e => setFilters(f => ({ ...f, q: e.target.value }))}
@@ -77,7 +142,7 @@ export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, o
         {/* Bulk actions */}
         {onBulkAssign && (
           <button onClick={onBulkAssign}
-            className="bg-School text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-School-600 transition-colors">
+            className="bg-primary text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors">
             Collectief toekennen
           </button>
         )}
@@ -87,6 +152,9 @@ export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, o
             Collectief beëindigen
           </button>
         )}
+
+        {/* Rapport */}
+        <RapportDropdown vestigingId={vestigingId} />
       </div>
     </div>
   )

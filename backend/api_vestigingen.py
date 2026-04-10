@@ -47,6 +47,44 @@ def update_borg(vid):
     g.db.commit()
     return jsonify({'ok': True, 'borg_actief': bool(borg_actief)})
 
+@vestigingen_bp.route('/vestigingen/<int:vid>/kleur', methods=['PUT'])
+@login_required
+def update_kleur(vid):
+    data = request.get_json()
+    kleur = (data.get('kleur') or '').strip()
+    # Valideer: leeg (reset) of een hex kleur
+    import re
+    if kleur and not re.match(r'^#[0-9a-fA-F]{6}$', kleur):
+        return jsonify({'error': 'Ongeldige kleurwaarde'}), 400
+    g.db.execute('UPDATE vestigingen SET kleur=? WHERE id=?', (kleur or None, vid))
+    g.db.commit()
+    return jsonify({'ok': True, 'kleur': kleur or None})
+
+@vestigingen_bp.route('/vestigingen/<int:vid>/locaties', methods=['GET'])
+@login_required
+def get_vestiging_locaties(vid):
+    rows = g.db.execute(
+        'SELECT locatie FROM vestigingen_locaties WHERE vestiging_id = ? ORDER BY locatie', (vid,)
+    ).fetchall()
+    return jsonify([r['locatie'] for r in rows])
+
+@vestigingen_bp.route('/vestigingen/<int:vid>/locaties', methods=['PUT'])
+@login_required
+def set_vestiging_locaties(vid):
+    """Stel in welke Magister-locaties bij een vestiging horen. Body: { locaties: [...] }"""
+    data = request.get_json() or {}
+    locaties = data.get('locaties', [])
+    if not g.db.execute('SELECT id FROM vestigingen WHERE id = ?', (vid,)).fetchone():
+        return jsonify({'error': 'Vestiging niet gevonden'}), 404
+    g.db.execute('DELETE FROM vestigingen_locaties WHERE vestiging_id = ?', (vid,))
+    for loc in locaties:
+        g.db.execute(
+            'INSERT OR IGNORE INTO vestigingen_locaties (vestiging_id, locatie) VALUES (?, ?)',
+            (vid, loc)
+        )
+    g.db.commit()
+    return jsonify({'vestiging_id': vid, 'locaties': locaties})
+
 @vestigingen_bp.route('/vestigingen/<int:vid>', methods=['DELETE'])
 @login_required
 def delete_vestiging(vid):

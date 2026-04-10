@@ -33,10 +33,10 @@ def update_cluster(cid):
     if not row:
         return jsonify({'error': 'Niet gevonden'}), 404
     data = request.get_json()
-    naam = data.get('naam', '').strip()
+    naam = data.get('naam', '').strip() if 'naam' in data else row['naam']
     if not naam:
         return jsonify({'error': 'Naam is verplicht'}), 400
-    standaard_borg = data.get('standaard_borg', 0.0)
+    standaard_borg = data.get('standaard_borg', row['standaard_borg'])
     g.db.execute(
         "UPDATE clusters SET naam=?, standaard_borg=?, updated_at=datetime('now') WHERE id=?",
         (naam, standaard_borg, cid)

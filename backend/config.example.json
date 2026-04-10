@@ -5,7 +5,12 @@
   "DashboardGroupId": "",
   "RedirectUri": "http://localhost:5000/auth/callback",
   "SecretKey": "change-me-to-random-string",
-  "MagisterUrl": "https://osgerasmus.swp.nl/doc",
+  "MagisterUrl": "https://jouschool.swp.nl/doc",
   "MagisterUser": "",
-  "MagisterPass": ""
+  "MagisterPass": "",
+  "SchoolNaam": "Mijn School",
+  "SchoolSubtitel": "",
+  "SchoolLogo": "/img/logo.png",
+  "SchoolKleur": "#FF8200",
+  "AllowedOrigins": ["http://localhost:5173"]
 }

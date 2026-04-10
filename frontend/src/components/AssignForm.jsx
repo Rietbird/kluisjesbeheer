@@ -9,8 +9,9 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
   const [showDropdown, setShowDropdown] = useState(false)
   const [periodeVan, setPeriodeVan] = useState('')
   const [periodeTot, setPeriodeTot] = useState('')
-  const [borgbedrag, setBorgbedrag] = useState('')
+  const [borgbedrag, setBorgbedrag] = useState(kluisje.standaard_borg ? String(kluisje.standaard_borg) : '')
   const [borgBetaald, setBorgBetaald] = useState(false)
+  const [borgTeruggestort, setBorgTeruggestort] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [alHeeftKluisje, setAlHeeftKluisje] = useState(null)
@@ -22,7 +23,8 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
     if (q.length < 2) { setResults([]); setShowDropdown(false); return }
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      api.get(`/api/magister/leerlingen?q=${encodeURIComponent(q)}`)
+      const vestigingParam = kluisje.vestiging_id ? `&vestiging_id=${kluisje.vestiging_id}` : ''
+      api.get(`/api/magister/leerlingen?q=${encodeURIComponent(q)}${vestigingParam}`)
         .then(data => { setResults(data); setShowDropdown(true) })
         .catch(() => setResults([]))
     }, 300)
@@ -69,6 +71,7 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
         periode_tot: periodeTot,
         borgbedrag: borgbedrag ? Number(borgbedrag) : null,
         borg_betaald: borgBetaald,
+        borg_teruggestort: borgTeruggestort,
       })
       onDone()
     } catch (err) {
@@ -136,9 +139,15 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
               onChange={e => setBorgbedrag(e.target.value)} placeholder="0.00" />
           </div>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" checked={borgBetaald} onChange={e => setBorgBetaald(e.target.checked)} />
+            <input type="checkbox" checked={borgBetaald} onChange={e => { setBorgBetaald(e.target.checked); if (!e.target.checked) setBorgTeruggestort(false) }} />
             Borg betaald
           </label>
+          {borgBetaald && (
+            <label className="flex items-center gap-2 text-sm cursor-pointer ml-4">
+              <input type="checkbox" checked={borgTeruggestort} onChange={e => setBorgTeruggestort(e.target.checked)} />
+              Borg teruggestort
+            </label>
+          )}
         </>
       )}
       {error && <p className="text-red-500 text-xs">{error}</p>}

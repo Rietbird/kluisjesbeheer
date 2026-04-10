@@ -24,11 +24,11 @@ def create_app(test_config=None):
         MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max upload
     )
 
-    # Restrict CORS to our own domain
-    CORS(app, origins=[
-        'https://kluisjes.school.nl',
-        'http://localhost:5173',  # Vite dev server
-    ])
+    # CORS: configurable origins from config.json, always allow localhost dev server
+    allowed_origins = config.get('AllowedOrigins', [])
+    if 'http://localhost:5173' not in allowed_origins:
+        allowed_origins.append('http://localhost:5173')
+    CORS(app, origins=allowed_origins)
 
     db_path = DB_PATH
     if test_config:
@@ -59,6 +59,24 @@ def create_app(test_config=None):
     @app.route('/api/health')
     def health():
         return {'status': 'ok'}
+
+    @app.route('/api/branding')
+    def branding():
+        # Read from database first, fall back to config.json
+        db = get_db(db_path)
+        try:
+            rows = db.execute('SELECT key, value FROM instellingen').fetchall()
+            inst = {r['key']: r['value'] for r in rows}
+        except Exception:
+            inst = {}
+        finally:
+            close_db(db)
+        return {
+            'schoolNaam': inst.get('schoolNaam') or config.get('SchoolNaam', 'Kluisjesbeheer'),
+            'schoolSubtitel': inst.get('schoolSubtitel') or config.get('SchoolSubtitel', ''),
+            'schoolLogo': inst.get('schoolLogo') or config.get('SchoolLogo', '/img/logo.png'),
+            'schoolKleur': inst.get('schoolKleur') or config.get('SchoolKleur', '#FF8200'),
+        }
 
     # Register blueprints
     from auth import auth_bp

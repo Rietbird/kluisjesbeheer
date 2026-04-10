@@ -23,10 +23,11 @@ else
     echo "[2/7] App user exists."
 fi
 
-# 3. Copy project files
+# 3. Copy project files + fix CRLF (skip binary files)
 echo "[3/7] Copying project files..."
 mkdir -p "$APP_DIR"
 cp -r backend frontend deploy.sh CLAUDE.md "$APP_DIR/" 2>/dev/null || true
+find "$APP_DIR" -type f \( -name '*.py' -o -name '*.js' -o -name '*.jsx' -o -name '*.ts' -o -name '*.tsx' -o -name '*.css' -o -name '*.html' -o -name '*.json' -o -name '*.md' -o -name '*.sh' -o -name '*.sql' -o -name '*.txt' -o -name '*.cfg' -o -name '*.toml' -o -name '*.yml' -o -name '*.yaml' \) -exec sed -i 's/\r$//' {} +
 rm -rf "$APP_DIR/backend/.venv" "$APP_DIR/frontend/node_modules" "$APP_DIR/backend/__pycache__"
 find "$APP_DIR" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
 

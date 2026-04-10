@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { api } from '../api'
 import { formatDate } from '../utils/formatDate'
 
-const STEPS = ['Klas', 'Leerlingen', 'Periode & Kluisjes', 'Toekenning', 'Bevestigen']
+const STEPS = ['Klas', 'Leerlingen', 'Periode & Kluisjes', 'Toekenning', 'Bevestigen', 'Resultaat']
 
 export default function BulkWizard({ vestigingId, onClose, onDone }) {
   const [step, setStep] = useState(0)
@@ -11,6 +11,7 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
   const [leerlingen, setLeerlingen] = useState([])
   const [selectedLeerlingen, setSelectedLeerlingen] = useState([])
   const [leerlingFilter, setLeerlingFilter] = useState('')
+  const [klasFilter, setKlasFilter] = useState('')
   const [periodeVan, setPeriodeVan] = useState('')
   const [periodeTot, setPeriodeTot] = useState('')
   const [vestigingen, setVestigingen] = useState([])
@@ -25,7 +26,8 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
   const [result, setResult] = useState(null)
 
   useEffect(() => {
-    api.get('/api/magister/klassen').then(setKlassen).catch(() => {})
+    const url = vestigingId ? `/api/magister/klassen?vestiging_id=${vestigingId}` : '/api/magister/klassen'
+    api.get(url).then(setKlassen).catch(() => {})
     api.get('/api/vestigingen').then(setVestigingen).catch(() => {})
   }, [])
 
@@ -56,12 +58,13 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
   }, [selectedCluster])
 
   useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10)
     api.get('/api/schooljaar/periode')
       .then(data => {
-        setPeriodeVan(data.periode_van || '')
+        setPeriodeVan(today)
         setPeriodeTot(data.periode_tot || '')
       })
-      .catch(() => {})
+      .catch(() => { setPeriodeVan(today) })
   }, [])
 
   async function loadLeerlingen(klas) {
@@ -126,7 +129,7 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
         periode_tot: periodeTot,
       })
       setResult(res)
-      onDone()
+      setStep(5)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -154,11 +157,13 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
           <div className="flex gap-1 items-center">
             {STEPS.map((s, i) => (
               <div key={i} className="flex items-center gap-1">
-                <div className={`rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold
-                  ${i === step ? 'bg-navy text-white' : i < step ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                <button onClick={() => i < step && setStep(i)} disabled={i >= step}
+                  className={`rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold transition-colors
+                  ${i === step ? 'bg-navy text-white' : i < step ? 'bg-green-500 text-white hover:bg-green-600 cursor-pointer' : 'bg-slate-200 text-slate-400 cursor-default'}`}>
                   {i < step ? '✓' : i + 1}
-                </div>
-                <span className={`text-xs hidden sm:block ${i === step ? 'text-navy font-medium' : 'text-slate-400'}`}>{s}</span>
+                </button>
+                <span onClick={() => i < step && setStep(i)}
+                  className={`text-xs hidden sm:block ${i === step ? 'text-navy font-medium' : i < step ? 'text-green-600 hover:underline cursor-pointer' : 'text-slate-400'}`}>{s}</span>
                 {i < STEPS.length - 1 && <div className="w-4 h-px bg-slate-200 mx-1" />}
               </div>
             ))}
@@ -173,15 +178,17 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
           {step === 0 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Kies de klas waarvan u kluisjes wilt toekennen.</p>
+              <input className="w-full border rounded px-2 py-1 text-sm" placeholder="Zoek klas..."
+                value={klasFilter} onChange={e => setKlasFilter(e.target.value)} />
               <div className="space-y-1 max-h-64 overflow-y-auto border rounded p-2">
-                {klassen.map((k, i) => (
+                {klassen.filter(k => (k.naam || k).toLowerCase().includes(klasFilter.toLowerCase())).map((k, i) => (
                   <label key={i} className="flex items-center gap-2 p-2 rounded hover:bg-slate-50 cursor-pointer">
                     <input type="radio" name="klas" value={k.naam || k} checked={selectedKlas === (k.naam || k)}
                       onChange={() => setSelectedKlas(k.naam || k)} />
                     <span className="text-sm">{k.naam || k}</span>
                   </label>
                 ))}
-                {klassen.length === 0 && <p className="text-sm text-slate-400 p-2">Geen klassen gevonden.</p>}
+                {klassen.filter(k => (k.naam || k).toLowerCase().includes(klasFilter.toLowerCase())).length === 0 && <p className="text-sm text-slate-400 p-2">Geen klassen gevonden.</p>}
               </div>
             </div>
           )}
@@ -319,20 +326,66 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
               </div>
             </div>
           )}
+          {/* Step 5: Resultaat */}
+          {step === 5 && result && (
+            <div className="space-y-4">
+              <div className={`rounded-xl p-4 text-sm font-medium ${result.assigned > 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                {result.assigned > 0
+                  ? `✓ ${result.assigned} kluisje${result.assigned !== 1 ? 's' : ''} toegekend`
+                  : 'Geen kluisjes toegekend'}
+              </div>
+              {result.skipped?.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                    Overgeslagen ({result.skipped.length})
+                  </div>
+                  <div className="border rounded overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-500">
+                          <th className="px-3 py-2 text-left">Leerling</th>
+                          <th className="px-3 py-2 text-left">Reden</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.skipped.map((s, i) => {
+                          const leerling = leerlingen.find(l => String(l.stamnr || l.leerling_stamnr) === String(s.leerling_stamnr))
+                          return (
+                            <tr key={i} className="border-t">
+                              <td className="px-3 py-2 font-medium">{leerling ? (leerling.naam || leerling.leerling_naam) : s.leerling_stamnr}</td>
+                              <td className="px-3 py-2 text-amber-600">{s.reden}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Footer buttons */}
         <div className="px-6 py-4 border-t border-slate-200 flex justify-between">
-          <button onClick={step === 0 ? onClose : prevStep}
-            className="border rounded px-4 py-2 text-sm text-slate-500 hover:bg-slate-50">
-            {step === 0 ? 'Annuleren' : '← Terug'}
-          </button>
-          {step < 4 ? (
+          {step === 5 ? (
+            <button onClick={() => { onDone(); onClose() }}
+              className="border rounded px-4 py-2 text-sm text-slate-500 hover:bg-slate-50">
+              Sluiten
+            </button>
+          ) : (
+            <button onClick={step === 0 ? onClose : prevStep}
+              className="border rounded px-4 py-2 text-sm text-slate-500 hover:bg-slate-50">
+              {step === 0 ? 'Annuleren' : '← Terug'}
+            </button>
+          )}
+          {step < 4 && (
             <button onClick={nextStep} disabled={loading}
               className="bg-navy text-white rounded px-4 py-2 text-sm hover:bg-navy/90 disabled:opacity-50">
               Volgende →
             </button>
-          ) : (
+          )}
+          {step === 4 && (
             <button onClick={handleSubmit} disabled={loading}
               className="bg-green-600 text-white rounded px-4 py-2 text-sm hover:bg-green-700 disabled:opacity-50">
               {loading ? 'Bezig...' : 'Toekennen'}
