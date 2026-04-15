@@ -71,3 +71,44 @@ def download_backup(naam):
         return jsonify({'error': 'Backup niet gevonden'}), 404
 
     return send_from_directory(BACKUP_DIR, naam, as_attachment=True)
+
+
+@backup_bp.route('/backups/<naam>/restore', methods=['POST'])
+@login_required
+def restore_backup(naam):
+    import sqlite3
+    from flask import request
+    err = _beheerder_required()
+    if err:
+        return err
+
+    # Require an explicit confirmation phrase to prevent accidents
+    data = request.get_json(silent=True) or {}
+    if data.get('bevestiging') != 'RESTORE':
+        return jsonify({'error': 'Bevestig door "RESTORE" te sturen in het veld bevestiging'}), 400
+
+    if '/' in naam or '\\' in naam or '..' in naam:
+        return jsonify({'error': 'Ongeldige bestandsnaam'}), 400
+
+    src_path = os.path.join(BACKUP_DIR, naam)
+    if not os.path.isfile(src_path):
+        return jsonify({'error': 'Backup niet gevonden'}), 404
+
+    # Safety backup of the current live DB before overwriting
+    safety = create_backup(DB_PATH, label='pre-restore')
+
+    # Use SQLite backup API: safe while app has open connections
+    src = sqlite3.connect(src_path)
+    dst = sqlite3.connect(DB_PATH)
+    try:
+        src.backup(dst)
+    finally:
+        dst.close()
+        src.close()
+
+    cleanup_backups()
+    return jsonify({
+        'ok': True,
+        'restored_from': naam,
+        'safety_backup': os.path.basename(safety),
+    })

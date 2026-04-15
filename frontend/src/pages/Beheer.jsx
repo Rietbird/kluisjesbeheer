@@ -1071,6 +1071,138 @@ function BeheerInstellingenTab() {
         </form>
       </div>
 
+      {/* Backups */}
+      <BackupPanel />
+
+    </div>
+  )
+}
+
+function BackupPanel() {
+  const [backups, setBackups] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [err, setErr] = useState('')
+  const [restoreName, setRestoreName] = useState('')
+  const [restoreConfirm, setRestoreConfirm] = useState('')
+  const [restoring, setRestoring] = useState(false)
+
+  const cardClass = "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6"
+  const btnClass = "bg-primary text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors"
+
+  function load() {
+    api.get('/api/backups').then(setBackups).catch(e => setErr(e.message))
+  }
+  useEffect(() => { load() }, [])
+
+  function formatSize(n) {
+    if (n < 1024) return `${n} B`
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
+    return `${(n / 1024 / 1024).toFixed(1)} MB`
+  }
+
+  function formatDatum(iso) {
+    const d = new Date(iso)
+    return d.toLocaleString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+
+  async function maakBackup() {
+    setLoading(true); setMsg(''); setErr('')
+    try {
+      const res = await api.post('/api/backups/create', {})
+      setMsg(`Backup gemaakt: ${res.naam}`)
+      load()
+    } catch (e) { setErr(e.message) }
+    finally { setLoading(false) }
+  }
+
+  async function doRestore() {
+    if (restoreConfirm !== 'RESTORE') { setErr('Typ RESTORE om te bevestigen'); return }
+    setRestoring(true); setMsg(''); setErr('')
+    try {
+      const res = await api.post(`/api/backups/${encodeURIComponent(restoreName)}/restore`, { bevestiging: 'RESTORE' })
+      setMsg(`Teruggezet vanuit ${res.restored_from}. Safety-backup: ${res.safety_backup}`)
+      setRestoreName(''); setRestoreConfirm('')
+      load()
+    } catch (e) { setErr(e.message) }
+    finally { setRestoring(false) }
+  }
+
+  const laatste = backups[0]
+
+  return (
+    <div className={cardClass} style={{ marginTop: '1.25rem' }}>
+      <h2 className="text-base font-bold text-slate-800 dark:text-white mb-1">Backups</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+        De database wordt automatisch dagelijks geback-upt (7 dagelijks + 4 wekelijks bewaard).
+      </p>
+
+      <div className="mb-4 text-sm">
+        {laatste ? (
+          <span className="text-slate-600 dark:text-slate-300">
+            Laatste backup: <strong>{formatDatum(laatste.datum)}</strong> ({formatSize(laatste.grootte)}) — <span className="font-mono text-xs text-slate-400">{laatste.naam}</span>
+          </span>
+        ) : (
+          <span className="text-slate-400">Nog geen backups.</span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 mb-4">
+        <button onClick={maakBackup} disabled={loading} className={btnClass}>
+          {loading ? 'Bezig...' : 'Nu backup maken'}
+        </button>
+        {msg && <span className="text-sm text-emerald-600 font-medium">{msg}</span>}
+        {err && <span className="text-sm text-red-500 font-medium">Fout: {err}</span>}
+      </div>
+
+      {backups.length > 0 && (
+        <div className="border-t border-slate-100 dark:border-slate-700 pt-4">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Alle backups</div>
+          <div className="space-y-1 max-h-64 overflow-y-auto">
+            {backups.map(b => (
+              <div key={b.naam} className="flex items-center justify-between text-sm py-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded">
+                <div className="flex-1 min-w-0">
+                  <div className="font-mono text-xs text-slate-600 dark:text-slate-300 truncate">{b.naam}</div>
+                  <div className="text-xs text-slate-400">{formatDatum(b.datum)} — {formatSize(b.grootte)}</div>
+                </div>
+                <div className="flex items-center gap-2 ml-3">
+                  <a href={`/api/backups/${encodeURIComponent(b.naam)}/download`}
+                    className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+                    Download
+                  </a>
+                  <button onClick={() => { setRestoreName(b.naam); setRestoreConfirm(''); setErr(''); setMsg('') }}
+                    className="text-xs px-2 py-1 rounded border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20">
+                    Terugzetten
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {restoreName && (
+        <div className="mt-4 p-4 border-2 border-red-300 dark:border-red-700 rounded-xl bg-red-50 dark:bg-red-900/20">
+          <div className="text-sm font-semibold text-red-700 dark:text-red-400 mb-1">Database terugzetten</div>
+          <p className="text-xs text-red-600 dark:text-red-300 mb-3">
+            Je staat op het punt de huidige database te vervangen door <span className="font-mono">{restoreName}</span>.
+            Alle huidige data wordt overschreven (er wordt eerst een safety-backup gemaakt).
+            Typ <strong>RESTORE</strong> om te bevestigen.
+          </p>
+          <div className="flex items-center gap-2">
+            <input className="border border-red-300 dark:border-red-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-slate-700 dark:text-white"
+              value={restoreConfirm} onChange={e => setRestoreConfirm(e.target.value)} placeholder="Typ RESTORE" />
+            <button onClick={doRestore} disabled={restoring || restoreConfirm !== 'RESTORE'}
+              className="bg-red-600 text-white rounded-lg px-4 py-1.5 text-sm font-semibold hover:bg-red-700 disabled:opacity-50">
+              {restoring ? 'Terugzetten...' : 'Ja, terugzetten'}
+            </button>
+            <button onClick={() => { setRestoreName(''); setRestoreConfirm('') }}
+              className="text-sm px-3 py-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">
+              Annuleren
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
