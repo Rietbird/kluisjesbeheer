@@ -6,21 +6,32 @@ magister_bp = Blueprint('magister', __name__, url_prefix='/api')
 
 
 def _sync_to_db(leerlingen):
-    """Upsert leerlingen list into the database."""
+    """Upsert leerlingen list into the database. Marks absent students as vertrokken."""
+    synced_stamnrs = set()
     for l in leerlingen:
+        synced_stamnrs.add(l['stamnr'])
         g.db.execute('''
-            INSERT INTO leerlingen (stamnr, naam, roepnaam, tussenvoegsel, achternaam, email, klas, leerjaar, studie, locatie, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            INSERT INTO leerlingen (stamnr, naam, roepnaam, tussenvoegsel, achternaam, email, klas, leerjaar, studie, locatie, vertrokken_op, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))
             ON CONFLICT(stamnr) DO UPDATE SET
                 naam=excluded.naam, roepnaam=excluded.roepnaam, tussenvoegsel=excluded.tussenvoegsel,
                 achternaam=excluded.achternaam, email=excluded.email, klas=excluded.klas,
                 leerjaar=excluded.leerjaar, studie=excluded.studie, locatie=excluded.locatie,
-                updated_at=datetime('now')
+                vertrokken_op=NULL, updated_at=datetime('now')
         ''', (
             l['stamnr'], l['naam'], l.get('roepnaam', ''), l.get('tussenvoegsel', ''),
             l.get('achternaam', ''), l.get('email', ''), l['klas'],
             l.get('leerjaar', ''), l.get('studie', ''), l.get('locatie', ''),
         ))
+
+    # Mark students no longer in Magister as vertrokken (only if not already marked)
+    if synced_stamnrs:
+        placeholders = ','.join('?' * len(synced_stamnrs))
+        g.db.execute(f'''
+            UPDATE leerlingen SET vertrokken_op = date('now'), updated_at = datetime('now')
+            WHERE stamnr NOT IN ({placeholders}) AND vertrokken_op IS NULL
+        ''', list(synced_stamnrs))
+
     g.db.commit()
 
 
@@ -42,24 +53,32 @@ def _get_vestiging_locaties(vestiging_id):
     return [r['locatie'] for r in rows] if rows else None
 
 
+def _vertrokken_filter():
+    """SQL fragment: hide vertrokken students unless they have an active toewijzing."""
+    return '''(vertrokken_op IS NULL OR stamnr IN (
+        SELECT t.leerling_stamnr FROM toewijzingen t WHERE t.actief = 1
+    ))'''
+
+
 @magister_bp.route('/magister/leerlingen', methods=['GET'])
 @login_required
 def search_leerlingen():
     """Search students from database. ?klas= for exact match, ?q= for substring search, ?vestiging_id= to filter."""
     vestiging_id = request.args.get('vestiging_id', '').strip()
     vestiging_locaties = _get_vestiging_locaties(vestiging_id) if vestiging_id else None
+    vf = _vertrokken_filter()
 
     klas = request.args.get('klas', '').strip()
     if klas:
         if vestiging_locaties is not None:
             placeholders = ','.join('?' * len(vestiging_locaties))
             rows = g.db.execute(f'''
-                SELECT * FROM leerlingen WHERE klas = ? AND locatie IN ({placeholders}) ORDER BY naam
+                SELECT * FROM leerlingen WHERE klas = ? AND locatie IN ({placeholders}) AND {vf} ORDER BY naam
             ''', (klas, *vestiging_locaties)).fetchall()
         else:
-            rows = g.db.execute(
-                'SELECT * FROM leerlingen WHERE klas = ? ORDER BY naam', (klas,)
-            ).fetchall()
+            rows = g.db.execute(f'''
+                SELECT * FROM leerlingen WHERE klas = ? AND {vf} ORDER BY naam
+            ''', (klas,)).fetchall()
         return jsonify([dict(r) for r in rows])
 
     q = request.args.get('q', '').strip()
@@ -73,13 +92,14 @@ def search_leerlingen():
         rows = g.db.execute(f'''
             SELECT * FROM leerlingen
             WHERE (naam LIKE ? ESCAPE '\\' OR stamnr LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\')
-              AND locatie IN ({placeholders})
+              AND locatie IN ({placeholders}) AND {vf}
             ORDER BY naam LIMIT 50
         ''', (like, like, like, *vestiging_locaties)).fetchall()
     else:
-        rows = g.db.execute('''
+        rows = g.db.execute(f'''
             SELECT * FROM leerlingen
-            WHERE naam LIKE ? ESCAPE '\\' OR klas LIKE ? ESCAPE '\\' OR stamnr LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\'
+            WHERE (naam LIKE ? ESCAPE '\\' OR klas LIKE ? ESCAPE '\\' OR stamnr LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\')
+              AND {vf}
             ORDER BY naam LIMIT 50
         ''', (like, like, like, like)).fetchall()
     return jsonify([dict(r) for r in rows])
@@ -96,12 +116,12 @@ def get_klassen():
             placeholders = ','.join('?' * len(vestiging_locaties))
             rows = g.db.execute(f'''
                 SELECT DISTINCT klas FROM leerlingen
-                WHERE klas != '' AND locatie IN ({placeholders})
+                WHERE klas != '' AND vertrokken_op IS NULL AND locatie IN ({placeholders})
                 ORDER BY klas
             ''', vestiging_locaties).fetchall()
             return jsonify([{'naam': r['klas']} for r in rows])
     rows = g.db.execute(
-        "SELECT DISTINCT klas FROM leerlingen WHERE klas != '' ORDER BY klas"
+        "SELECT DISTINCT klas FROM leerlingen WHERE klas != '' AND vertrokken_op IS NULL ORDER BY klas"
     ).fetchall()
     return jsonify([{'naam': r['klas']} for r in rows])
 

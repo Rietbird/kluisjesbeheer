@@ -65,6 +65,12 @@ def init_db(db_path):
             PRIMARY KEY (gebruiker_id, vestiging_id)
         )
     ''')
+    # Migration: vertrokken_op kolom voor leerlingen die van school zijn
+    try:
+        conn.execute("ALTER TABLE leerlingen ADD COLUMN vertrokken_op DATE DEFAULT NULL")
+        conn.commit()
+    except Exception:
+        pass  # kolom bestaat al
     conn.commit()
     return conn
 

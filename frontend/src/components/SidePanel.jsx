@@ -116,7 +116,7 @@ export default function SidePanel({ kluisje, onClose, onUpdate }) {
                 <span className="w-2 h-2 bg-sky-500 rounded-full" />
                 Huidige huurder
               </div>
-              <InfoRow label="Naam"><span className="font-semibold">{detail.leerling_naam}</span></InfoRow>
+              <InfoRow label="Naam"><span className="font-semibold">{detail.leerling_naam}</span>{detail.leerling_vertrokken_op && <span className="ml-2 text-xs text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded">Vertrokken</span>}</InfoRow>
               <InfoRow label="Stamnr">{detail.leerling_stamnr || '—'}</InfoRow>
               <InfoRow label="Klas">{detail.leerling_klas || '—'}</InfoRow>
               {detail.periode_van && (

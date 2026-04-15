@@ -221,7 +221,7 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
                           if (e.target.checked) setSelectedLeerlingen(s => [...s, origIndex])
                           else setSelectedLeerlingen(s => s.filter(x => x !== origIndex))
                         }} />
-                      <span className="text-sm">{l.naam || l.leerling_naam}</span>
+                      <span className="text-sm">{l.naam || l.leerling_naam}{l.vertrokken_op && <span className="ml-1 text-xs text-red-600 font-bold">[V]</span>}</span>
                       <span className="text-xs text-slate-400">{l.klas || l.leerling_klas}</span>
                     </label>
                   )

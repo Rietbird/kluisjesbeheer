@@ -105,7 +105,7 @@ export default function LockerTable({ kluisjes, onSelect, selectedId }) {
               className={`cursor-pointer transition-colors ${selectedId === k.id ? 'bg-navy/5 dark:bg-slate-700' : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
               <td className="px-3 py-2 font-semibold text-navy dark:text-slate-100">{k.kluisnummer}</td>
               <td className="px-3 py-2 hidden md:table-cell text-slate-400 dark:text-slate-500 text-xs">{k.sleutelnummer || '—'}</td>
-              <td className="px-3 py-2 text-slate-800 dark:text-slate-200">{k.leerling_naam || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
+              <td className="px-3 py-2 text-slate-800 dark:text-slate-200">{k.leerling_naam || <span className="text-slate-300 dark:text-slate-600">—</span>}{k.leerling_vertrokken_op && <span className="ml-1 text-xs text-red-600 font-bold">[V]</span>}</td>
               <td className="px-3 py-2 hidden md:table-cell text-slate-400 dark:text-slate-500 text-xs">{k.leerling_stamnr || '—'}</td>
               <td className="px-3 py-2 hidden lg:table-cell text-xs text-slate-600 dark:text-slate-400">{k.leerling_klas || '—'}</td>
               <td className="px-3 py-2"><StatusBadge kluisje={k} /></td>

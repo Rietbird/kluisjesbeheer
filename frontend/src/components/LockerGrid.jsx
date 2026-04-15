@@ -20,7 +20,7 @@ function getLabel(kluisje) {
       : ''
     return (
       <span className={`truncate block ${borgNietBetaald ? 'text-orange-700 dark:text-orange-300' : 'text-sky-800 dark:text-sky-300'}`}>
-        {borgNietBetaald && <span className="mr-0.5">💰</span>}{short}
+        {borgNietBetaald && <span className="mr-0.5">💰</span>}{kluisje.leerling_vertrokken_op && <span className="text-red-600 mr-0.5" title="Vertrokken van school">⚠</span>}{short}
       </span>
     )
   }

@@ -111,10 +111,12 @@ def _get_rapport_data(report_type, vestiging_id, db):
     elif report_type == 'sleutels':
         query = '''
             SELECT v.naam as vestiging, k.kluisnummer, k.sleutelnummer,
-                   t.leerling_naam, t.leerling_stamnr, t.leerling_klas, t.periode_tot, t.einddatum
+                   t.leerling_naam, t.leerling_stamnr, t.leerling_klas, t.periode_tot, t.einddatum,
+                   l.vertrokken_op
             FROM kluisjes k
             JOIN vestigingen v ON k.vestiging_id = v.id
             JOIN toewijzingen t ON k.id = t.kluisje_id
+            LEFT JOIN leerlingen l ON t.leerling_stamnr = l.stamnr
             WHERE k.verwijderd = 0 AND k.status = 'vrij'
               AND t.actief = 0 AND t.sleutel_ingeleverd = 0
               AND t.id = (SELECT MAX(t2.id) FROM toewijzingen t2 WHERE t2.kluisje_id = k.id)
@@ -131,10 +133,12 @@ def _get_rapport_data(report_type, vestiging_id, db):
         query = '''
             SELECT v.naam as vestiging, k.kluisnummer,
                    t.leerling_naam, t.leerling_stamnr, t.leerling_klas,
-                   t.borgbedrag, t.borg_betaald, t.borg_teruggestort, t.actief
+                   t.borgbedrag, t.borg_betaald, t.borg_teruggestort, t.actief,
+                   l.vertrokken_op
             FROM toewijzingen t
             JOIN kluisjes k ON t.kluisje_id = k.id
             JOIN vestigingen v ON k.vestiging_id = v.id
+            LEFT JOIN leerlingen l ON t.leerling_stamnr = l.stamnr
             WHERE k.verwijderd = 0 AND t.borgbedrag > 0
               AND ((t.actief = 1 AND t.borg_betaald = 0) OR (t.actief = 0 AND t.borg_betaald = 1 AND t.borg_teruggestort = 0))
         '''
@@ -147,11 +151,11 @@ def _get_rapport_data(report_type, vestiging_id, db):
         return title, rows, borg_actief, vestiging_naam
 
     elif report_type == 'zonder_kluisje':
-        # Students in leerlingen table without an active toewijzing
+        # Students in leerlingen table without an active toewijzing (exclude vertrokken)
         query = '''
             SELECT l.naam, l.stamnr, l.klas, l.leerjaar, l.studie, l.locatie
             FROM leerlingen l
-            WHERE NOT EXISTS (
+            WHERE l.vertrokken_op IS NULL AND NOT EXISTS (
                 SELECT 1 FROM toewijzingen t
                 WHERE t.leerling_stamnr = l.stamnr AND t.actief = 1
             )
@@ -171,9 +175,11 @@ def _get_rapport_data(report_type, vestiging_id, db):
         query = '''
             SELECT t.leerling_naam, t.leerling_klas, t.leerling_stamnr,
                    k.kluisnummer, k.sleutelnummer,
-                   t.periode_van, t.periode_tot, t.borgbedrag, t.borg_betaald
+                   t.periode_van, t.periode_tot, t.borgbedrag, t.borg_betaald,
+                   l.vertrokken_op
             FROM toewijzingen t
             JOIN kluisjes k ON t.kluisje_id = k.id
+            LEFT JOIN leerlingen l ON t.leerling_stamnr = l.stamnr
             WHERE k.verwijderd = 0 AND t.actief = 1
         '''
         params = []
@@ -245,7 +251,8 @@ def rapport_preview():
                 sleutelnr_td = f'<td class="nr">{e(r["sleutelnummer"])}</td>' if toon_sleutelnr else ''
                 borg_td = '<td class="check"></td>' if borg_actief else ''
                 row_class = 'alt' if i % 2 else ''
-                tabel_html += f'<tr class="{row_class}"><td class="naam">{e(r["leerling_naam"])}</td><td class="nr">{e(r["kluisnummer"])}</td>{sleutelnr_td}<td class="check"></td>{borg_td}</tr>'
+                vertrokken_tag = ' <span style="color:#dc2626;font-size:10px;font-weight:bold">[Vertrokken]</span>' if r['vertrokken_op'] else ''
+                tabel_html += f'<tr class="{row_class}"><td class="naam">{e(r["leerling_naam"])}{vertrokken_tag}</td><td class="nr">{e(r["kluisnummer"])}</td>{sleutelnr_td}<td class="check"></td>{borg_td}</tr>'
             tabel_html += '</tbody></table>'
 
     elif report_type in ('toewijzingen',):
@@ -267,21 +274,24 @@ def rapport_preview():
                 borg_betaald_str = 'Ja' if r['borg_betaald'] else 'Nee'
                 borg_tds = f'<td>{borg_bedrag_str}</td><td>{borg_betaald_str}</td>' if borg_actief else ''
                 row_class = 'alt' if i % 2 else ''
-                tabel_html += f'<tr class="{row_class}"><td class="naam">{e(r["leerling_naam"])}</td><td>{e(r["leerling_stamnr"])}</td><td>{e(r["kluisnummer"])}</td>{sleutelnr_td}<td>{e(klas)}</td><td>{e(r["periode_van"])}</td><td>{e(r["periode_tot"])}</td>{borg_tds}</tr>'
+                vertrokken_tag = ' <span style="color:#dc2626;font-size:10px;font-weight:bold">[Vertrokken]</span>' if r['vertrokken_op'] else ''
+                tabel_html += f'<tr class="{row_class}"><td class="naam">{e(r["leerling_naam"])}{vertrokken_tag}</td><td>{e(r["leerling_stamnr"])}</td><td>{e(r["kluisnummer"])}</td>{sleutelnr_td}<td>{e(klas)}</td><td>{e(r["periode_van"])}</td><td>{e(r["periode_tot"])}</td>{borg_tds}</tr>'
             tabel_html += '</tbody></table>'
     elif report_type == 'sleutels':
-        tabel_html = '<table><thead><tr><th>Vestiging</th><th class="nr">Kluisnr</th><th class="nr">Sleutelnr</th><th>Laatste huurder</th><th>Stamnr</th><th>Klas</th><th>Periode tot</th></tr></thead><tbody>'
+        tabel_html = '<table><thead><tr><th>Vestiging</th><th class="nr">Kluisnr</th><th class="nr">Sleutelnr</th><th>Laatste huurder</th><th>Stamnr</th><th>Klas</th><th>Periode tot</th><th>Status</th></tr></thead><tbody>'
         for i, r in enumerate(rows):
             row_class = 'alt' if i % 2 else ''
-            tabel_html += f'<tr class="{row_class}"><td>{e(r["vestiging"])}</td><td class="nr">{e(r["kluisnummer"])}</td><td class="nr">{e(r["sleutelnummer"])}</td><td class="naam">{e(r["leerling_naam"])}</td><td>{e(r["leerling_stamnr"])}</td><td>{e(r["leerling_klas"])}</td><td>{e(r["periode_tot"])}</td></tr>'
+            vertrokken = '<span style="color:#dc2626;font-weight:bold">Vertrokken</span>' if r['vertrokken_op'] else ''
+            tabel_html += f'<tr class="{row_class}"><td>{e(r["vestiging"])}</td><td class="nr">{e(r["kluisnummer"])}</td><td class="nr">{e(r["sleutelnummer"])}</td><td class="naam">{e(r["leerling_naam"])}</td><td>{e(r["leerling_stamnr"])}</td><td>{e(r["leerling_klas"])}</td><td>{e(r["periode_tot"])}</td><td>{vertrokken}</td></tr>'
         tabel_html += '</tbody></table>'
 
     elif report_type == 'borg':
-        tabel_html = '<table><thead><tr><th>Vestiging</th><th class="nr">Kluisnr</th><th>Leerling</th><th>Stamnr</th><th>Klas</th><th>Borg</th><th>Betaald</th><th>Teruggestort</th><th>Actief</th></tr></thead><tbody>'
+        tabel_html = '<table><thead><tr><th>Vestiging</th><th class="nr">Kluisnr</th><th>Leerling</th><th>Stamnr</th><th>Klas</th><th>Borg</th><th>Betaald</th><th>Teruggestort</th><th>Actief</th><th>Status</th></tr></thead><tbody>'
         for i, r in enumerate(rows):
             row_class = 'alt' if i % 2 else ''
             borg_str = f'EUR {r["borgbedrag"]:.2f}' if r['borgbedrag'] else ''
-            tabel_html += f'<tr class="{row_class}"><td>{e(r["vestiging"])}</td><td class="nr">{e(r["kluisnummer"])}</td><td class="naam">{e(r["leerling_naam"])}</td><td>{e(r["leerling_stamnr"])}</td><td>{e(r["leerling_klas"])}</td><td>{borg_str}</td><td>{"Ja" if r["borg_betaald"] else "Nee"}</td><td>{"Ja" if r["borg_teruggestort"] else "Nee"}</td><td>{"Ja" if r["actief"] else "Nee"}</td></tr>'
+            vertrokken = '<span style="color:#dc2626;font-weight:bold">Vertrokken</span>' if r['vertrokken_op'] else ''
+            tabel_html += f'<tr class="{row_class}"><td>{e(r["vestiging"])}</td><td class="nr">{e(r["kluisnummer"])}</td><td class="naam">{e(r["leerling_naam"])}</td><td>{e(r["leerling_stamnr"])}</td><td>{e(r["leerling_klas"])}</td><td>{borg_str}</td><td>{"Ja" if r["borg_betaald"] else "Nee"}</td><td>{"Ja" if r["borg_teruggestort"] else "Nee"}</td><td>{"Ja" if r["actief"] else "Nee"}</td><td>{vertrokken}</td></tr>'
         tabel_html += '</tbody></table>'
 
     elif report_type == 'zonder_kluisje':
@@ -441,17 +451,22 @@ def rapport():
             elements.append(make_table(data, col_widths=col_widths))
 
     elif report_type == 'sleutels':
-        headers = ['Vestiging', 'Kluisnr', 'Sleutelnr', 'Laatste huurder', 'Stamnr', 'Klas', 'Periode tot', 'Einddatum']
+        headers = ['Vestiging', 'Kluisnr', 'Sleutelnr', 'Laatste huurder', 'Stamnr', 'Klas', 'Per. tot', 'Einddatum', 'Status']
         nr_w = 20*mm
         date_w = 24*mm
-        fixed = 2*nr_w + nr_w + nr_w + 2*date_w  # kluisnr, sleutelnr, stamnr, klas, 2x datum
+        status_w = 22*mm
+        fixed = 2*nr_w + nr_w + nr_w + 2*date_w + status_w
         rest = page_w - fixed
-        col_widths = [rest*0.35, nr_w, nr_w, rest*0.65, nr_w, nr_w, date_w, date_w]
+        col_widths = [rest*0.35, nr_w, nr_w, rest*0.65, nr_w, nr_w, date_w, date_w, status_w]
         data = [headers]
+        vertrokken_style = ParagraphStyle('Vertrokken', parent=styles['Normal'],
+                                          fontSize=7, fontName=font_bold,
+                                          textColor=colors.HexColor('#DC2626'))
         for r in rows:
+            status_cell = Paragraph('Vertrokken', vertrokken_style) if r['vertrokken_op'] else ''
             data.append([r['vestiging'], r['kluisnummer'], r['sleutelnummer'] or '',
                          r['leerling_naam'], r['leerling_stamnr'], r['leerling_klas'] or '',
-                         r['periode_tot'] or '', r['einddatum'] or ''])
+                         r['periode_tot'] or '', r['einddatum'] or '', status_cell])
         if len(data) == 1:
             elements.append(Paragraph("Geen gegevens gevonden voor dit rapport.", styles['Normal']))
         else:
@@ -460,21 +475,26 @@ def rapport():
             elements.append(make_table(data, col_widths=col_widths))
 
     elif report_type == 'borg':
-        headers = ['Vestiging', 'Kluisnr', 'Leerling', 'Stamnr', 'Klas', 'Borg', 'Betaald', 'Terug', 'Actief']
+        headers = ['Vestiging', 'Kluisnr', 'Leerling', 'Stamnr', 'Klas', 'Borg', 'Betaald', 'Terug', 'Actief', 'Status']
         small_w = 16*mm
         nr_w = 20*mm
         borg_w = 22*mm
-        fixed = nr_w + nr_w + nr_w + borg_w + 3*small_w  # kluisnr, stamnr, klas, borg, 3x ja/nee
+        status_w = 22*mm
+        fixed = nr_w + nr_w + nr_w + borg_w + 3*small_w + status_w
         rest = page_w - fixed
-        col_widths = [rest*0.4, nr_w, rest*0.6, nr_w, nr_w, borg_w, small_w, small_w, small_w]
+        col_widths = [rest*0.4, nr_w, rest*0.6, nr_w, nr_w, borg_w, small_w, small_w, small_w, status_w]
+        vertrokken_style = ParagraphStyle('VertrokkenBorg', parent=styles['Normal'],
+                                          fontSize=7, fontName=font_bold,
+                                          textColor=colors.HexColor('#DC2626'))
         data = [headers]
         for r in rows:
+            status_cell = Paragraph('Vertrokken', vertrokken_style) if r['vertrokken_op'] else ''
             data.append([r['vestiging'], r['kluisnummer'], r['leerling_naam'],
                          r['leerling_stamnr'], r['leerling_klas'] or '',
                          f"EUR {r['borgbedrag']:.2f}",
                          'Ja' if r['borg_betaald'] else 'Nee',
                          'Ja' if r['borg_teruggestort'] else 'Nee',
-                         'Ja' if r['actief'] else 'Nee'])
+                         'Ja' if r['actief'] else 'Nee', status_cell])
         if len(data) == 1:
             elements.append(Paragraph("Geen gegevens gevonden voor dit rapport.", styles['Normal']))
         else:
@@ -546,7 +566,10 @@ def rapport():
                 elements.append(Spacer(1, 1*mm))
                 data = [col_headers]
                 for r in leerlingen:
-                    row_data = [r['leerling_naam'], r['kluisnummer']]
+                    naam = r['leerling_naam']
+                    if r['vertrokken_op']:
+                        naam += ' [V]'
+                    row_data = [naam, r['kluisnummer']]
                     if toon_sleutelnr:
                         row_data.append(r['sleutelnummer'] or '')
                     row_data.append('')  # Sleutel ingeleverd checkbox
@@ -590,7 +613,10 @@ def rapport():
                 elements.append(Paragraph(f"Klas: {klas}", klas_style))
                 data = [col_headers]
                 for r in leerlingen:
-                    row_data = [r['leerling_naam'], r['leerling_stamnr'], r['kluisnummer']]
+                    naam = r['leerling_naam']
+                    if r['vertrokken_op']:
+                        naam += ' [V]'
+                    row_data = [naam, r['leerling_stamnr'], r['kluisnummer']]
                     if toon_sleutelnr:
                         row_data.append(r['sleutelnummer'] or '')
                     row_data += [klas, r['periode_van'] or '', r['periode_tot'] or '']

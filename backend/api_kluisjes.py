@@ -26,6 +26,7 @@ def search_kluisjes():
                t.id as toewijzing_id,
                t.leerling_naam, t.leerling_stamnr, t.leerling_klas,
                t.periode_van, t.periode_tot, t.borgbedrag, t.borg_betaald,
+               l.vertrokken_op as leerling_vertrokken_op,
                CASE
                  WHEN k.status = 'vrij' AND EXISTS (
                    SELECT 1 FROM toewijzingen t2
@@ -44,6 +45,7 @@ def search_kluisjes():
         FROM kluisjes k
         JOIN clusters c ON k.cluster_id = c.id
         LEFT JOIN toewijzingen t ON k.id = t.kluisje_id AND t.actief = 1
+        LEFT JOIN leerlingen l ON t.leerling_stamnr = l.stamnr
         WHERE k.verwijderd = 0
     '''
     params = []

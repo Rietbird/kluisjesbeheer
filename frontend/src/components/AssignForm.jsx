@@ -98,7 +98,7 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
               <button key={i} type="button"
                 className="w-full text-left px-4 py-3 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b last:border-b-0"
                 onClick={() => selectLeerling(l)}>
-                <div className="font-medium">{l.naam || l.leerling_naam}</div>
+                <div className="font-medium">{l.naam || l.leerling_naam}{l.vertrokken_op && <span className="ml-2 text-xs text-red-600 font-bold">Vertrokken</span>}</div>
                 <div className="text-xs text-slate-400 mt-0.5">{l.stamnr || l.leerling_stamnr} — {l.klas || l.leerling_klas}</div>
               </button>
             ))}
