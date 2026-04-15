@@ -721,6 +721,7 @@ function ImportTab() {
       formData.append('file', importFile)
       if (preview?.has_locaties) {
         formData.append('auto_vestiging', '1')
+        formData.append('locatie_mapping', JSON.stringify(prefixNames))
       } else {
         formData.append('prefix_mapping', JSON.stringify(prefixNames))
       }
@@ -773,16 +774,20 @@ function ImportTab() {
 
               {preview.has_locaties ? (
                 <div>
-                  <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">Vestigingen uit bestand (Locatie kolom)</div>
-                  <div className="space-y-1">
+                  <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">Vestigingen uit bestand — pas eventueel de naam aan</div>
+                  <div className="space-y-2">
                     {preview.locaties.map(l => (
-                      <div key={l.locatie} className="flex items-center gap-3 text-sm">
-                        <span className="text-slate-500 w-8 text-right">{l.count}x</span>
-                        <span className="font-medium text-slate-700 dark:text-slate-300">{l.locatie}</span>
+                      <div key={l.locatie} className="flex items-center gap-3">
+                        <span className="text-xs text-slate-400 w-10 text-right">{l.count}x</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 flex-shrink-0 max-w-[180px] truncate" title={l.locatie}>{l.locatie}</span>
+                        <span className="text-slate-400">→</span>
+                        <input className={inputClass + ' flex-1'} value={prefixNames[l.locatie] || ''}
+                          onChange={e => setPrefixNames(m => ({ ...m, [l.locatie]: e.target.value }))}
+                          placeholder="Vestigingnaam" />
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs text-slate-400 mt-2">Vestigingen worden automatisch aangemaakt.</p>
+                  <p className="text-xs text-slate-400 mt-2">Vestigingen worden automatisch aangemaakt met de opgegeven naam.</p>
                 </div>
               ) : (
                 <div>

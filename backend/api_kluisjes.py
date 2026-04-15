@@ -400,6 +400,13 @@ def import_kluisjes():
             prefix_mapping = json_mod.loads(pm_raw)
         except Exception:
             pass
+    locatie_mapping = {}
+    lm_raw = request.form.get('locatie_mapping', '')
+    if lm_raw:
+        try:
+            locatie_mapping = json_mod.loads(lm_raw)
+        except Exception:
+            pass
 
     if not auto_vestiging and not vestiging_id and not prefix_mapping:
         if not cluster_id:
@@ -503,7 +510,8 @@ def import_kluisjes():
             elif auto_vestiging:
                 row_locatie = row_dict.get('locatie', '').strip() if fmt == 'mx' else ''
                 if row_locatie:
-                    row_vestiging_id = _get_or_create_vestiging(row_locatie)
+                    mapped = locatie_mapping.get(row_locatie, '').strip() if locatie_mapping else ''
+                    row_vestiging_id = _get_or_create_vestiging(mapped or row_locatie)
                 elif vestiging_id:
                     row_vestiging_id = int(vestiging_id)
                 else:
