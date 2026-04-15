@@ -1,9 +1,52 @@
 import msal
 from functools import wraps
-from flask import Blueprint, redirect, request, session, jsonify, url_for, g
+from flask import Blueprint, redirect, request, session, jsonify, url_for, g, Response
 from config import config
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+
+def _error_page(title, message, status=403):
+    """Render a styled error page consistent with the application design."""
+    session.clear()
+    kleur = config.get('SchoolKleur', '#FF8200')
+    school = config.get('SchoolNaam', 'Kluisjesbeheer')
+    html = f'''<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title} — {school}</title>
+<style>
+  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #f1f5f9; color: #1e293b; min-height: 100vh;
+         display: flex; flex-direction: column; align-items: center; justify-content: center; }}
+  .card {{ background: white; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,.08);
+           max-width: 440px; width: 90%; padding: 40px 32px; text-align: center; }}
+  .icon {{ width: 56px; height: 56px; border-radius: 50%; background: #fef2f2;
+           display: flex; align-items: center; justify-content: center;
+           margin: 0 auto 20px; font-size: 24px; }}
+  h1 {{ font-size: 20px; color: #1e3a5f; margin-bottom: 12px; }}
+  p {{ font-size: 14px; color: #64748b; line-height: 1.6; margin-bottom: 24px; }}
+  .btn {{ display: inline-block; background: {kleur}; color: white; padding: 10px 28px;
+          border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600;
+          transition: opacity .15s; }}
+  .btn:hover {{ opacity: .85; }}
+  .footer {{ margin-top: 24px; font-size: 11px; color: #94a3b8; }}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">&#128274;</div>
+    <h1>{title}</h1>
+    <p>{message}</p>
+    <a href="/auth/logout" class="btn">Opnieuw inloggen</a>
+    <div class="footer">{school}</div>
+  </div>
+</body>
+</html>'''
+    return Response(html, status=status, mimetype='text/html')
 
 _msal_app = None
 
@@ -42,11 +85,11 @@ def callback():
     result = msal_app.acquire_token_by_auth_code_flow(flow, dict(request.args))
 
     if 'error' in result:
-        return jsonify({'error': result.get('error_description', 'Login mislukt')}), 403
+        return _error_page('Inloggen mislukt', result.get('error_description', 'Er ging iets mis bij het inloggen. Probeer het opnieuw.'))
 
     token = result.get('access_token')
     if not token:
-        return jsonify({'error': 'Geen token ontvangen'}), 403
+        return _error_page('Inloggen mislukt', 'Er is geen token ontvangen van Microsoft. Probeer het opnieuw.')
 
     import requests as http_requests
 
@@ -63,9 +106,9 @@ def callback():
         if resp.ok:
             member_groups = resp.json().get('value', [])
             if group_id not in member_groups:
-                return jsonify({'error': 'Geen toegang — je bent geen lid van de juiste groep'}), 403
+                return _error_page('Geen toegang', 'Je bent geen lid van de juiste groep. Neem contact op met je ICT-beheerder als je denkt dat dit niet klopt.')
         else:
-            return jsonify({'error': 'Groepscontrole mislukt'}), 403
+            return _error_page('Groepscontrole mislukt', 'De groepscontrole bij Microsoft kon niet worden uitgevoerd. Probeer het later opnieuw.')
 
     # Get user info from Microsoft Graph
     headers = {'Authorization': f'Bearer {token}'}
@@ -88,7 +131,7 @@ def callback():
             g.db.commit()
             geb = g.db.execute('SELECT id, rol FROM gebruikers WHERE id = ?', (cur.lastrowid,)).fetchone()
         else:
-            return jsonify({'error': 'Geen toegang — vraag je beheerder om je toe te voegen'}), 403
+            return _error_page('Geen toegang', 'Je account is niet bekend in het systeem. Vraag je beheerder om je toe te voegen.')
 
     is_beheerder = geb['rol'] == 'beheerder'
 
@@ -98,7 +141,7 @@ def callback():
         rows = g.db.execute('SELECT vestiging_id FROM gebruiker_vestigingen WHERE gebruiker_id = ?', (geb['id'],)).fetchall()
         allowed_vestiging_ids = [r['vestiging_id'] for r in rows]
         if not allowed_vestiging_ids:
-            return jsonify({'error': 'Geen vestigingen toegewezen — neem contact op met je beheerder'}), 403
+            return _error_page('Geen vestigingen', 'Er zijn nog geen vestigingen aan je account gekoppeld. Neem contact op met je beheerder.')
 
     session.permanent = True
     session['user'] = {
@@ -144,4 +187,8 @@ def photo():
 def logout():
     session.clear()
     tenant_id = config.get('TenantId', '')
-    return redirect(f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/logout?post_logout_redirect_uri=/')
+    # Microsoft requires an absolute URI for post_logout_redirect_uri
+    from urllib.parse import urlparse
+    parsed = urlparse(config.get('RedirectUri', ''))
+    base_url = f'{parsed.scheme}://{parsed.netloc}'
+    return redirect(f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/logout?post_logout_redirect_uri={base_url}/')
