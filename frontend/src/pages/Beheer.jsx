@@ -1086,6 +1086,7 @@ function BackupPanel() {
   const [restoreName, setRestoreName] = useState('')
   const [restoreConfirm, setRestoreConfirm] = useState('')
   const [restoring, setRestoring] = useState(false)
+  const [showAll, setShowAll] = useState(false)
 
   const cardClass = "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6"
   const btnClass = "bg-primary text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors"
@@ -1157,8 +1158,12 @@ function BackupPanel() {
 
       {backups.length > 0 && (
         <div className="border-t border-slate-100 dark:border-slate-700 pt-4">
-          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Alle backups</div>
-          <div className="space-y-1 max-h-64 overflow-y-auto">
+          <button onClick={() => setShowAll(v => !v)}
+            className="w-full flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider hover:text-slate-700 dark:hover:text-slate-200">
+            <span>Alle backups ({backups.length})</span>
+            <span className="text-base">{showAll ? '▲' : '▼'}</span>
+          </button>
+          <div className={`${showAll ? 'block' : 'hidden'} space-y-1 max-h-64 overflow-y-auto`}>
             {backups.map(b => (
               <div key={b.naam} className="flex items-center justify-between text-sm py-1.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded">
                 <div className="flex-1 min-w-0">
