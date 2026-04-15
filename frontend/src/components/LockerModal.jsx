@@ -109,7 +109,7 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
           )}
 
           {/* Borg niet teruggestort warning */}
-          {!!detail._borg_niet_teruggestort && borgActiefVoor(detail.vestiging_id) && (
+          {!!detail._borg_niet_teruggestort && (
             <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3">
               <span className="text-xl">💰</span>
               <div className="flex-1">

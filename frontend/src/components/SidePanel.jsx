@@ -102,9 +102,32 @@ export default function SidePanel({ kluisje, onClose, onUpdate }) {
           {detail._sleutel_niet_ingeleverd && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
               <span className="text-red-500 text-base mt-0.5">🔑</span>
-              <div>
+              <div className="flex-1">
                 <div className="text-sm font-medium text-red-700">Sleutel niet ingeleverd</div>
                 <div className="text-xs text-red-600 mt-0.5">De vorige huurder heeft de sleutel nog niet teruggebracht.</div>
+                {geschiedenis.length > 0 && !geschiedenis[0].sleutel_ingeleverd && (
+                  <button onClick={async () => { await api.post(`/api/toewijzingen/${geschiedenis[0].id}/sleutel-ingeleverd`); onUpdate() }}
+                    className="mt-2 text-xs bg-white border border-red-300 text-red-700 px-3 py-1 rounded hover:bg-red-50 font-medium">
+                    Markeer als ingeleverd
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Borg niet teruggestort warning */}
+          {detail._borg_niet_teruggestort && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+              <span className="text-amber-500 text-base mt-0.5">💰</span>
+              <div className="flex-1">
+                <div className="text-sm font-medium text-amber-700">Borg niet teruggestort</div>
+                <div className="text-xs text-amber-600 mt-0.5">De borg van de vorige huurder is nog niet teruggestort.</div>
+                {geschiedenis.length > 0 && !geschiedenis[0].borg_teruggestort && geschiedenis[0].borg_betaald && (
+                  <button onClick={async () => { await api.post(`/api/toewijzingen/${geschiedenis[0].id}/borg-teruggestort`); onUpdate() }}
+                    className="mt-2 text-xs bg-white border border-amber-300 text-amber-700 px-3 py-1 rounded hover:bg-amber-50 font-medium">
+                    Markeer als teruggestort
+                  </button>
+                )}
               </div>
             </div>
           )}
