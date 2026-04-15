@@ -47,6 +47,7 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
       api.get(`/api/clusters/${selectedCluster}/kluisjes`)
         .then(data => {
           const vrij = data.filter(k => k.status === 'vrij')
+            .sort((a, b) => String(a.kluisnummer).localeCompare(String(b.kluisnummer), undefined, { numeric: true, sensitivity: 'base' }))
           setVrijeKluisjes(vrij)
           setAvailableCount(vrij.length)
         })
@@ -112,11 +113,11 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
     setLoading(true)
     setError('')
     try {
-      const leerlingenList = selectedLeerlingen.map(i => leerlingen[i])
-      let kluisjesList = [...vrijevKluisjes]
+      let leerlingenList = selectedLeerlingen.map(i => leerlingen[i])
       if (toekenningWijze === 'willekeurig') {
-        kluisjesList = kluisjesList.sort(() => Math.random() - 0.5)
+        leerlingenList = [...leerlingenList].sort(() => Math.random() - 0.5)
       }
+      const kluisjesList = vrijevKluisjes
       const toewijzingen = leerlingenList.map((l, i) => ({
         kluisje_id: kluisjesList[i].id,
         leerling_stamnr: l.stamnr || l.leerling_stamnr,
@@ -287,7 +288,7 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
                   onChange={() => setToekenningWijze('willekeurig')} />
                 <div>
                   <div className="font-medium text-sm">Willekeurig</div>
-                  <div className="text-xs text-slate-400">Kluisjes worden willekeurig verdeeld</div>
+                  <div className="text-xs text-slate-400">Leerlingen in willekeurige volgorde, kluisjes vanaf het laagste kluisnummer</div>
                 </div>
               </label>
             </div>
