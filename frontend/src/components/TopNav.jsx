@@ -33,7 +33,8 @@ export default function TopNav({ onOpenBeheer }) {
     <header className="bg-gradient-to-r from-white via-primary-50 to-primary-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 border-b border-primary-100 dark:border-slate-700 shadow-sm">
       <div className="flex items-center justify-between px-5 py-2">
         <div className="flex items-center gap-3">
-          <img src={schoolLogo} alt={schoolNaam} className="h-9 w-auto rounded-none" />
+          <img src={schoolLogo} alt={schoolNaam} className="h-9 w-auto rounded-none"
+            onError={e => { e.target.onerror = null; e.target.src = '/img/logo-placeholder.svg' }} />
           <div>
             <div className="font-bold text-lg text-navy dark:text-white leading-tight">Kluisjesbeheer</div>
             {(schoolSubtitel || schoolNaam) && <div className="text-[10px] text-primary-700 dark:text-primary font-medium leading-tight">{schoolSubtitel || schoolNaam}</div>}
@@ -57,15 +58,17 @@ export default function TopNav({ onOpenBeheer }) {
             </span>
           </button>
 
-          {/* Beheer tandwiel */}
-          <button onClick={onOpenBeheer}
-            className="p-2 rounded-lg hover:bg-primary-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors"
-            title="Beheer">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
+          {/* Beheer tandwiel — alleen voor beheerders */}
+          {user?.is_beheerder && (
+            <button onClick={onOpenBeheer}
+              className="p-2 rounded-lg hover:bg-primary-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors"
+              title="Beheer">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          )}
 
           {/* User info */}
           <div className="hidden sm:flex items-center gap-2.5 bg-white/60 dark:bg-slate-700/60 backdrop-blur rounded-xl px-3 py-1.5 border border-primary-100 dark:border-slate-600">

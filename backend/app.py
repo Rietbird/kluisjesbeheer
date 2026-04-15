@@ -37,6 +37,10 @@ def create_app(test_config=None):
 
     init_db(db_path)
 
+    # Start automatic backup scheduler
+    from backup import start_backup_scheduler
+    start_backup_scheduler(db_path)
+
     @app.before_request
     def before_request():
         g.db = get_db(db_path)
@@ -83,7 +87,7 @@ def create_app(test_config=None):
         return {
             'schoolNaam': inst.get('schoolNaam') or config.get('SchoolNaam', 'Kluisjesbeheer'),
             'schoolSubtitel': inst.get('schoolSubtitel') or config.get('SchoolSubtitel', ''),
-            'schoolLogo': inst.get('schoolLogo') or config.get('SchoolLogo', '/img/logo.png'),
+            'schoolLogo': inst.get('schoolLogo') or config.get('SchoolLogo', '/img/logo-placeholder.svg'),
             'schoolKleur': inst.get('schoolKleur') or config.get('SchoolKleur', '#FF8200'),
         }
 
@@ -114,6 +118,12 @@ def create_app(test_config=None):
 
     from api_schooljaar import schooljaar_bp
     app.register_blueprint(schooljaar_bp)
+
+    from api_gebruikers import gebruikers_bp
+    app.register_blueprint(gebruikers_bp)
+
+    from api_backup import backup_bp
+    app.register_blueprint(backup_bp)
 
     # SPA catch-all
     @app.route('/', defaults={'path': ''})

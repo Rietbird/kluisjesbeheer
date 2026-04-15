@@ -23,12 +23,41 @@ class MagisterClient:
     CACHE_TTL = 60  # 1 minute
 
     def __init__(self, url=None, user=None, password=None):
-        self.url = url or config.get('MagisterUrl', '')
-        self.user = user or config.get('MagisterUser', '')
-        self.password = password or config.get('MagisterPass', '')
+        self._override_url = url
+        self._override_user = user
+        self._override_password = password
         self._session_token = None
         self._token_time = 0
         self._cache = {}
+
+    def _load_credentials(self):
+        """Load Magister credentials: DB settings take priority, then config.json."""
+        if self._override_url:
+            return self._override_url, self._override_user, self._override_password
+        try:
+            from flask import g
+            rows = g.db.execute(
+                "SELECT key, value FROM instellingen WHERE key IN ('magister_url', 'magister_user', 'magister_pass')"
+            ).fetchall()
+            db_cfg = {r['key']: r['value'] for r in rows}
+            if db_cfg.get('magister_url') and db_cfg.get('magister_user') and db_cfg.get('magister_pass'):
+                from crypto_util import decrypt
+                return db_cfg['magister_url'], db_cfg['magister_user'], decrypt(db_cfg['magister_pass'])
+        except Exception:
+            pass
+        return config.get('MagisterUrl', ''), config.get('MagisterUser', ''), config.get('MagisterPass', '')
+
+    @property
+    def url(self):
+        return self._load_credentials()[0]
+
+    @property
+    def user(self):
+        return self._load_credentials()[1]
+
+    @property
+    def password(self):
+        return self._load_credentials()[2]
 
     def _login(self):
         """Get a session token from the Medius webservice."""

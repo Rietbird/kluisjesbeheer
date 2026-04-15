@@ -4,7 +4,7 @@ import { api } from '../api'
 const BrandingContext = createContext({
   schoolNaam: 'Kluisjesbeheer',
   schoolSubtitel: '',
-  schoolLogo: '/img/logo.png',
+  schoolLogo: '/img/logo-placeholder.svg',
   schoolKleur: '#FF8200',
 })
 
@@ -36,7 +36,7 @@ export function BrandingProvider({ children }) {
       .catch(() => setBranding({
         schoolNaam: 'Kluisjesbeheer',
         schoolSubtitel: '',
-        schoolLogo: '/img/logo.png',
+        schoolLogo: '/img/logo-placeholder.svg',
         schoolKleur: '#FF8200',
       }))
   }, [])

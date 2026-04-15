@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onderhoud — Kluisjesbeheer</title>
+<style>
+  :root { --primary: #2563eb; --bg: #ffffff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0; --code-bg: #f1f5f9; --nav-bg: #f8fafc; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--text); background: var(--bg); line-height: 1.7; }
+  .layout { display: flex; min-height: 100vh; }
+  nav { width: 260px; background: var(--nav-bg); border-right: 1px solid var(--border); padding: 24px 20px; position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0; }
+  nav h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--primary); }
+  nav a { display: block; padding: 6px 10px; margin: 2px 0; border-radius: 6px; text-decoration: none; color: var(--text); font-size: 14px; transition: background 0.15s; }
+  nav a:hover, nav a.active { background: #dbeafe; color: var(--primary); }
+  nav a.active { font-weight: 600; }
+  main { flex: 1; max-width: 860px; padding: 40px 48px; }
+  h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; color: var(--text); border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
+  h2 { font-size: 22px; font-weight: 700; margin-top: 36px; margin-bottom: 12px; color: var(--text); }
+  h3 { font-size: 17px; font-weight: 600; margin-top: 28px; margin-bottom: 8px; }
+  p { margin-bottom: 14px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+  th { background: var(--nav-bg); text-align: left; padding: 10px 14px; border: 1px solid var(--border); font-weight: 600; }
+  td { padding: 8px 14px; border: 1px solid var(--border); vertical-align: top; }
+  tr:hover td { background: #f8fafc; }
+  code { background: var(--code-bg); padding: 2px 6px; border-radius: 4px; font-size: 13px; font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 16px 20px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-size: 13px; line-height: 1.6; }
+  pre code { background: none; padding: 0; color: inherit; }
+  blockquote { border-left: 3px solid var(--primary); background: #eff6ff; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  blockquote p { margin-bottom: 0; }
+  ul, ol { margin: 8px 0 14px 24px; }
+  li { margin-bottom: 4px; }
+  strong { font-weight: 600; }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; }
+    nav { width: 100%; height: auto; position: relative; border-right: none; border-bottom: 1px solid var(--border); }
+    main { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <h2>Kluisjesbeheer</h2>
+  <a href="index.html">Overzicht</a>
+<a href="systeemeisen.html">Systeemeisen</a>
+<a href="installatie.html">Installatie</a>
+<a href="configuratie.html">Configuratie</a>
+<a href="architectuur.html">Architectuur</a>
+<a href="onderhoud.html" class="active">Onderhoud</a>
+
+</nav>
+<main>
+<h1>Onderhoud</h1>
+<h2>Service beheren</h2>
+<pre><code class="language-bash">systemctl status kluisjesbeheer    # Status bekijken
+systemctl restart kluisjesbeheer   # Herstarten
+systemctl stop kluisjesbeheer      # Stoppen
+</code></pre>
+<h2>Logs</h2>
+<pre><code class="language-bash">journalctl -u kluisjesbeheer -f           # Live logs volgen
+journalctl -u kluisjesbeheer --since today # Logs van vandaag
+</code></pre>
+<h2>Dagelijkse leerlingensync</h2>
+<p>Leerlinggegevens (klas, naam, locatie) wijzigen gedurende het schooljaar. Stel een cronjob in voor automatische synchronisatie:</p>
+<pre><code class="language-bash"># /etc/cron.d/kluisjesbeheer-sync
+0 6 * * 1-5 kluisjes /opt/kluisjesbeheer/.venv/bin/python /opt/kluisjesbeheer/backend/cron_sync.py
+</code></pre>
+<p>Dit draait elke werkdag om 06:00. Handmatig synchroniseren kan via Beheer &gt; Import &gt; "Leerlingen ophalen uit Magister".</p>
+<h2>Schoolvakanties</h2>
+<p>Het bestand <code>backend/schoolvakanties.json</code> bevat vakantieperiodes per regio (Noord, Midden, Zuid). Dit moet <strong>jaarlijks handmatig bijgewerkt</strong> worden met de nieuwe vakantiedata van de Rijksoverheid.</p>
+<h2>Updates deployen</h2>
+<p>Bij een update van de applicatie:</p>
+<pre><code class="language-bash"># 1. Nieuwe bestanden naar de server kopieren
+scp -r kluisjesbeheer/ root@[server-ip]:/opt/
+
+# 2. Frontend opnieuw bouwen (als er frontend-wijzigingen zijn)
+cd /opt/kluisjesbeheer/frontend &amp;&amp; npm run build
+
+# 3. Service herstarten
+systemctl restart kluisjesbeheer
+</code></pre>
+<p>De database wordt automatisch gemigreerd bij het opstarten (nieuwe tabellen en kolommen worden aangemaakt).</p>
+<blockquote>
+<p><strong>Let op:</strong> <code>config.json</code> en de database (<code>*.db</code>) worden niet overschreven bij een update.</p>
+</blockquote>
+<h2>Backup</h2>
+<p>De volledige applicatiestate zit in twee bestanden:</p>
+<table>
+<thead>
+<tr>
+<th>Bestand</th>
+<th>Inhoud</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/kluisjesbeheer.db</code></td>
+<td>Alle data (kluisjes, toewijzingen, leerlingen, instellingen, gebruikers)</td>
+</tr>
+<tr>
+<td><code>backend/config.json</code></td>
+<td>Entra ID credentials en SecretKey</td>
+</tr>
+</tbody>
+</table>
+<p>Maak regelmatig een backup van deze bestanden:</p>
+<pre><code class="language-bash"># Voorbeeld: dagelijkse backup naar /backup/
+cp /opt/kluisjesbeheer/backend/kluisjesbeheer.db /backup/kluisjesbeheer-$(date +%F).db
+cp /opt/kluisjesbeheer/backend/config.json /backup/config-$(date +%F).json
+</code></pre>
+<blockquote>
+<p><strong>Let op:</strong> SQLite met WAL mode kan veilig gekopieerd worden terwijl de app draait, mits je het hele bestand kopieert (niet alleen de <code>.db</code>, ook <code>.db-wal</code> en <code>.db-shm</code> als die bestaan).</p>
+</blockquote>
+<h2>Veelvoorkomende problemen</h2>
+<table>
+<thead>
+<tr>
+<th>Probleem</th>
+<th>Oorzaak</th>
+<th>Oplossing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Login redirect loop</td>
+<td>Verkeerde RedirectUri of ClientId</td>
+<td>Check config.json, moet exact matchen met App Registration</td>
+</tr>
+<tr>
+<td>"Geen toegang — vraag je beheerder"</td>
+<td>E-mailadres niet als gebruiker toegevoegd</td>
+<td>Beheerder voegt toe via Beheer &gt; Gebruikers</td>
+</tr>
+<tr>
+<td>"Niet lid van de juiste groep"</td>
+<td>Account niet in Entra security group</td>
+<td>Voeg toe aan de DashboardGroupId groep in Entra</td>
+</tr>
+<tr>
+<td>Magister sync mislukt</td>
+<td>Verkeerde URL of credentials</td>
+<td>Check via Beheer &gt; Instellingen &gt; Magister API koppeling</td>
+</tr>
+<tr>
+<td>"Magister niet bereikbaar"</td>
+<td>Firewall blokkeert poort 8800</td>
+<td>Controleer uitgaand verkeer naar Magister-server</td>
+</tr>
+<tr>
+<td>Logo laadt niet</td>
+<td>Browsercache</td>
+<td>Hard refresh (Ctrl+Shift+R)</td>
+</tr>
+<tr>
+<td>413 bij upload</td>
+<td>NGINX upload limiet</td>
+<td>Voeg <code>client_max_body_size 16M;</code> toe aan NGINX config</td>
+</tr>
+<tr>
+<td>Concierge ziet geen vestigingen</td>
+<td>Geen vestigingen gekoppeld</td>
+<td>Beheerder wijst toe via Beheer &gt; Gebruikers</td>
+</tr>
+<tr>
+<td>500 bij logo upload</td>
+<td>Schrijfrechten uploads/ map</td>
+<td><code>chown -R kluisjes:kluisjes /opt/kluisjesbeheer/backend/uploads</code></td>
+</tr>
+<tr>
+<td>Leerlingen niet gefilterd per vestiging</td>
+<td>Locaties niet gekoppeld</td>
+<td>Beheer &gt; Vestigingen &gt; klik vestiging &gt; Locaties</td>
+</tr>
+</tbody>
+</table>
+</main>
+</div>
+</body>
+</html>

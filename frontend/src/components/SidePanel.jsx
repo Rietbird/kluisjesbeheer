@@ -15,10 +15,10 @@ function InfoRow({ label, children }) {
 }
 
 function StatusBadge({ status, sleutelNietIngeleverd }) {
-  const cls = status === 'uitgeleend' ? 'bg-green-100 text-green-700'
+  const cls = status === 'uitgeleend' ? 'bg-sky-100 text-sky-700'
     : status === 'defect' ? 'bg-amber-100 text-amber-700'
     : sleutelNietIngeleverd ? 'bg-red-100 text-red-700'
-    : 'bg-blue-100 text-blue-700'
+    : 'bg-emerald-100 text-emerald-700'
   return <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${cls}`}>{status}</span>
 }
 
@@ -111,9 +111,9 @@ export default function SidePanel({ kluisje, onClose, onUpdate }) {
 
           {/* Huurder section */}
           {isUitgeleend && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-0.5">
-              <div className="text-xs font-semibold text-green-700 mb-2 flex items-center gap-1.5">
-                <span className="w-2 h-2 bg-green-500 rounded-full" />
+            <div className="bg-sky-50 border border-sky-200 rounded-lg p-3 space-y-0.5">
+              <div className="text-xs font-semibold text-sky-700 mb-2 flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-sky-500 rounded-full" />
                 Huidige huurder
               </div>
               <InfoRow label="Naam"><span className="font-semibold">{detail.leerling_naam}</span></InfoRow>
@@ -214,7 +214,7 @@ export default function SidePanel({ kluisje, onClose, onUpdate }) {
               </button>
             ) : (
               <button onClick={() => setStatus('vrij')}
-                className="w-full border border-blue-300 text-blue-700 rounded-lg py-2 text-sm hover:bg-blue-50 transition-colors">
+                className="w-full border border-emerald-300 text-emerald-700 rounded-lg py-2 text-sm hover:bg-emerald-50 transition-colors">
                 Markeer als vrij
               </button>
             )}

@@ -46,6 +46,26 @@ def init_db(db_path):
         conn.commit()
     except Exception:
         pass
+    # Migration: gebruikers (in-app user management)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS gebruikers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            naam TEXT NOT NULL DEFAULT '',
+            rol TEXT NOT NULL DEFAULT 'concierge',
+            actief INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS gebruiker_vestigingen (
+            gebruiker_id INTEGER NOT NULL REFERENCES gebruikers(id) ON DELETE CASCADE,
+            vestiging_id INTEGER NOT NULL REFERENCES vestigingen(id) ON DELETE CASCADE,
+            PRIMARY KEY (gebruiker_id, vestiging_id)
+        )
+    ''')
+    conn.commit()
     return conn
 
 def get_db(db_path):

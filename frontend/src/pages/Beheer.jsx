@@ -71,22 +71,27 @@ function VestigingenPanel({ onSelect, selectedId }) {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between" onClick={() => onSelect(v.id)}>
-                <div>
-                  <div className="font-semibold text-base">{v.naam}</div>
-                  {v.adres && <div className="text-sm text-slate-500">{v.adres}</div>}
+              <>
+                <div className="flex items-center justify-between" onClick={() => onSelect(v.id)}>
+                  <div>
+                    <div className="font-semibold text-base">{v.naam}</div>
+                    {v.adres && <div className="text-sm text-slate-500">{v.adres}</div>}
+                  </div>
+                  <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => { setEditId(v.id); setEditNaam(v.naam); setEditAdres(v.adres || '') }}
+                      className="text-slate-400 hover:text-primary p-1 rounded hover:bg-slate-100 transition-colors">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
+                    <ConfirmButton onConfirm={() => handleDelete(v.id)}
+                      className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-slate-100 transition-colors">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </ConfirmButton>
+                  </div>
                 </div>
-                <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                  <button onClick={() => { setEditId(v.id); setEditNaam(v.naam); setEditAdres(v.adres || '') }}
-                    className="text-slate-400 hover:text-primary p-1 rounded hover:bg-slate-100 transition-colors">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                  </button>
-                  <ConfirmButton onConfirm={() => handleDelete(v.id)}
-                    className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-slate-100 transition-colors">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </ConfirmButton>
-                </div>
-              </div>
+                {selectedId === v.id && (
+                  <VestigingDetailPanel vestiging={v} index={vestigingen.indexOf(v)} />
+                )}
+              </>
             )}
           </div>
         ))}
@@ -371,9 +376,9 @@ function KluisjesPanel({ clusterId }) {
                   <span className="font-semibold text-navy dark:text-white">{k.kluisnummer}</span>
                   {k.sleutelnummer && <span className="text-sm text-slate-500">sleutel {k.sleutelnummer}</span>}
                   <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                    k.status === 'uitgeleend' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300' :
+                    k.status === 'uitgeleend' ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300' :
                     k.status === 'defect' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300' :
-                    'bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300'
+                    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
                   }`}>{k.status}</span>
                 </div>
                 {!selectMode && (
@@ -476,6 +481,13 @@ function MagisterSyncPanel() {
   const [syncing, setSyncing] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
+  const [configured, setConfigured] = useState(null)
+
+  useEffect(() => {
+    api.get('/api/magister/config')
+      .then(data => setConfigured(data.configured))
+      .catch(() => setConfigured(false))
+  }, [])
 
   async function handleSync() {
     setSyncing(true); setError(''); setResult(null)
@@ -489,12 +501,17 @@ function MagisterSyncPanel() {
   return (
     <div>
       <h2 className="text-base font-bold text-navy dark:text-white mb-3">Magister leerlingen</h2>
+      {configured === false && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3 text-sm text-amber-700 dark:text-amber-300 mb-4">
+          Magister API is nog niet geconfigureerd. Ga naar <strong>Instellingen</strong> om de koppeling in te stellen.
+        </div>
+      )}
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
         Ververs de leerlingenlijst uit Magister zodat nieuwe leerlingen direct een kluisje
         toegewezen kunnen krijgen. Draait ook automatisch elke ochtend om 06:00.
       </p>
 
-      <button onClick={handleSync} disabled={syncing}
+      <button onClick={handleSync} disabled={syncing || configured === false}
         className="w-full bg-primary text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
         {syncing ? (
           <>
@@ -527,7 +544,7 @@ function MagisterSyncPanel() {
   )
 }
 
-// ── Kleuren Tab ───────────────────────────────────────────────────────────────
+// ── Kleuren palet ────────────────────────────────────────────────────────────
 
 const KLEURENPALET = [
   '#14b8a6', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6',
@@ -535,167 +552,132 @@ const KLEURENPALET = [
   '#22c55e', '#10b981', '#64748b', '#1e293b',
 ]
 
-function KleurenTab() {
-  const { kleurVoor, setKleurVoor, kleurMap } = useInstellingen()
-  const [vestigingen, setVestigingen] = useState([])
+// ── Vestiging detail panel (kleur, borg, locaties) ──────────────────────────
 
-  useEffect(() => {
-    api.get('/api/vestigingen').then(setVestigingen).catch(() => {})
-  }, [])
-
-  const cardClass = "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5"
-
-  return (
-    <div className="space-y-4 max-w-2xl">
-      {vestigingen.map((v, i) => {
-        const huidigeKleur = kleurVoor(v.id, i)
-        return (
-          <div key={v.id} className={cardClass}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-base"
-                style={{ backgroundColor: huidigeKleur }}>
-                {v.naam[0]}
-              </div>
-              <div className="font-bold text-slate-800 dark:text-white">{v.naam}</div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {KLEURENPALET.map(kleur => (
-                <button
-                  key={kleur}
-                  onClick={() => setKleurVoor(v.id, kleur)}
-                  title={kleur}
-                  className={`w-8 h-8 rounded-lg transition-all hover:scale-110 ${huidigeKleur === kleur ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : ''}`}
-                  style={{ backgroundColor: kleur }}
-                />
-              ))}
-            </div>
-          </div>
-        )
-      })}
-      {vestigingen.length === 0 && <p className="text-sm text-slate-400">Laden...</p>}
-    </div>
-  )
-}
-
-// ── Borg Tab ──────────────────────────────────────────────────────────────────
-
-function BorgTab() {
-  const { borgActiefVoor, setBorgActiefVoor } = useInstellingen()
-  const [vestigingen, setVestigingen] = useState([])
-  const [clusters, setClusters] = useState({})
-  const [editId, setEditId] = useState(null)
+function VestigingDetailPanel({ vestiging, index }) {
+  const { kleurVoor, setKleurVoor, borgActiefVoor, setBorgActiefVoor } = useInstellingen()
+  const [clusters, setClusters] = useState([])
+  const [alleLocaties, setAlleLocaties] = useState([])
+  const [vestigingLocaties, setVestigingLocaties] = useState(new Set())
+  const [editBorgId, setEditBorgId] = useState(null)
   const [editBorg, setEditBorg] = useState('')
   const [saving, setSaving] = useState(null)
-  const [error, setError] = useState(null)
+  const [resetMsg, setResetMsg] = useState('')
 
   useEffect(() => {
-    api.get('/api/vestigingen').then(async (vList) => {
-      setVestigingen(vList)
-      const map = {}
-      await Promise.all(vList.map(async v => {
-        const c = await api.get(`/api/vestigingen/${v.id}/clusters`)
-        map[v.id] = c
-      }))
-      setClusters(map)
-    }).catch(() => {})
-  }, [])
+    api.get(`/api/vestigingen/${vestiging.id}/clusters`).then(setClusters).catch(() => {})
+    api.get('/api/magister/locaties').then(setAlleLocaties).catch(() => {})
+    api.get(`/api/vestigingen/${vestiging.id}/locaties`).then(locs => setVestigingLocaties(new Set(locs))).catch(() => {})
+  }, [vestiging.id])
 
-  async function handleToggle(vestigingId) {
-    setSaving(vestigingId)
-    try { await setBorgActiefVoor(vestigingId, !borgActiefVoor(vestigingId)) }
+  async function handleToggleBorg() {
+    setSaving('borg')
+    try { await setBorgActiefVoor(vestiging.id, !borgActiefVoor(vestiging.id)) }
     finally { setSaving(null) }
   }
 
   async function handleSaveBorg(clusterId) {
-    setError(null)
     try {
-      await api.put(`/api/clusters/${clusterId}`, {
-        standaard_borg: editBorg !== '' ? Number(editBorg) : null
-      })
-      const vList = await api.get('/api/vestigingen')
-      const map = {}
-      await Promise.all(vList.map(async v => {
-        const c = await api.get(`/api/vestigingen/${v.id}/clusters`)
-        map[v.id] = c
-      }))
-      setClusters(map)
-      setEditId(null)
-    } catch (err) {
-      setError('Borg opslaan mislukt: ' + (err?.message || 'onbekende fout'))
-    }
+      await api.put(`/api/clusters/${clusterId}`, { standaard_borg: editBorg !== '' ? Number(editBorg) : null })
+      setClusters(await api.get(`/api/vestigingen/${vestiging.id}/clusters`))
+      setEditBorgId(null)
+    } catch {}
   }
 
-  const cardClass = "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5"
-  const inputClass = "border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none w-32"
+  async function handleToggleLocatie(locatie) {
+    const updated = new Set(vestigingLocaties)
+    if (updated.has(locatie)) updated.delete(locatie); else updated.add(locatie)
+    setVestigingLocaties(updated)
+    try { await api.put(`/api/vestigingen/${vestiging.id}/locaties`, { locaties: [...updated] }) }
+    catch { setVestigingLocaties(vestigingLocaties) }
+  }
+
+  const huidigeKleur = kleurVoor(vestiging.id, index)
 
   return (
-    <div className="space-y-5 max-w-2xl">
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-xl px-4 py-3 text-sm">
-          {error}
+    <div className="space-y-4 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+      {/* Kleur */}
+      <div>
+        <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Kleur</div>
+        <div className="flex flex-wrap gap-1.5">
+          {KLEURENPALET.map(kleur => (
+            <button key={kleur} onClick={() => setKleurVoor(vestiging.id, kleur)} title={kleur}
+              className={`w-7 h-7 rounded-lg transition-all hover:scale-110 ${huidigeKleur === kleur ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : ''}`}
+              style={{ backgroundColor: kleur }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Borg */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Borg</div>
+          <button onClick={handleToggleBorg} disabled={saving === 'borg'}
+            className={`flex items-center w-12 h-6 rounded-full px-0.5 transition-colors ${borgActiefVoor(vestiging.id) ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'}`}>
+            <span className={`w-5 h-5 rounded-full bg-white shadow-md transition-all duration-200 ${borgActiefVoor(vestiging.id) ? 'translate-x-6' : 'translate-x-0'}`} />
+          </button>
+        </div>
+        {borgActiefVoor(vestiging.id) && clusters.length > 0 && (
+          <div className="space-y-1">
+            {clusters.map(c => (
+              <div key={c.id} className="flex items-center justify-between text-sm py-1">
+                <span className="text-slate-600 dark:text-slate-300">{c.naam}</span>
+                {editBorgId === c.id ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-500">€</span>
+                    <input type="number" step="0.01" min="0" value={editBorg} onChange={e => setEditBorg(e.target.value)}
+                      className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm dark:bg-slate-700 dark:text-white w-24" autoFocus />
+                    <button onClick={() => handleSaveBorg(c.id)} className="px-2 py-1 bg-primary text-white rounded-lg text-xs">OK</button>
+                    <button onClick={() => setEditBorgId(null)} className="px-2 py-1 text-xs text-slate-500">✕</button>
+                  </div>
+                ) : (
+                  <button onClick={() => { setEditBorgId(c.id); setEditBorg(c.standaard_borg ?? '') }}
+                    className="text-slate-500 hover:text-primary text-sm">
+                    {c.standaard_borg != null ? `€${Number(c.standaard_borg).toFixed(2)}` : '— klik om in te stellen'}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Locaties */}
+      {alleLocaties.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">
+            Magister-locaties <span className="normal-case font-normal">({vestigingLocaties.size} gekoppeld)</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {alleLocaties.map(loc => (
+              <button key={loc} onClick={() => handleToggleLocatie(loc)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
+                  vestigingLocaties.has(loc)
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-primary'
+                }`}>
+                {loc}
+              </button>
+            ))}
+          </div>
         </div>
       )}
-      {vestigingen.map(v => (
-        <div key={v.id} className={cardClass}>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="font-bold text-slate-800 dark:text-white">{v.naam}</div>
-              <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                {borgActiefVoor(v.id) ? 'Borg is ingeschakeld' : 'Borg is uitgeschakeld'}
-              </div>
-            </div>
-            <button
-              onClick={() => handleToggle(v.id)}
-              disabled={saving === v.id}
-              className={`flex items-center w-14 h-7 rounded-full px-0.5 transition-colors focus:outline-none ${borgActiefVoor(v.id) ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'}`}
-            >
-              <span className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-200 ${borgActiefVoor(v.id) ? 'translate-x-7' : 'translate-x-0'}`} />
-            </button>
-          </div>
 
-          {borgActiefVoor(v.id) && (clusters[v.id] || []).length > 0 && (
-            <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
-              <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Standaard borgbedragen</div>
-              <div className="space-y-1">
-                {(clusters[v.id] || []).map(c => (
-                  <div key={c.id} className="flex items-center justify-between border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-2">
-                    <span className="text-sm text-slate-700 dark:text-slate-200">{c.naam}</span>
-                    {editId === c.id ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-slate-500">€</span>
-                        <input
-                          type="number" step="0.01" min="0"
-                          className={inputClass}
-                          value={editBorg}
-                          onChange={e => setEditBorg(e.target.value)}
-                          autoFocus
-                        />
-                        <button onClick={() => handleSaveBorg(c.id)}
-                          className="px-3 py-1.5 bg-primary text-white rounded-lg text-sm hover:bg-primary-600">Opslaan</button>
-                        <button onClick={() => setEditId(null)}
-                          className="px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">Annuleren</button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-slate-500">
-                          {c.standaard_borg != null ? `€${Number(c.standaard_borg).toFixed(2)}` : '—'}
-                        </span>
-                        <button onClick={() => { setEditId(c.id); setEditBorg(c.standaard_borg ?? '') }}
-                          className="text-slate-400 hover:text-primary p-1 rounded hover:bg-slate-100 transition-colors">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
-      {vestigingen.length === 0 && <p className="text-sm text-slate-400">Laden...</p>}
+      {/* Reset vestiging */}
+      <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
+        <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Gegevens wissen</div>
+        {resetMsg && <p className={`text-xs mb-2 ${resetMsg.startsWith('Fout') ? 'text-red-500' : 'text-emerald-600'}`}>{resetMsg}</p>}
+        <ConfirmButton onConfirm={async () => {
+          setResetMsg('')
+          try {
+            const res = await api.post(`/api/vestigingen/${vestiging.id}/reset`, {})
+            setResetMsg(`${res.deleted_kluisjes} kluisjes en ${res.deleted_toewijzingen} toewijzingen verwijderd.`)
+          } catch (err) { setResetMsg(`Fout: ${err.message}`) }
+        }} className="text-xs px-3 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors">
+          Alle kluisjes en toewijzingen wissen
+        </ConfirmButton>
+        <p className="text-xs text-slate-400 mt-1">Vestiging en clusters blijven behouden.</p>
+      </div>
     </div>
   )
 }
@@ -868,6 +850,13 @@ function BeheerInstellingenTab() {
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
   const [loaded, setLoaded] = useState(false)
+  // Magister config
+  const [magUrl, setMagUrl] = useState('')
+  const [magUser, setMagUser] = useState('')
+  const [magPass, setMagPass] = useState('')
+  const [magPassSet, setMagPassSet] = useState(false)
+  const [magSaving, setMagSaving] = useState(false)
+  const [magMsg, setMagMsg] = useState('')
 
   useEffect(() => {
     api.get('/api/instellingen')
@@ -891,6 +880,13 @@ function BeheerInstellingenTab() {
       })
       .catch(() => {})
       .finally(() => setLoaded(true))
+    api.get('/api/magister/config')
+      .then(data => {
+        setMagUrl(data.magister_url || '')
+        setMagUser(data.magister_user || '')
+        setMagPassSet(data.magister_pass_set)
+      })
+      .catch(() => {})
   }, [])
 
   async function handleSavePeriode(e) {
@@ -926,6 +922,20 @@ function BeheerInstellingenTab() {
       setTimeout(() => setSaveMsg(''), 5000)
     } catch (err) { setSaveMsg(`Fout: ${err.message}`) }
     finally { setSaving(false) }
+  }
+
+  async function handleSaveMagister(e) {
+    e.preventDefault(); setMagSaving(true); setMagMsg('')
+    try {
+      const body = { magister_url: magUrl, magister_user: magUser }
+      if (magPass) body.magister_pass = magPass
+      await api.put('/api/magister/config', body)
+      setMagPass('')
+      setMagPassSet(true)
+      setMagMsg('Opgeslagen!')
+      setTimeout(() => setMagMsg(''), 3000)
+    } catch (err) { setMagMsg(`Fout: ${err.message}`) }
+    finally { setMagSaving(false) }
   }
 
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
@@ -1020,89 +1030,231 @@ function BeheerInstellingenTab() {
         </div>
       </div>
 
+      <div className={cardClass}>
+        <h2 className="text-base font-bold text-slate-800 dark:text-white mb-2">Magister API koppeling</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          Koppel de Magister Medius webservice om leerlinggegevens automatisch te synchroniseren. De URL is meestal <code className="text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">https://jouwschool.swp.nl:8800/doc</code>
+        </p>
+        <form onSubmit={handleSaveMagister} className="space-y-4">
+          <div>
+            <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">Webservice URL</label>
+            <input className={inputClass} value={magUrl} onChange={e => setMagUrl(e.target.value)}
+              placeholder="https://jouwschool.swp.nl:8800/doc" />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">Gebruikersnaam</label>
+            <input className={inputClass} value={magUser} onChange={e => setMagUser(e.target.value)}
+              placeholder="webuser" />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">
+              Wachtwoord {magPassSet && !magPass && <span className="text-emerald-600 font-normal">(ingesteld, laat leeg om te behouden)</span>}
+            </label>
+            <input type="password" className={inputClass} value={magPass} onChange={e => setMagPass(e.target.value)}
+              placeholder={magPassSet ? '••••••••' : 'Wachtwoord'} />
+          </div>
+          <div className="flex items-center gap-3">
+            <button type="submit" disabled={magSaving} className={btnClass}>
+              {magSaving ? 'Opslaan...' : 'Opslaan'}
+            </button>
+            {magMsg && (
+              <span className={`text-sm font-medium ${magMsg.startsWith('Fout') ? 'text-red-500' : 'text-emerald-600'}`}>
+                {magMsg}
+              </span>
+            )}
+          </div>
+        </form>
+      </div>
+
     </div>
   )
 }
 
-// ── Locaties per vestiging Tab ────────────────────────────────────────────────
 
-function KlassenTab() {
+// ── Gebruikers ──────────────────────────────────────────────────────────────
+
+function GebruikersTab() {
+  const [gebruikers, setGebruikers] = useState([])
   const [vestigingen, setVestigingen] = useState([])
-  const [alleLocaties, setAlleLocaties] = useState([])
-  const [vestigingLocaties, setVestigingLocaties] = useState({}) // { vestiging_id: Set }
-  const [saving, setSaving] = useState(null)
-  const [msg, setMsg] = useState('')
+  const [email, setEmail] = useState('')
+  const [naam, setNaam] = useState('')
+  const [rol, setRol] = useState('concierge')
+  const [selVestigingen, setSelVestigingen] = useState([])
+  const [editId, setEditId] = useState(null)
+  const [editNaam, setEditNaam] = useState('')
+  const [editRol, setEditRol] = useState('concierge')
+  const [editVestigingen, setEditVestigingen] = useState([])
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-  useEffect(() => {
-    api.get('/api/vestigingen').then(async vList => {
-      setVestigingen(vList)
-      const locs = await api.get('/api/magister/locaties')
-      setAlleLocaties(locs)
-      const map = {}
-      await Promise.all(vList.map(async v => {
-        const vl = await api.get(`/api/vestigingen/${v.id}/locaties`)
-        map[v.id] = new Set(vl)
-      }))
-      setVestigingLocaties(map)
-    }).catch(() => {})
-  }, [])
+  function load() {
+    api.get('/api/gebruikers').then(setGebruikers).catch(() => {})
+    api.get('/api/vestigingen').then(setVestigingen).catch(() => {})
+  }
+  useEffect(() => { load() }, [])
 
-  async function handleToggle(vestigingId, locatie) {
-    const prev = vestigingLocaties[vestigingId] || new Set()
-    const updated = new Set(prev)
-    if (updated.has(locatie)) updated.delete(locatie)
-    else updated.add(locatie)
-    setVestigingLocaties(m => ({ ...m, [vestigingId]: updated }))
-    setSaving(vestigingId)
+  async function handleAdd(e) {
+    e.preventDefault(); setError(''); setSuccess('')
     try {
-      await api.put(`/api/vestigingen/${vestigingId}/locaties`, { locaties: [...updated] })
-      setMsg('Opgeslagen')
-      setTimeout(() => setMsg(''), 2000)
-    } catch {
-      setVestigingLocaties(m => ({ ...m, [vestigingId]: prev }))
-    } finally { setSaving(null) }
+      await api.post('/api/gebruikers', { email, naam, rol, vestiging_ids: rol === 'concierge' ? selVestigingen : [] })
+      setEmail(''); setNaam(''); setRol('concierge'); setSelVestigingen([])
+      setSuccess(`${email} is toegevoegd`)
+      load()
+    } catch (err) { setError(err.message) }
   }
 
-  const cardClass = "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5"
+  async function handleUpdate(id) {
+    setError(''); setSuccess('')
+    try {
+      await api.put(`/api/gebruikers/${id}`, { naam: editNaam, rol: editRol, vestiging_ids: editRol === 'concierge' ? editVestigingen : [] })
+      setEditId(null); load()
+    } catch (err) { setError(err.message) }
+  }
+
+  async function handleDelete(id) {
+    setError(''); setSuccess('')
+    try { await api.del(`/api/gebruikers/${id}`); load() }
+    catch (err) { setError(err.message) }
+  }
+
+  async function handleToggleActief(g) {
+    try { await api.put(`/api/gebruikers/${g.id}`, { naam: g.naam, rol: g.rol, actief: !g.actief, vestiging_ids: g.vestiging_ids }); load() }
+    catch (err) { setError(err.message) }
+  }
 
   return (
-    <div className="space-y-5 max-w-3xl">
-      <p className="text-sm text-slate-500 dark:text-slate-400">
-        Koppel Magister-locaties aan vestigingen. Bij het zoeken van een leerling worden dan alleen leerlingen van de gekoppelde locaties getoond.
+    <div className="max-w-3xl">
+      <h2 className="text-base font-bold text-navy dark:text-white mb-1">Gebruikers</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+        Voeg gebruikers toe via hun e-mailadres. Zij moeten ook lid zijn van de Entra-groep voor kluisjesbeheer.
       </p>
-      {msg && <div className="text-sm text-emerald-600 dark:text-emerald-400">{msg}</div>}
-      {vestigingen.map(v => {
-        const geselecteerd = vestigingLocaties[v.id] || new Set()
-        return (
-          <div key={v.id} className={cardClass}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="font-bold text-slate-800 dark:text-white">{v.naam}</div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-400">{geselecteerd.size} gekoppeld</span>
-                {saving === v.id && <span className="text-xs text-slate-400">Opslaan...</span>}
+
+      {error && <p className="text-red-500 text-sm mb-3 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>}
+      {success && <p className="text-emerald-600 text-sm mb-3 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 rounded-lg">{success}</p>}
+
+      {/* Bestaande gebruikers */}
+      <div className="space-y-3 mb-6">
+        {gebruikers.map(g => (
+          <div key={g.id} className={`border rounded-xl p-4 transition-all ${!g.actief ? 'opacity-50 border-slate-200 dark:border-slate-700' : 'border-slate-200 dark:border-slate-700'}`}>
+            {editId === g.id ? (
+              <div className="space-y-3">
+                <div className="text-sm font-medium text-slate-500">{g.email}</div>
+                <input className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white"
+                  value={editNaam} onChange={e => setEditNaam(e.target.value)} placeholder="Naam" />
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <input type="radio" name="editRol" value="beheerder" checked={editRol === 'beheerder'} onChange={() => setEditRol('beheerder')} />
+                    Beheerder
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <input type="radio" name="editRol" value="concierge" checked={editRol === 'concierge'} onChange={() => setEditRol('concierge')} />
+                    Conciërge
+                  </label>
+                </div>
+                {editRol === 'concierge' && (
+                  <div>
+                    <div className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Vestigingen</div>
+                    <div className="flex flex-wrap gap-2">
+                      {vestigingen.map(v => (
+                        <label key={v.id} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                          <input type="checkbox" checked={editVestigingen.includes(v.id)}
+                            onChange={() => setEditVestigingen(prev => prev.includes(v.id) ? prev.filter(x => x !== v.id) : [...prev, v.id])}
+                            className="rounded border-slate-300" />
+                          {v.naam}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button onClick={() => handleUpdate(g.id)}
+                    className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-600">Opslaan</button>
+                  <button onClick={() => setEditId(null)}
+                    className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300">Annuleren</button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-sm">{g.naam || g.email}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">{g.email}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium ${
+                      g.rol === 'beheerder' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'
+                    }`}>{g.rol === 'beheerder' ? 'Beheerder' : 'Conciërge'}</span>
+                    {g.rol === 'concierge' && g.vestiging_ids.length > 0 && (
+                      <span className="text-xs text-slate-500">
+                        {g.vestiging_ids.map(vid => vestigingen.find(v => v.id === vid)?.naam || vid).join(', ')}
+                      </span>
+                    )}
+                    {g.rol === 'concierge' && g.vestiging_ids.length === 0 && (
+                      <span className="text-xs text-amber-500 font-medium">Geen vestigingen!</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleToggleActief(g)}
+                    className={`text-xs px-2 py-1 rounded-lg border ${g.actief ? 'border-slate-300 text-slate-500 hover:border-amber-300 hover:text-amber-600' : 'border-emerald-300 text-emerald-600 hover:bg-emerald-50'}`}>
+                    {g.actief ? 'Deactiveer' : 'Activeer'}
+                  </button>
+                  <button onClick={() => { setEditId(g.id); setEditNaam(g.naam); setEditRol(g.rol); setEditVestigingen(g.vestiging_ids) }}
+                    className="text-slate-400 hover:text-primary p-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  </button>
+                  <ConfirmButton onConfirm={() => handleDelete(g.id)}
+                    className="text-slate-400 hover:text-red-500 p-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </ConfirmButton>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+        {gebruikers.length === 0 && <p className="text-sm text-slate-400">Nog geen gebruikers. Voeg jezelf eerst toe als beheerder.</p>}
+      </div>
+
+      {/* Nieuwe gebruiker */}
+      <form onSubmit={handleAdd} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 space-y-3">
+        <div className="text-sm font-bold text-navy dark:text-white">Gebruiker toevoegen</div>
+        <input className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white"
+          type="email" placeholder="E-mailadres" value={email} onChange={e => setEmail(e.target.value)} required />
+        <input className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white"
+          placeholder="Naam (optioneel)" value={naam} onChange={e => setNaam(e.target.value)} />
+        <div className="flex gap-3">
+          <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+            <input type="radio" name="rol" value="beheerder" checked={rol === 'beheerder'} onChange={() => setRol('beheerder')} />
+            Beheerder
+          </label>
+          <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+            <input type="radio" name="rol" value="concierge" checked={rol === 'concierge'} onChange={() => setRol('concierge')} />
+            Conciërge
+          </label>
+        </div>
+        {rol === 'concierge' && (
+          <div>
+            <div className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Vestigingen</div>
             <div className="flex flex-wrap gap-2">
-              {alleLocaties.map(loc => (
-                <button key={loc} onClick={() => handleToggle(v.id, loc)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
-                    geselecteerd.has(loc)
-                      ? 'bg-primary text-white border-primary'
-                      : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-primary'
-                  }`}>
-                  {loc}
-                </button>
+              {vestigingen.map(v => (
+                <label key={v.id} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input type="checkbox" checked={selVestigingen.includes(v.id)}
+                    onChange={() => setSelVestigingen(prev => prev.includes(v.id) ? prev.filter(x => x !== v.id) : [...prev, v.id])}
+                    className="rounded border-slate-300" />
+                  {v.naam}
+                </label>
               ))}
             </div>
           </div>
-        )
-      })}
-      {vestigingen.length === 0 && <p className="text-sm text-slate-400">Laden...</p>}
+        )}
+        <button type="submit"
+          className="w-full bg-primary text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-primary-600 transition-colors">
+          + Gebruiker toevoegen
+        </button>
+      </form>
     </div>
   )
 }
 
-const TABS = ['Vestigingen & Kluisjes', 'Borg', 'Kleuren', 'Locaties', 'Import', 'Instellingen']
+const TABS = ['Instellingen', 'Import', 'Vestigingen', 'Gebruikers']
 
 export default function Beheer({ onClose }) {
   const [activeTab, setActiveTab] = useState(0)
@@ -1137,7 +1289,9 @@ export default function Beheer({ onClose }) {
       </div>
 
       {/* Tab content */}
-      {activeTab === 0 && (
+      {activeTab === 0 && <BeheerInstellingenTab />}
+      {activeTab === 1 && <ImportTab />}
+      {activeTab === 2 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
             <VestigingenPanel onSelect={id => { setSelectedVestiging(id); setSelectedCluster(null) }} selectedId={selectedVestiging} />
@@ -1150,11 +1304,7 @@ export default function Beheer({ onClose }) {
           </div>
         </div>
       )}
-      {activeTab === 1 && <BorgTab />}
-      {activeTab === 2 && <KleurenTab />}
-      {activeTab === 3 && <KlassenTab />}
-      {activeTab === 4 && <ImportTab />}
-      {activeTab === 5 && <BeheerInstellingenTab />}
+      {activeTab === 3 && <GebruikersTab />}
     </div>
   )
 }

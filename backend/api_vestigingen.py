@@ -6,7 +6,16 @@ vestigingen_bp = Blueprint('vestigingen', __name__, url_prefix='/api')
 @vestigingen_bp.route('/vestigingen', methods=['GET'])
 @login_required
 def list_vestigingen():
-    rows = g.db.execute('SELECT * FROM vestigingen ORDER BY naam').fetchall()
+    from flask import session
+    user = session.get('user', {})
+    allowed_ids = user.get('allowed_vestiging_ids', [])
+    if not user.get('is_beheerder') and allowed_ids:
+        placeholders = ','.join('?' * len(allowed_ids))
+        rows = g.db.execute(
+            f'SELECT * FROM vestigingen WHERE id IN ({placeholders}) ORDER BY naam', allowed_ids
+        ).fetchall()
+    else:
+        rows = g.db.execute('SELECT * FROM vestigingen ORDER BY naam').fetchall()
     return jsonify([dict(r) for r in rows])
 
 @vestigingen_bp.route('/vestigingen', methods=['POST'])
@@ -84,6 +93,35 @@ def set_vestiging_locaties(vid):
         )
     g.db.commit()
     return jsonify({'vestiging_id': vid, 'locaties': locaties})
+
+@vestigingen_bp.route('/vestigingen/<int:vid>/reset', methods=['POST'])
+@login_required
+def reset_vestiging(vid):
+    """Delete all kluisjes + toewijzingen for a vestiging, keep vestiging + clusters."""
+    from flask import session
+    user = session.get('user', {})
+    if not user.get('is_beheerder'):
+        return jsonify({'error': 'Alleen beheerders'}), 403
+    row = g.db.execute('SELECT id, naam FROM vestigingen WHERE id = ?', (vid,)).fetchone()
+    if not row:
+        return jsonify({'error': 'Niet gevonden'}), 404
+    # Delete toewijzingen for kluisjes in this vestiging
+    deleted_toewijzingen = g.db.execute('''
+        DELETE FROM toewijzingen WHERE kluisje_id IN (
+            SELECT id FROM kluisjes WHERE vestiging_id = ?
+        )
+    ''', (vid,)).rowcount
+    # Delete all kluisjes (including soft-deleted)
+    deleted_kluisjes = g.db.execute(
+        'DELETE FROM kluisjes WHERE vestiging_id = ?', (vid,)
+    ).rowcount
+    g.db.commit()
+    return jsonify({
+        'ok': True,
+        'deleted_kluisjes': deleted_kluisjes,
+        'deleted_toewijzingen': deleted_toewijzingen,
+    })
+
 
 @vestigingen_bp.route('/vestigingen/<int:vid>', methods=['DELETE'])
 @login_required

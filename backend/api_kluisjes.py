@@ -51,7 +51,25 @@ def search_kluisjes():
     if vestiging_id:
         query += ' AND k.vestiging_id = ?'
         params.append(int(vestiging_id))
-    if status:
+    if status == 'sleutel':
+        # Lockers where key was not returned after ending assignment
+        query += ''' AND EXISTS (
+            SELECT 1 FROM toewijzingen t2
+            WHERE t2.kluisje_id = k.id AND t2.actief = 0 AND t2.sleutel_ingeleverd = 0
+            AND t2.id = (SELECT MAX(t3.id) FROM toewijzingen t3 WHERE t3.kluisje_id = k.id AND t3.actief = 0)
+        )'''
+    elif status == 'borg':
+        # Lockers with outstanding borg: active with borg NOT paid, OR ended with borg paid but not refunded
+        query += ''' AND (
+            (t.actief = 1 AND t.borgbedrag > 0 AND t.borg_betaald = 0)
+            OR EXISTS (
+                SELECT 1 FROM toewijzingen t2
+                WHERE t2.kluisje_id = k.id AND t2.actief = 0
+                AND t2.borg_betaald = 1 AND t2.borg_teruggestort = 0
+                AND t2.id = (SELECT MAX(t3.id) FROM toewijzingen t3 WHERE t3.kluisje_id = k.id)
+            )
+        )'''
+    elif status:
         query += ' AND k.status = ?'
         params.append(status)
     if q:
@@ -434,6 +452,7 @@ def import_kluisjes():
                 klas = row_dict.get('klas', '')
                 borg = _parse_bedrag(row_dict.get('borgbedrag', ''))
                 datum_van, datum_tot = _parse_periode_mx(row_dict.get('uitleenperiode', ''))
+                opmerkingen = row_dict.get('opmerkingen', '')
                 is_uitgeleend = status_text.lower() == 'uitgeleend'
                 is_defect = status_text.lower() == 'defect'
 
@@ -450,6 +469,7 @@ def import_kluisjes():
                 borg = 0.0
                 datum_van = _parse_date_desktop(row_dict.get('verhuur vanaf', ''))
                 datum_tot = _parse_date_desktop(row_dict.get('verhuur tot/met', ''))
+                opmerkingen = ''
                 is_uitgeleend = bool(naam and stamnr)
                 is_defect = False
 
@@ -463,6 +483,7 @@ def import_kluisjes():
                 borg = 0.0
                 datum_van = None
                 datum_tot = None
+                opmerkingen = ''
                 is_uitgeleend = False
                 is_defect = False
 
@@ -515,8 +536,8 @@ def import_kluisjes():
 
             # Insert kluisje
             cur = g.db.execute(
-                'INSERT INTO kluisjes (cluster_id, vestiging_id, kluisnummer, sleutelnummer, locatie, status) VALUES (?, ?, ?, ?, ?, ?)',
-                (row_cluster_id, row_vestiging_id, kluisnummer, sleutelnummer, locatie, db_status)
+                'INSERT INTO kluisjes (cluster_id, vestiging_id, kluisnummer, sleutelnummer, locatie, status, opmerkingen) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                (row_cluster_id, row_vestiging_id, kluisnummer, sleutelnummer, locatie, db_status, opmerkingen)
             )
             kluisjes_created += 1
 

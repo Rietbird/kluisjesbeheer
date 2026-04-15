@@ -3,9 +3,11 @@ import { useInstellingen } from '../context/InstellingenContext'
 
 const statusOptions = [
   { value: '', label: 'Alles' },
-  { value: 'vrij', label: 'Vrij', dot: 'bg-sky-400' },
-  { value: 'uitgeleend', label: 'Uitgeleend', dot: 'bg-emerald-500' },
+  { value: 'vrij', label: 'Vrij', dot: 'bg-emerald-500' },
+  { value: 'uitgeleend', label: 'Uitgeleend', dot: 'bg-sky-400' },
   { value: 'defect', label: 'Defect', dot: 'bg-amber-500' },
+  { value: 'sleutel', label: 'Sleutel', dot: 'bg-red-500' },
+  { value: 'borg', label: 'Borg', dot: 'bg-yellow-400' },
 ]
 
 const EyeIcon = () => (
@@ -59,6 +61,7 @@ function RapportDropdown({ vestigingId }) {
             <RapportRij label="Actieve toewijzingen" type="toewijzingen" onDownload={download} onPreview={preview} />
             <RapportRij label="Innameoverzicht (afvinklijst)" type="inname" onDownload={download} onPreview={preview} />
             <RapportRij label="Defecte kluisjes" type="defect" onDownload={download} onPreview={preview} />
+            <RapportRij label="Leerlingen zonder kluisje" type="zonder_kluisje" onDownload={download} onPreview={preview} />
             <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
             <div className="px-4 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Openstaand</div>
             <RapportRij label="Openstaande sleutels" type="sleutels" onDownload={download} onPreview={preview} />

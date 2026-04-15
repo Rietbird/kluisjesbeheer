@@ -13,6 +13,8 @@ ALLOWED_SETTINGS_KEYS = {
     'standaard_periode_van', 'standaard_periode_tot',
 }
 
+MAGISTER_SETTINGS_KEYS = {'magister_url', 'magister_user', 'magister_pass'}
+
 
 def _sanitize_svg(data):
     """Strip dangerous elements/attributes from SVG to prevent stored XSS."""
@@ -68,7 +70,7 @@ def upload_logo():
             f.write(content)
     else:
         file.save(save_path)
-    logo_path = f'/uploads/img/{save_name}?v={int(time.time())}'
+    logo_path = f'/api/uploads/img/{save_name}?v={int(time.time())}'
     g.db.execute(
         'INSERT INTO instellingen (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=?',
         ('schoolLogo', logo_path, logo_path)
@@ -81,3 +83,62 @@ def upload_logo():
 def serve_upload(filename):
     """Serve uploaded images with restrictive Content-Type."""
     return send_from_directory(UPLOAD_DIR, filename)
+
+
+def _beheerder_required():
+    from flask import session
+    user = session.get('user', {})
+    if not user.get('is_beheerder'):
+        return jsonify({'error': 'Alleen beheerders'}), 403
+    return None
+
+
+@instellingen_bp.route('/magister/config', methods=['GET'])
+@login_required
+def get_magister_config():
+    """Return Magister API config. Password is masked."""
+    err = _beheerder_required()
+    if err:
+        return err
+    rows = g.db.execute(
+        "SELECT key, value FROM instellingen WHERE key IN ('magister_url', 'magister_user', 'magister_pass')"
+    ).fetchall()
+    cfg = {r['key']: r['value'] for r in rows}
+    has_pass = bool(cfg.get('magister_pass'))
+    return jsonify({
+        'magister_url': cfg.get('magister_url', ''),
+        'magister_user': cfg.get('magister_user', ''),
+        'magister_pass_set': has_pass,
+        'configured': bool(cfg.get('magister_url') and cfg.get('magister_user') and has_pass),
+    })
+
+
+@instellingen_bp.route('/magister/config', methods=['PUT'])
+@login_required
+def update_magister_config():
+    """Save Magister API config. Password is encrypted."""
+    err = _beheerder_required()
+    if err:
+        return err
+    from crypto_util import encrypt
+    data = request.get_json()
+    if not data or not isinstance(data, dict):
+        return jsonify({'error': 'Ongeldig verzoek'}), 400
+
+    for key in ('magister_url', 'magister_user'):
+        if key in data:
+            val = str(data[key]).strip()
+            g.db.execute(
+                'INSERT INTO instellingen (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=?',
+                (key, val, val)
+            )
+
+    if 'magister_pass' in data and data['magister_pass']:
+        encrypted = encrypt(data['magister_pass'])
+        g.db.execute(
+            'INSERT INTO instellingen (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=?',
+            ('magister_pass', encrypted, encrypted)
+        )
+
+    g.db.commit()
+    return jsonify({'ok': True})

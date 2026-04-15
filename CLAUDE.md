@@ -8,6 +8,16 @@ School locker management web app. Replaces the Magister locker module.
 - **Frontend:** React SPA (`frontend/`) — Vite, TailwindCSS
 - **Auth:** Entra ID SSO via MSAL (authorization code flow)
 - **Data:** Magister API (read-only) for student data
+- **Backup:** `backend/backup.py` (scheduler + sqlite3.backup), `backend/api_backup.py` (REST endpoints)
+
+## Deploy
+
+> **CRITICAL: NEVER include `*.db` or `config.json` in deploy tarballs!**
+> On 2026-04-15, a deploy without `--exclude='*.db'` overwrote the production database on CT101. 5 days of data was lost.
+
+- tar MUST always use `--exclude='*.db'` and `--exclude='config.json'`
+- Pre-deploy: trigger a manual backup via POST /api/backups/create (beheerder only)
+- Three backup layers are in place (see Backup section below)
 
 ## Development
 
@@ -37,7 +47,30 @@ pytest -v
 
 Copy `backend/config.example.json` to `backend/config.json` and fill in secrets.
 
+## Backup System
+
+Three layers of backup protection:
+
+1. **In-app backup** (`backend/backup.py` + `backend/api_backup.py`):
+   - Background thread creates daily SQLite backups using `sqlite3.backup()` API (safe during writes)
+   - Retention: 7 daily + 4 weekly, rolling
+   - Stored in `backend/backups/`
+   - API endpoints (beheerder only): GET /api/backups, POST /api/backups/create, GET /api/backups/<naam>/download
+   - Registered in app.py as `backup_bp` blueprint, scheduler starts at app startup
+
+2. **Proxmox host cronjob** (`/usr/local/bin/backup-kluisjes.sh`):
+   - Runs daily at 02:00 via cron
+   - Pulls database from CT101 and CT102 via `pct exec` + `pct pull`
+   - Stored in `/var/lib/vz/dump/kluisjes-db/`, 7 daily per container
+   - Sunday: full `vzdump` snapshot of both containers (4 weeks retained)
+
+3. **Deploy protection**: tar MUST always use `--exclude='*.db'` and `--exclude='config.json'`
+
 ## Bekende valkuilen
+
+**Deploy / Database:**
+- **NEVER deploy without `--exclude='*.db'` and `--exclude='config.json'`** — production DB was overwritten on 2026-04-15
+- Always trigger a manual backup (POST /api/backups/create) before deploying
 
 **Soft deletes:**
 - Kluisjes gebruiken `verwijderd` flag — queries MOETEN `AND verwijderd = 0` bevatten

@@ -80,6 +80,7 @@ def _get_rapport_data(report_type, vestiging_id, db):
         'toewijzingen': 'Actieve toewijzingen',
         'inname': 'Innameoverzicht sleutels/borg',
         'defect': 'Defecte kluisjes',
+        'zonder_kluisje': 'Leerlingen zonder kluisje',
     }
     title = titles.get(report_type, 'Rapport')
 
@@ -142,6 +143,27 @@ def _get_rapport_data(report_type, vestiging_id, db):
             query += ' AND k.vestiging_id = ?'
             params.append(int(vestiging_id))
         query += ' ORDER BY v.naam, k.kluisnummer'
+        rows = db.execute(query, params).fetchall()
+        return title, rows, borg_actief, vestiging_naam
+
+    elif report_type == 'zonder_kluisje':
+        # Students in leerlingen table without an active toewijzing
+        query = '''
+            SELECT l.naam, l.stamnr, l.klas, l.leerjaar, l.studie, l.locatie
+            FROM leerlingen l
+            WHERE NOT EXISTS (
+                SELECT 1 FROM toewijzingen t
+                WHERE t.leerling_stamnr = l.stamnr AND t.actief = 1
+            )
+        '''
+        params = []
+        if vestiging_id:
+            # Filter by locaties linked to this vestiging
+            query += ''' AND l.locatie IN (
+                SELECT locatie FROM vestigingen_locaties WHERE vestiging_id = ?
+            )'''
+            params.append(int(vestiging_id))
+        query += ' ORDER BY l.klas, l.naam'
         rows = db.execute(query, params).fetchall()
         return title, rows, borg_actief, vestiging_naam
 
@@ -262,6 +284,21 @@ def rapport_preview():
             tabel_html += f'<tr class="{row_class}"><td>{e(r["vestiging"])}</td><td class="nr">{e(r["kluisnummer"])}</td><td class="naam">{e(r["leerling_naam"])}</td><td>{e(r["leerling_stamnr"])}</td><td>{e(r["leerling_klas"])}</td><td>{borg_str}</td><td>{"Ja" if r["borg_betaald"] else "Nee"}</td><td>{"Ja" if r["borg_teruggestort"] else "Nee"}</td><td>{"Ja" if r["actief"] else "Nee"}</td></tr>'
         tabel_html += '</tbody></table>'
 
+    elif report_type == 'zonder_kluisje':
+        klassen = {}
+        for r in rows:
+            klas = r['klas'] or '-'
+            klassen.setdefault(klas, []).append(r)
+
+        tabel_html = ''
+        for klas, leerlingen in klassen.items():
+            tabel_html += f'<h3>Klas: {e(klas)} <span>({len(leerlingen)} leerlingen)</span></h3>'
+            tabel_html += '<table><thead><tr><th>Naam</th><th>Stamnr</th><th>Klas</th><th>Leerjaar</th><th>Studie</th></tr></thead><tbody>'
+            for i, r in enumerate(leerlingen):
+                row_class = 'alt' if i % 2 else ''
+                tabel_html += f'<tr class="{row_class}"><td class="naam">{e(r["naam"])}</td><td>{e(r["stamnr"])}</td><td>{e(r["klas"])}</td><td>{e(r["leerjaar"])}</td><td>{e(r["studie"])}</td></tr>'
+            tabel_html += '</tbody></table>'
+
     else:
         tabel_html = '<p>Preview niet beschikbaar voor dit rapporttype.</p>'
 
@@ -334,11 +371,12 @@ def rapport():
     toon_sleutelnr = result[4] if len(result) > 4 else True
 
     buf = io.BytesIO()
-    is_inname = report_type in ('inname', 'toewijzingen', 'defect')
-    page_size = A4 if is_inname else landscape(A4)
+    portrait_types = ('inname', 'zonder_kluisje')
+    page_size = A4 if report_type in portrait_types else landscape(A4)
     doc = SimpleDocTemplate(buf, pagesize=page_size,
                             leftMargin=15*mm, rightMargin=15*mm,
                             topMargin=15*mm, bottomMargin=15*mm)
+    page_w = page_size[0] - 30*mm  # usable width
 
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle('RTitle', parent=styles['Title'], fontSize=16,
@@ -350,23 +388,28 @@ def rapport():
                                 spaceBefore=4, spaceAfter=2)
     school_color = colors.HexColor(config.get('SchoolKleur', '#FF8200'))
 
+    is_portrait = report_type in portrait_types
+
     def make_table(data, col_widths=None, checkbox_cols=None):
         t = Table(data, colWidths=col_widths, repeatRows=1)
+        fs_header = 9 if is_portrait else 7.5
+        fs_body = 9 if is_portrait else 7
+        pad = 5 if is_portrait else 3
         style_cmds = [
             ('BACKGROUND', (0, 0), (-1, 0), school_color),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('FONTNAME', (0, 0), (-1, -1), font_normal),
             ('FONTNAME', (0, 0), (-1, 0), font_bold),
-            ('FONTSIZE', (0, 0), (-1, 0), 8 if not is_inname else 9),
-            ('FONTSIZE', (0, 1), (-1, -1), 7.5 if not is_inname else 9),
+            ('FONTSIZE', (0, 0), (-1, 0), fs_header),
+            ('FONTSIZE', (0, 1), (-1, -1), fs_body),
             ('ALIGN', (0, 0), (-1, 0), 'LEFT'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#FFF7ED')]),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
-            ('TOPPADDING', (0, 0), (-1, -1), 3 if not is_inname else 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3 if not is_inname else 5),
-            ('LEFTPADDING', (0, 0), (-1, -1), 5),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING', (0, 0), (-1, -1), pad),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), pad),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
         ]
         if checkbox_cols:
             for col in checkbox_cols:
@@ -384,6 +427,8 @@ def rapport():
 
     if report_type == 'defect':
         headers = ['Vestiging', 'Cluster', 'Kluisnr', 'Sleutelnr', 'Locatie', 'Opmerkingen']
+        nr_w = 22*mm
+        col_widths = [page_w*0.18, page_w*0.14, nr_w, nr_w, page_w*0.18, page_w - page_w*0.5 - 2*nr_w]
         data = [headers]
         for r in rows:
             data.append([r['vestiging'], r['cluster'], r['kluisnummer'],
@@ -393,10 +438,15 @@ def rapport():
         else:
             elements.append(Paragraph(f"{len(data)-1} kluisjes", subtitle_style))
             elements.append(Spacer(1, 3*mm))
-            elements.append(make_table(data))
+            elements.append(make_table(data, col_widths=col_widths))
 
     elif report_type == 'sleutels':
         headers = ['Vestiging', 'Kluisnr', 'Sleutelnr', 'Laatste huurder', 'Stamnr', 'Klas', 'Periode tot', 'Einddatum']
+        nr_w = 20*mm
+        date_w = 24*mm
+        fixed = 2*nr_w + nr_w + nr_w + 2*date_w  # kluisnr, sleutelnr, stamnr, klas, 2x datum
+        rest = page_w - fixed
+        col_widths = [rest*0.35, nr_w, nr_w, rest*0.65, nr_w, nr_w, date_w, date_w]
         data = [headers]
         for r in rows:
             data.append([r['vestiging'], r['kluisnummer'], r['sleutelnummer'] or '',
@@ -407,10 +457,16 @@ def rapport():
         else:
             elements.append(Paragraph(f"{len(data)-1} rijen", subtitle_style))
             elements.append(Spacer(1, 3*mm))
-            elements.append(make_table(data))
+            elements.append(make_table(data, col_widths=col_widths))
 
     elif report_type == 'borg':
-        headers = ['Vestiging', 'Kluisnr', 'Leerling', 'Stamnr', 'Klas', 'Borg', 'Betaald', 'Teruggestort', 'Actief']
+        headers = ['Vestiging', 'Kluisnr', 'Leerling', 'Stamnr', 'Klas', 'Borg', 'Betaald', 'Terug', 'Actief']
+        small_w = 16*mm
+        nr_w = 20*mm
+        borg_w = 22*mm
+        fixed = nr_w + nr_w + nr_w + borg_w + 3*small_w  # kluisnr, stamnr, klas, borg, 3x ja/nee
+        rest = page_w - fixed
+        col_widths = [rest*0.4, nr_w, rest*0.6, nr_w, nr_w, borg_w, small_w, small_w, small_w]
         data = [headers]
         for r in rows:
             data.append([r['vestiging'], r['kluisnummer'], r['leerling_naam'],
@@ -424,13 +480,36 @@ def rapport():
         else:
             elements.append(Paragraph(f"{len(data)-1} rijen", subtitle_style))
             elements.append(Spacer(1, 3*mm))
-            elements.append(make_table(data))
+            elements.append(make_table(data, col_widths=col_widths))
+
+    elif report_type == 'zonder_kluisje':
+        if not rows:
+            elements.append(Paragraph("Alle leerlingen hebben een kluisje.", styles['Normal']))
+        else:
+            klassen = {}
+            for r in rows:
+                klas = r['klas'] or '-'
+                klassen.setdefault(klas, []).append(r)
+
+            elements.append(Paragraph(f"{len(rows)} leerlingen", subtitle_style))
+            elements.append(Spacer(1, 3*mm))
+
+            for klas, leerlingen in klassen.items():
+                elements.append(Paragraph(
+                    f"Klas: {klas}  ({len(leerlingen)} leerlingen)", klas_style))
+                elements.append(Spacer(1, 1*mm))
+                data = [['Naam', 'Stamnr', 'Klas', 'Leerjaar', 'Studie']]
+                small_w = 20*mm
+                col_widths = [page_w - 4*small_w, small_w, small_w, small_w, small_w]
+                for r in leerlingen:
+                    data.append([r['naam'], r['stamnr'], r['klas'] or '', r['leerjaar'] or '', r['studie'] or ''])
+                elements.append(make_table(data, col_widths=col_widths))
+                elements.append(Spacer(1, 5*mm))
 
     elif report_type == 'inname':
         if not rows:
             elements.append(Paragraph("Geen gegevens gevonden voor dit rapport.", styles['Normal']))
         else:
-            page_w = A4[0] - 30*mm
             # Kolom labels kort houden zodat ze passen
             sleutel_label = 'Sleutel'
             borg_label = 'Borg'
@@ -481,12 +560,23 @@ def rapport():
         if not rows:
             elements.append(Paragraph("Geen gegevens gevonden voor dit rapport.", styles['Normal']))
         else:
-            col_headers = ['Naam', 'Stamnr', 'Kluisnr']
+            nr_w = 20*mm
+            date_w = 22*mm
+            klas_w = 18*mm
+            borg_w = 22*mm
+            betaald_w = 18*mm
+
+            col_defs = [('Naam', None), ('Stamnr', nr_w), ('Kluisnr', nr_w)]
             if toon_sleutelnr:
-                col_headers.append('Sleutelnr')
-            col_headers += ['Klas', 'Van', 'Tot']
+                col_defs.append(('Sleutelnr', nr_w))
+            col_defs += [('Klas', klas_w), ('Van', date_w), ('Tot', date_w)]
             if borg_actief:
-                col_headers += ['Borg', 'Borg betaald']
+                col_defs += [('Borg', borg_w), ('Betaald', betaald_w)]
+
+            fixed_w = sum(w for _, w in col_defs if w is not None)
+            naam_w = page_w - fixed_w
+            col_widths = [naam_w if w is None else w for _, w in col_defs]
+            col_headers = [h for h, _ in col_defs]
 
             elements.append(Paragraph(f"{len(rows)} rijen", subtitle_style))
             elements.append(Spacer(1, 3*mm))
@@ -510,7 +600,7 @@ def rapport():
                             'Ja' if r['borg_betaald'] else 'Nee'
                         ]
                     data.append(row_data)
-                elements.append(make_table(data))
+                elements.append(make_table(data, col_widths=col_widths))
                 elements.append(Spacer(1, 4*mm))
 
     doc.build(elements)

@@ -15,10 +15,10 @@ function InfoRow({ label, children }) {
 }
 
 function StatusBadge({ status, sleutelNietIngeleverd }) {
-  const cls = status === 'uitgeleend' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
+  const cls = status === 'uitgeleend' ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300'
     : status === 'defect' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
     : sleutelNietIngeleverd ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
-    : 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300'
+    : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
   return <span className={`px-3 py-1 rounded-full font-semibold ${cls}`}>{status}</span>
 }
 
@@ -138,9 +138,9 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
 
           {/* Huurder section */}
           {isUitgeleend && (
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4">
-              <div className="text-sm font-bold text-emerald-800 dark:text-emerald-300 mb-3 flex items-center gap-2">
-                <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
+            <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-xl p-4">
+              <div className="text-sm font-bold text-sky-800 dark:text-sky-300 mb-3 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 bg-sky-500 rounded-full" />
                 Huidige huurder
               </div>
               <div className="text-sm space-y-0">
@@ -255,7 +255,7 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
               </button>
             ) : (
               <button onClick={() => setStatus('vrij')}
-                className="flex-1 bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-xl py-3 text-sm font-bold hover:from-sky-600 hover:to-sky-700 transition-all shadow-sm">
+                className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl py-3 text-sm font-bold hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-sm">
                 Markeer als vrij
               </button>
             )}

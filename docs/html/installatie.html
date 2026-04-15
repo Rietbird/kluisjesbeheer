@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Installatie — Kluisjesbeheer</title>
+<style>
+  :root { --primary: #2563eb; --bg: #ffffff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0; --code-bg: #f1f5f9; --nav-bg: #f8fafc; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--text); background: var(--bg); line-height: 1.7; }
+  .layout { display: flex; min-height: 100vh; }
+  nav { width: 260px; background: var(--nav-bg); border-right: 1px solid var(--border); padding: 24px 20px; position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0; }
+  nav h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--primary); }
+  nav a { display: block; padding: 6px 10px; margin: 2px 0; border-radius: 6px; text-decoration: none; color: var(--text); font-size: 14px; transition: background 0.15s; }
+  nav a:hover, nav a.active { background: #dbeafe; color: var(--primary); }
+  nav a.active { font-weight: 600; }
+  main { flex: 1; max-width: 860px; padding: 40px 48px; }
+  h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; color: var(--text); border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
+  h2 { font-size: 22px; font-weight: 700; margin-top: 36px; margin-bottom: 12px; color: var(--text); }
+  h3 { font-size: 17px; font-weight: 600; margin-top: 28px; margin-bottom: 8px; }
+  p { margin-bottom: 14px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+  th { background: var(--nav-bg); text-align: left; padding: 10px 14px; border: 1px solid var(--border); font-weight: 600; }
+  td { padding: 8px 14px; border: 1px solid var(--border); vertical-align: top; }
+  tr:hover td { background: #f8fafc; }
+  code { background: var(--code-bg); padding: 2px 6px; border-radius: 4px; font-size: 13px; font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 16px 20px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-size: 13px; line-height: 1.6; }
+  pre code { background: none; padding: 0; color: inherit; }
+  blockquote { border-left: 3px solid var(--primary); background: #eff6ff; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  blockquote p { margin-bottom: 0; }
+  ul, ol { margin: 8px 0 14px 24px; }
+  li { margin-bottom: 4px; }
+  strong { font-weight: 600; }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; }
+    nav { width: 100%; height: auto; position: relative; border-right: none; border-bottom: 1px solid var(--border); }
+    main { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <h2>Kluisjesbeheer</h2>
+  <a href="index.html">Overzicht</a>
+<a href="systeemeisen.html">Systeemeisen</a>
+<a href="installatie.html" class="active">Installatie</a>
+<a href="configuratie.html">Configuratie</a>
+<a href="architectuur.html">Architectuur</a>
+<a href="onderhoud.html">Onderhoud</a>
+
+</nav>
+<main>
+<h1>Installatie</h1>
+<h2>Vooraf</h2>
+<p>Zorg dat je de volgende gegevens bij de hand hebt (zie <a href="systeemeisen.html">Systeemeisen</a>):</p>
+<ul>
+<li>Entra ID: TenantId, ClientId, ClientSecret, DashboardGroupId</li>
+<li>Een HTTPS-domein (bijv. <code>kluisjes.jouwschool.nl</code>)</li>
+<li>Servertoegang (SSH als root)</li>
+</ul>
+<p>De Magister API-koppeling is optioneel en kan later via de app worden ingesteld.</p>
+<h2>Stap 1: Bestanden op de server zetten</h2>
+<pre><code class="language-bash">scp -r kluisjesbeheer/ root@[server-ip]:/opt/
+</code></pre>
+<h2>Stap 2: Deploy script draaien</h2>
+<pre><code class="language-bash">cd /opt/kluisjesbeheer
+bash deploy.sh
+</code></pre>
+<p>Dit doet het volgende:
+- Installeert Python- en Node.js-dependencies
+- Bouwt de frontend (React/Vite)
+- Maakt een systemd service aan (<code>kluisjesbeheer.service</code>)
+- Maakt een <code>kluisjes</code> gebruiker en groep aan
+- Start de app</p>
+<h2>Stap 3: config.json invullen</h2>
+<pre><code class="language-bash">cp /opt/kluisjesbeheer/backend/config.example.json /opt/kluisjesbeheer/backend/config.json
+nano /opt/kluisjesbeheer/backend/config.json
+</code></pre>
+<p><strong>Minimale configuratie — alleen deze velden zijn vereist:</strong></p>
+<pre><code class="language-json">{
+  &quot;TenantId&quot;: &quot;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&quot;,
+  &quot;ClientId&quot;: &quot;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&quot;,
+  &quot;ClientSecret&quot;: &quot;je-client-secret&quot;,
+  &quot;DashboardGroupId&quot;: &quot;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&quot;,
+  &quot;RedirectUri&quot;: &quot;https://kluisjes.jouwschool.nl/auth/callback&quot;,
+  &quot;SecretKey&quot;: &quot;willekeurige-lange-string&quot;,
+  &quot;AllowedOrigins&quot;: [&quot;https://kluisjes.jouwschool.nl&quot;]
+}
+</code></pre>
+<p>Genereer een veilige SecretKey:</p>
+<pre><code class="language-bash">python3 -c &quot;import secrets; print(secrets.token_hex(32))&quot;
+</code></pre>
+<p>Alle overige instellingen (schoolnaam, logo, kleur, Magister API) worden via de app geconfigureerd.</p>
+<h2>Stap 4: NGINX configureren</h2>
+<p>Maak <code>/etc/nginx/sites-enabled/kluisjesbeheer</code>:</p>
+<pre><code class="language-nginx">server {
+    listen 80;
+    server_name kluisjes.jouwschool.nl;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name kluisjes.jouwschool.nl;
+
+    ssl_certificate /etc/nginx/ssl/cert.crt;
+    ssl_certificate_key /etc/nginx/ssl/cert.key;
+
+    client_max_body_size 16M;
+
+    location /img/ {
+        root /opt/kluisjesbeheer/frontend/dist;
+        expires 1h;
+        add_header Cache-Control &quot;public&quot;;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+</code></pre>
+<p>Test en herlaad:</p>
+<pre><code class="language-bash">nginx -t &amp;&amp; systemctl reload nginx
+</code></pre>
+<blockquote>
+<p><strong>Alternatief:</strong> gebruik een <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/">Cloudflare tunnel</a> naar <code>http://127.0.0.1:5000</code> in plaats van een eigen SSL-certificaat.</p>
+</blockquote>
+<h2>Stap 5: Service starten</h2>
+<pre><code class="language-bash">systemctl restart kluisjesbeheer
+systemctl status kluisjesbeheer
+</code></pre>
+<p>De app is nu bereikbaar op <code>https://kluisjes.jouwschool.nl</code>.</p>
+<h2>Volgende stap</h2>
+<p>Ga naar <a href="configuratie.html">Configuratie</a> voor de eerste inrichting via de app.</p>
+</main>
+</div>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import msal
 from functools import wraps
-from flask import Blueprint, redirect, request, session, jsonify, url_for
+from flask import Blueprint, redirect, request, session, jsonify, url_for, g
 from config import config
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -48,14 +48,15 @@ def callback():
     if not token:
         return jsonify({'error': 'Geen token ontvangen'}), 403
 
-    # Check group membership
     import requests as http_requests
+
+    # Check Entra group membership (single group for access)
     group_id = config.get('DashboardGroupId', '')
     if group_id:
-        headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
+        headers_auth = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
         resp = http_requests.post(
             'https://graph.microsoft.com/v1.0/me/checkMemberGroups',
-            headers=headers,
+            headers=headers_auth,
             json={'groupIds': [group_id]},
             timeout=10,
         )
@@ -66,16 +67,46 @@ def callback():
         else:
             return jsonify({'error': 'Groepscontrole mislukt'}), 403
 
-    # Get user info
+    # Get user info from Microsoft Graph
     headers = {'Authorization': f'Bearer {token}'}
     user_resp = http_requests.get('https://graph.microsoft.com/v1.0/me', headers=headers, timeout=10)
     user_data = user_resp.json() if user_resp.ok else {}
+    email = (user_data.get('mail') or user_data.get('userPrincipalName') or '').lower()
+
+    # Look up user in local gebruikers table
+    geb = g.db.execute('SELECT id, rol FROM gebruikers WHERE LOWER(email) = ? AND actief = 1', (email,)).fetchone()
+
+    if not geb:
+        # First user ever? Auto-create as beheerder
+        has_any = g.db.execute('SELECT COUNT(*) as cnt FROM gebruikers').fetchone()['cnt']
+        if has_any == 0:
+            display = user_data.get('displayName', '')
+            cur = g.db.execute(
+                'INSERT INTO gebruikers (email, naam, rol) VALUES (?, ?, ?)',
+                (email, display, 'beheerder')
+            )
+            g.db.commit()
+            geb = g.db.execute('SELECT id, rol FROM gebruikers WHERE id = ?', (cur.lastrowid,)).fetchone()
+        else:
+            return jsonify({'error': 'Geen toegang — vraag je beheerder om je toe te voegen'}), 403
+
+    is_beheerder = geb['rol'] == 'beheerder'
+
+    # Get allowed vestiging IDs for non-beheerders
+    allowed_vestiging_ids = []
+    if not is_beheerder:
+        rows = g.db.execute('SELECT vestiging_id FROM gebruiker_vestigingen WHERE gebruiker_id = ?', (geb['id'],)).fetchall()
+        allowed_vestiging_ids = [r['vestiging_id'] for r in rows]
+        if not allowed_vestiging_ids:
+            return jsonify({'error': 'Geen vestigingen toegewezen — neem contact op met je beheerder'}), 403
 
     session.permanent = True
     session['user'] = {
         'displayName': user_data.get('displayName', ''),
-        'email': user_data.get('mail', user_data.get('userPrincipalName', '')),
+        'email': email,
         'givenName': user_data.get('givenName', ''),
+        'is_beheerder': is_beheerder,
+        'allowed_vestiging_ids': allowed_vestiging_ids,
     }
     session['access_token'] = token
 
