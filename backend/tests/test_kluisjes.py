@@ -99,3 +99,29 @@ def test_analyse_detecteert_collision():
     mo = next(p for p in res['prefixes'] if p['prefix'] == 'MO-')
     assert mo['collision'] is True
     assert res['heeft_collision'] is True
+
+
+def _maak_xlsx(rows, headers):
+    import io, openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(headers)
+    for r in rows:
+        ws.append(r)
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf
+
+def test_preview_geeft_normalisatie_advies(client):
+    rows = [[f'MO-{n}'] for n in (1, 10, 100, 1000)]
+    xlsx = _maak_xlsx(rows, ['omschrijving kluisje'])
+    rv = client.post('/api/kluisjes/import/preview',
+        data={'file': (xlsx, 'k.xlsx')}, content_type='multipart/form-data')
+    assert rv.status_code == 200
+    body = rv.get_json()
+    assert 'normalisatie' in body
+    assert body['normalisatie']['heeft_krom'] is True
+    assert body['normalisatie']['heeft_collision'] is False
+    mo = next(p for p in body['normalisatie']['prefixes'] if p['prefix'] == 'MO-')
+    assert mo['breedte'] == 4

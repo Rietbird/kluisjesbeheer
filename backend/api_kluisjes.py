@@ -422,6 +422,7 @@ def import_preview():
         locaties = {}  # locatie -> count
         clusters = {}  # cluster -> count
         total = 0
+        alle_nummers = []
 
         for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
             if i == 1:
@@ -451,6 +452,7 @@ def import_preview():
                 continue
 
             total += 1
+            alle_nummers.append(kluisnummer)
             prefix = _extract_prefix(kluisnummer)
             prefixes[prefix] = prefixes.get(prefix, 0) + 1
             if locatie:
@@ -469,6 +471,7 @@ def import_preview():
         'locaties': [{'locatie': k, 'count': v} for k, v in sorted(locaties.items())],
         'clusters': [{'cluster': k, 'count': v} for k, v in sorted(clusters.items())],
         'has_locaties': len(locaties) > 0,
+        'normalisatie': _analyseer_nummering(alle_nummers),
     })
 
 
