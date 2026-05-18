@@ -23,3 +23,9 @@ frontend/dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Import-bronbestanden (lokaal, niet versiebeheren)
+*.xlsx
+
+# Claude lokale sessie-data
+.claude/
