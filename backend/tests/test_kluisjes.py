@@ -58,3 +58,21 @@ def test_csv_import_rollback_on_duplicate(client):
     # P002 should NOT be imported (rollback)
     rv = client.get('/api/clusters/1/kluisjes')
     assert len(rv.get_json()) == 1  # only original P001
+
+
+from api_kluisjes import _normaliseer_kluisnummer
+
+def test_normaliseer_padt_numeriek_blok():
+    assert _normaliseer_kluisnummer('MO-7', 4) == 'MO-0007'
+
+def test_normaliseer_idempotent():
+    assert _normaliseer_kluisnummer('BL-001', 3) == 'BL-001'
+
+def test_normaliseer_behoudt_suffix():
+    assert _normaliseer_kluisnummer('MO-7B', 4) == 'MO-0007B'
+
+def test_normaliseer_zonder_getal_ongewijzigd():
+    assert _normaliseer_kluisnummer('XYZ', 4) == 'XYZ'
+
+def test_normaliseer_lege_invoer():
+    assert _normaliseer_kluisnummer('', 4) == ''

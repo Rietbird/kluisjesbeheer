@@ -330,6 +330,23 @@ def _extract_prefix(kluisnummer):
     return m.group(1) if m else 'Overig'
 
 
+def _normaliseer_kluisnummer(nummer, breedte):
+    """Pad het eerste numerieke blok links met nullen tot `breedte`.
+
+    Prefix en alles na het getal (suffix) blijven exact behouden.
+    'MO-7' + 4 -> 'MO-0007'; 'MO-7B' + 4 -> 'MO-0007B';
+    'BL-001' + 3 -> 'BL-001' (idempotent); zonder getal -> ongewijzigd.
+    """
+    import re
+    if not nummer:
+        return nummer
+    m = re.match(r'^(.*?)(\d+)(.*)$', str(nummer))
+    if not m:
+        return nummer
+    prefix, getal, rest = m.group(1), m.group(2), m.group(3)
+    return f"{prefix}{getal.zfill(breedte)}{rest}"
+
+
 @kluisjes_bp.route('/kluisjes/import/preview', methods=['POST'])
 @login_required
 def import_preview():
