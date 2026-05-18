@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kluisjesbeheer — Demo OSG Demo</title>
+<style>
+  :root {
+    --bg: #f8fafc;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --accent: #FF8200;
+    --accent-soft: #fff4e8;
+    --card: #ffffff;
+    --line: #e2e8f0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .deck { width: 100vw; height: 100vh; position: relative; }
+  .slide {
+    position: absolute;
+    inset: 0;
+    padding: 8vh 10vw;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .slide.active { display: flex; }
+
+  /* Typography */
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+  }
+  h1 {
+    font-size: clamp(2.4rem, 5vw, 4.2rem);
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+  }
+  h2 {
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin-bottom: 2rem;
+  }
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  p, li { font-size: 1.25rem; line-height: 1.55; color: var(--ink); }
+  p.lead { font-size: 1.4rem; color: var(--muted); max-width: 60ch; }
+  ul, ol { margin-left: 1.4rem; }
+  ul li, ol li { margin-bottom: 0.6rem; }
+  strong { font-weight: 700; }
+
+  /* Title slide */
+  .title-slide {
+    background: linear-gradient(135deg, var(--accent) 0%, #e76d00 100%);
+    color: white;
+  }
+  .title-slide .eyebrow, .title-slide h1, .title-slide p { color: white; }
+  .title-slide .eyebrow { opacity: 0.85; }
+  .title-slide p { opacity: 0.9; font-size: 1.3rem; max-width: 50ch; }
+
+  /* Section divider */
+  .section-slide {
+    background: var(--ink);
+    color: white;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding-bottom: 12vh;
+  }
+  .section-slide h2 { color: white; font-size: 5rem; line-height: 1; }
+  .section-slide .eyebrow { color: var(--accent); }
+
+  /* Grids */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    margin-top: 2rem;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    padding: 1.75rem;
+  }
+  .card .num {
+    display: inline-block;
+    width: 2rem;
+    height: 2rem;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 0.5rem;
+    text-align: center;
+    line-height: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+  }
+  .card h3 {
+    margin-bottom: 0.5rem;
+    color: var(--ink);
+    font-size: 1.15rem;
+  }
+  .card p { font-size: 1rem; color: var(--muted); line-height: 1.5; }
+
+  /* Stats */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+    margin-top: 3rem;
+  }
+  .stat .num {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .stat .lbl {
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin-top: 0.4rem;
+  }
+
+  /* Demo callout */
+  .demo-callout {
+    display: inline-block;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Footer / navigation */
+  .footer {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .title-slide ~ .footer .brand, .section-slide ~ .footer .brand { color: rgba(255,255,255,0.7); }
+  .counter { font-variant-numeric: tabular-nums; }
+  .nav-hint { font-size: 0.75rem; opacity: 0.5; }
+
+  /* Wide list slide */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+  }
+  .two-col h3 { color: var(--ink); margin-bottom: 1rem; font-size: 1.2rem; }
+  .two-col ul { list-style: none; margin: 0; }
+  .two-col li { padding: 0.5rem 0; border-bottom: 1px solid var(--line); }
+  .two-col li:last-child { border-bottom: 0; }
+</style>
+</head>
+<body>
+
+<div class="deck">
+
+  <!-- 1: Title -->
+  <section class="slide title-slide active">
+    <div class="eyebrow">Demo · Maandag</div>
+    <h1>Kluisjesbeheer</h1>
+    <p>Een blik onder de motorkap van het systeem dat in Almelo draait — en hoe Demo het ook kan gebruiken.</p>
+  </section>
+
+  <!-- 2: Waarom -->
+  <section class="slide">
+    <div class="eyebrow">Waarom dit bestaat</div>
+    <h2>Magister werd duurder. Dus hebben we het zelf gebouwd.</h2>
+    <p class="lead">Vorig jaar bij School opgezet als vervanger voor de Magister-kluismodule. Draait nu een jaar zonder gedoe. Multi-school van opzet — Demo kan mee.</p>
+  </section>
+
+  <!-- 3: Stats School -->
+  <section class="slide">
+    <div class="eyebrow">Stand vandaag — School</div>
+    <h2>Een jaar productie</h2>
+    <div class="stats">
+      <div class="stat"><div class="num">3.385</div><div class="lbl">Kluisjes</div></div>
+      <div class="stat"><div class="num">680</div><div class="lbl">Actieve toewijzingen</div></div>
+      <div class="stat"><div class="num">4</div><div class="lbl">Vestigingen</div></div>
+      <div class="stat"><div class="num">365</div><div class="lbl">Dagen uptime</div></div>
+    </div>
+  </section>
+
+  <!-- 4: Demo al klaar -->
+  <section class="slide">
+    <div class="eyebrow">En jullie data?</div>
+    <h2>Staat al klaar in de testomgeving.</h2>
+    <div class="stats">
+      <div class="stat"><div class="num">969</div><div class="lbl">Bataafs Lyceum</div></div>
+      <div class="stat"><div class="num">1.605</div><div class="lbl">Montessori College</div></div>
+      <div class="stat"><div class="num">2.110</div><div class="lbl">Uitgeleend nu</div></div>
+      <div class="stat"><div class="num">82%</div><div class="lbl">Bezetting</div></div>
+    </div>
+    <p style="margin-top: 3rem; color: var(--muted);">Eenmalig geïmporteerd uit jullie kluis-spreadsheet. Vanaf nu beheert het systeem dit zelf.</p>
+  </section>
+
+  <!-- 5: Section: Dagelijks gebruik -->
+  <section class="slide section-slide">
+    <div class="eyebrow">Demo · Deel 1</div>
+    <h2>Dagelijks<br>gebruik.</h2>
+  </section>
+
+  <!-- 6: Wat je gaat zien -->
+  <section class="slide">
+    <span class="demo-callout">Live demo</span>
+    <h2>Wat conciërges doen, elke dag</h2>
+    <div class="grid-3">
+      <div class="card"><div class="num">1</div><h3>Overzicht & zoeken</h3><p>Kleurgecodeerde tegels, live zoek op naam, klas of kluisnummer.</p></div>
+      <div class="card"><div class="num">2</div><h3>Toewijzen</h3><p>Klik vrij kluisje → leerling zoeken → klaar in twee seconden.</p></div>
+      <div class="card"><div class="num">3</div><h3>Beëindigen</h3><p>Sleutel ingeleverd? Vink aan. Sleutel kwijt? Blijft zichtbaar in de lijst.</p></div>
+      <div class="card"><div class="num">4</div><h3>Defect melden</h3><p>Eén klik. Blijft uitgeleend zichtbaar als er nog een huurder zit.</p></div>
+      <div class="card"><div class="num">5</div><h3>Reservesleutel</h3><p>Checkbox + datum. Sleutel-icoon op het overzicht.</p></div>
+      <div class="card"><div class="num">6</div><h3>Rapport</h3><p>PDF van de huidige selectie. Voor conciërge of administratie.</p></div>
+    </div>
+  </section>
+
+  <!-- 7: Section: Bulk -->
+  <section class="slide section-slide">
+    <div class="eyebrow">Demo · Deel 2</div>
+    <h2>Bulk-acties.</h2>
+  </section>
+
+  <!-- 8: Bulk -->
+  <section class="slide">
+    <span class="demo-callout">Live demo</span>
+    <h2>Hele klassen tegelijk</h2>
+    <div class="grid-2">
+      <div class="card">
+        <div class="num">↑</div>
+        <h3>Collectief toekennen</h3>
+        <p>Begin schooljaar. Hele brugklas in één wizard. 6 stappen: klas → leerlingen → periode → kluisje-keuze → bevestigen → klaar.</p>
+        <p style="margin-top: 1rem; color: var(--accent); font-weight: 600;">28 leerlingen → 3 minuten.</p>
+      </div>
+      <div class="card">
+        <div class="num">↓</div>
+        <h3>Collectief beëindigen</h3>
+        <p>Einde schooljaar. Filter op klas of cluster, vink aan, klaar. Met of zonder "sleutel ingeleverd" als bulk-default.</p>
+        <p style="margin-top: 1rem; color: var(--accent); font-weight: 600;">600 huren → 5 minuten.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9: Section: Beheer & uitrol -->
+  <section class="slide section-slide">
+    <div class="eyebrow">Demo · Deel 3</div>
+    <h2>Beheer<br>& uitrol.</h2>
+  </section>
+
+  <!-- 10: Beheer -->
+  <section class="slide">
+    <span class="demo-callout">Live demo</span>
+    <h2>Voor de beheerder</h2>
+    <div class="grid-2">
+      <div>
+        <h3>Vestigingen & clusters</h3>
+        <p style="font-size: 1.1rem; color: var(--muted);">Drie kolommen: vestigingen → clusters → kluisjes. Toevoegen, hernoemen, soft-deleten. Magister-locaties hier koppelen.</p>
+
+        <h3 style="margin-top: 2rem;">Gebruikers & rollen</h3>
+        <p style="font-size: 1.1rem; color: var(--muted);">Beheerder of medewerker. Medewerkers gekoppeld aan specifieke vestiging(en).</p>
+      </div>
+      <div>
+        <h3>Eigen branding</h3>
+        <p style="font-size: 1.1rem; color: var(--muted);">Schoolnaam, logo, hoofdkleur. Per school anders, zelfde codebase.</p>
+
+        <h3 style="margin-top: 2rem;">Import-flow</h3>
+        <p style="font-size: 1.1rem; color: var(--muted);">XLSX uploaden → preview → prefixen mappen naar vestigingen → importeren. 2.500 kluisjes in 30 seconden.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11: Section: Onder de motorkap -->
+  <section class="slide section-slide">
+    <div class="eyebrow">Kort</div>
+    <h2>Onder de<br>motorkap.</h2>
+  </section>
+
+  <!-- 12: Tech -->
+  <section class="slide">
+    <h2>De bouwstenen</h2>
+    <div class="two-col" style="margin-top: 2rem;">
+      <div>
+        <h3>Software</h3>
+        <ul>
+          <li><strong>Backend:</strong> Python / Flask</li>
+          <li><strong>Frontend:</strong> React + Tailwind</li>
+          <li><strong>Database:</strong> SQLite</li>
+          <li><strong>Hosting:</strong> Proxmox LXC (Debian 12)</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Integraties</h3>
+        <ul>
+          <li><strong>Login:</strong> Microsoft Entra (SSO)</li>
+          <li><strong>Leerlingen:</strong> Magister Medius (nachtelijke sync)</li>
+          <li><strong>Backups:</strong> 3 lagen — in-app, host-cron, weekly snapshot</li>
+          <li><strong>PDF:</strong> server-side gegenereerd</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13: Section: Hoe verder -->
+  <section class="slide section-slide">
+    <div class="eyebrow">Tot slot</div>
+    <h2>Hoe verder<br>als jullie willen.</h2>
+  </section>
+
+  <!-- 14: Hoe verder -->
+  <section class="slide">
+    <h2>Wat moeten we regelen?</h2>
+    <div class="grid-2">
+      <div>
+        <h3 style="color: var(--accent);">Aan jullie kant</h3>
+        <ul style="margin-top: 1rem;">
+          <li>Entra app-registratie + toegangsgroep</li>
+          <li>Magister service-account (leestoegang ADFuncties)</li>
+          <li>Subdomein, bijv. <code>kluisjes.osg-Demo.nl</code></li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="color: var(--accent);">Aan mijn kant</h3>
+        <ul style="margin-top: 1rem;">
+          <li>Container opzetten met jullie config</li>
+          <li>Logo, kleur, branding instellen</li>
+          <li>XLSX-import + dagelijkse Magister-sync</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top: 3rem; font-size: 1.4rem; color: var(--ink); font-weight: 600;">Bij elkaar: ongeveer een dag werk.</p>
+  </section>
+
+  <!-- 15: Vragen -->
+  <section class="slide title-slide">
+    <div class="eyebrow">Tot slot</div>
+    <h1>Vragen?</h1>
+    <p>De browser blijft open — kom gerust naar voren om zelf wat te klikken.</p>
+  </section>
+
+</div>
+
+<div class="footer">
+  <span class="brand">Kluisjesbeheer · School</span>
+  <span class="nav-hint">← → om te navigeren · F voor fullscreen</span>
+  <span class="counter"><span id="cur">1</span> / <span id="tot">15</span></span>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const cur = document.getElementById('cur');
+  const tot = document.getElementById('tot');
+  tot.textContent = slides.length;
+  let idx = 0;
+
+  function show(n) {
+    idx = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+    cur.textContent = idx + 1;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { show(idx + 1); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { show(idx - 1); e.preventDefault(); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+    }
+  });
+
+  // Click navigation
+  document.addEventListener('click', e => {
+    if (e.target.closest('a, button, input')) return;
+    if (e.clientX < window.innerWidth / 3) show(idx - 1);
+    else if (e.clientX > 2 * window.innerWidth / 3) show(idx + 1);
+  });
+</script>
+
+</body>
+</html>

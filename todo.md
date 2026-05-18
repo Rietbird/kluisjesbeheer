@@ -11,3 +11,9 @@
 [x] Collectief beëindigen gesorteerd op achternaam
 [ ] Leerlingen van de pro alleen pro, leerlingen mhv + zuid alleen mhv en zuid, isk alleen isk
 Bij inlog alleen eigen locatie voor de locatie, beheer alles
+
+
+[ ] makkelijk wisselen van kluisjes bij collectief toekenen of enkel kluisje
+[ ] Toewijzen van kluiskes aan nieuwe clusters
+[ ] V2 Plattegrond weergave met daarop de clusters met kluisjes.
+[ ] http://school.swp.nl:8800

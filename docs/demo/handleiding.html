@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kluisjesbeheer · Handleiding</title>
+<style>
+  :root {
+    --bg: #f7f9fb;
+    --surface: #ffffff;
+    --fg: #16263b;
+    --muted: #5d6b7c;
+    --border: #dde5ec;
+    --accent: #1f7ae0;
+    --accent-soft: #e8f1fc;
+    --amber: #b45309;
+    --amber-soft: #fef3e2;
+    --font-display: 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-body: 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
+  }
+  * , *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .layout { display: grid; grid-template-columns: 280px 1fr; max-width: 1280px; margin: 0 auto; }
+  /* Sidebar */
+  nav.side {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 40px 28px;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+  }
+  nav.side .brand {
+    font-family: var(--font-display);
+    font-size: 24px;
+    letter-spacing: -0.02em;
+    margin: 0 0 4px;
+  }
+  nav.side .brand-sub { font-size: 13px; color: var(--muted); margin: 0 0 32px; }
+  nav.side h4 {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 28px 0 10px;
+  }
+  nav.side a {
+    display: block;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 15px;
+    padding: 5px 0;
+    border-left: 2px solid transparent;
+    padding-left: 12px;
+    transition: color .15s, border-color .15s;
+  }
+  nav.side a:hover { color: var(--accent); border-left-color: var(--accent); }
+  /* Content */
+  main { padding: 56px clamp(32px, 6vw, 88px); max-width: 860px; }
+  .hero-block { margin-bottom: 56px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 16px;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(38px, 5vw, 52px);
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+    margin: 0 0 16px;
+  }
+  h2 {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 3.4vw, 38px);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin: 64px 0 8px;
+    padding-top: 24px;
+  }
+  h2:first-of-type { margin-top: 32px; }
+  h3 {
+    font-family: var(--font-display);
+    font-size: 23px;
+    letter-spacing: -0.01em;
+    margin: 40px 0 10px;
+  }
+  p { margin: 12px 0; color: #2a3a4d; }
+  .lead { font-size: 20px; color: var(--muted); max-width: 60ch; }
+  ol, ul { padding-left: 22px; }
+  li { margin: 8px 0; }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--accent-soft);
+    color: #0f4f96;
+    padding: 2px 6px;
+    border-radius: 5px;
+  }
+  pre {
+    background: var(--fg);
+    color: #e7eef6;
+    padding: 18px 20px;
+    border-radius: 10px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+  .section-tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 20px;
+  }
+  .tag-concierge { background: var(--accent-soft); color: #0f4f96; }
+  .tag-it { background: #eef0f3; color: #3a4654; }
+  .divider { margin: 80px 0; border: none; border-top: 2px solid var(--border); }
+  /* Callouts */
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    padding: 16px 20px;
+    border-radius: 0 10px 10px 0;
+    margin: 24px 0;
+  }
+  .callout.warn { border-left-color: var(--amber); background: var(--amber-soft); }
+  .callout .ct {
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 6px;
+    color: var(--accent);
+  }
+  .callout.warn .ct { color: var(--amber); }
+  .callout p { margin: 4px 0; font-size: 15px; }
+  /* Steps */
+  .steps { counter-reset: step; padding: 0; list-style: none; margin: 24px 0; }
+  .steps > li {
+    counter-increment: step;
+    position: relative;
+    padding: 4px 0 20px 52px;
+    border-left: 1px solid var(--border);
+    margin-left: 16px;
+  }
+  .steps > li:last-child { border-left-color: transparent; }
+  .steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: -16px;
+    top: 0;
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .steps > li strong { display: block; font-size: 17px; margin-bottom: 2px; }
+  /* Status legend */
+  .legend { display: grid; gap: 10px; margin: 20px 0; }
+  .legend-row { display: flex; align-items: center; gap: 14px; font-size: 15px; }
+  .swatch { width: 26px; height: 26px; border-radius: 7px; border: 2px solid; flex-shrink: 0; }
+  .sw-vrij { background: #ecfdf3; border-color: #6ee7b7; }
+  .sw-uit { background: #eff6ff; border-color: #60a5fa; }
+  .sw-borg { background: #fff7ed; border-color: #fb923c; }
+  .sw-defect { background: #fffbeb; border-color: #fbbf24; }
+  .sw-defect-uit { background: #eff6ff; border-color: #60a5fa; outline: 2px solid #f59e0b; outline-offset: 1px; }
+  .sw-sleutel { background: #fef2f2; border-color: #f87171; }
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 15px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  th { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  td code { font-size: 0.85em; }
+  .toc-footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px; color: var(--muted); }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.side { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <nav class="side">
+    <p class="brand">Kluisjesbeheer</p>
+    <p class="brand-sub">Handleiding · School</p>
+
+    <h4>Voor de conciërge</h4>
+    <a href="#c-start">Inloggen &amp; overzicht</a>
+    <a href="#c-kleuren">Kleuren &amp; status</a>
+    <a href="#c-toewijzen">Kluisje toewijzen</a>
+    <a href="#c-defect">Defect melden</a>
+    <a href="#c-reserve">Reservesleutel</a>
+    <a href="#c-innemen">Huur beëindigen</a>
+    <a href="#c-zoeken">Zoeken &amp; filteren</a>
+    <a href="#c-rapport">Rapporten</a>
+
+    <h4>Voor de IT-afdeling</h4>
+    <a href="#it-eisen">Systeemeisen</a>
+    <a href="#it-entra">Entra ID</a>
+    <a href="#it-install">Installatie</a>
+    <a href="#it-nginx">NGINX &amp; SSL</a>
+    <a href="#it-magister">Magister (optioneel)</a>
+    <a href="#it-backup">Back-up</a>
+    <a href="#it-onderhoud">Onderhoud</a>
+  </nav>
+
+  <main>
+    <div class="hero-block">
+      <p class="eyebrow">Handleiding · 2026</p>
+      <h1>Kluisjesbeheer</h1>
+      <p class="lead">Beheer van schoolkluisjes — toewijzen, innemen, defecten en rapportage. Deze handleiding bestaat uit twee delen: dagelijks gebruik voor conciërges, en installatie &amp; beheer voor de IT-afdeling.</p>
+    </div>
+
+    <!-- ============ DEEL 1: CONCIËRGE ============ -->
+    <span class="section-tag tag-concierge">Deel 1 · Voor de conciërge</span>
+
+    <h2 id="c-start">Inloggen &amp; overzicht</h2>
+    <p>De applicatie werkt volledig in de browser. Ga naar het webadres dat de IT-afdeling heeft doorgegeven en log in met uw schoolaccount (hetzelfde Microsoft-account als voor e-mail). Er zijn geen aparte wachtwoorden.</p>
+    <p>Na het inloggen ziet u uw vestiging(en). Heeft u toegang tot één vestiging, dan komt u daar direct in. Bij meerdere vestigingen kiest u er één via de tabbladen bovenaan.</p>
+    <p>Het hoofdscherm toont alle kluisjes als tegels. Elke tegel laat het kluisnummer zien en — afhankelijk van de status — de huurder of een label.</p>
+
+    <h2 id="c-kleuren">Kleuren &amp; status</h2>
+    <p>De kleur van een tegel vertelt in één oogopslag wat er met het kluisje aan de hand is:</p>
+    <div class="legend">
+      <div class="legend-row"><span class="swatch sw-vrij"></span> <span><strong>Groen — Vrij.</strong> Kluisje is beschikbaar voor toewijzing.</span></div>
+      <div class="legend-row"><span class="swatch sw-uit"></span> <span><strong>Blauw — Uitgeleend.</strong> Toont de naam van de huidige huurder.</span></div>
+      <div class="legend-row"><span class="swatch sw-borg"></span> <span><strong>Oranje — Uitgeleend, borg niet betaald.</strong> 💰-teken bij de naam.</span></div>
+      <div class="legend-row"><span class="swatch sw-defect"></span> <span><strong>Amber — Defect (en vrij).</strong> Kluisje is gemarkeerd als defect, geen huurder.</span></div>
+      <div class="legend-row"><span class="swatch sw-defect-uit"></span> <span><strong>Blauw met amber rand — Defect én in gebruik.</strong> ⚠-teken voor het nummer; de huurder blijft zichtbaar.</span></div>
+      <div class="legend-row"><span class="swatch sw-sleutel"></span> <span><strong>Rood — Vrij, maar sleutel/borg openstaand</strong> van de vorige huurder (🔑 / 💰).</span></div>
+    </div>
+    <p>Een 🔑-pictogram bij een huurder betekent dat er een reservesleutel is uitgegeven.</p>
+
+    <h2 id="c-toewijzen">Een kluisje toewijzen</h2>
+    <ol class="steps">
+      <li><strong>Open een vrij kluisje</strong> — klik op een groene tegel.</li>
+      <li><strong>Klik op "Toewijzen"</strong> onderaan het detailscherm.</li>
+      <li><strong>Zoek de leerling</strong> op naam of stamnummer. Bij een ingerichte Magister-koppeling verschijnen de leerlingen automatisch.</li>
+      <li><strong>Vul periode en borg in</strong> — van/tot-datum en, indien van toepassing, het borgbedrag en of het al betaald is.</li>
+      <li><strong>Bevestig.</strong> Het kluisje wordt blauw en toont de naam van de leerling.</li>
+    </ol>
+    <div class="callout">
+      <p class="ct">Goed om te weten</p>
+      <p>Een leerling kan maar één kluisje per vestiging hebben. Een kluisje kan pas opnieuw worden toegewezen als de sleutel is ingeleverd én de borg is teruggestort.</p>
+    </div>
+
+    <h2 id="c-defect">Een defect melden</h2>
+    <p>Een kluisje kan defect zijn terwijl het nog in gebruik is. Het defect markeren raakt de huurder en de opmerkingen <strong>niet</strong> aan.</p>
+    <ol class="steps">
+      <li><strong>Open het kluisje</strong> — een vrij of een verhuurd kluisje, beide kan.</li>
+      <li><strong>Klik op "Markeer als defect".</strong> Er verschijnt een amber "defect"-label naast de status.</li>
+      <li><strong>In het overzicht</strong> krijgt een verhuurd-en-defect kluisje een amber rand met een ⚠-teken; de huurder blijft gewoon zichtbaar.</li>
+      <li><strong>Opgelost?</strong> Open het kluisje en klik op "Defect opheffen".</li>
+    </ol>
+    <div class="callout warn">
+      <p class="ct">Let op</p>
+      <p>Een defect kluisje kan niet aan een nieuwe leerling worden toegewezen. Hef eerst het defect op. Een lopende verhuur blijft wél gewoon doorlopen.</p>
+    </div>
+
+    <h2 id="c-reserve">Reservesleutel registreren</h2>
+    <p>Bij een verhuurd kluisje kunt u vastleggen dat er een reservesleutel is afgegeven.</p>
+    <ol class="steps">
+      <li><strong>Open het verhuurde kluisje.</strong></li>
+      <li><strong>Vink "Reservesleutel uitgegeven" aan</strong> in het huurderblok.</li>
+      <li><strong>Kies de datum</strong> van afgifte in het datumveld dat verschijnt.</li>
+    </ol>
+    <p>In het overzicht verschijnt een 🔑-pictogram bij de huurder. Een eventueel borgbedrag voor de reservesleutel noteert u in het opmerkingenveld — dat veld is bedoeld voor vrije aantekeningen.</p>
+
+    <h2 id="c-innemen">Een huur beëindigen</h2>
+    <ol class="steps">
+      <li><strong>Open het verhuurde kluisje</strong> en klik op "Huur beëindigen".</li>
+      <li><strong>Vink aan</strong> of de sleutel is ingeleverd en of de borg is teruggestort.</li>
+      <li><strong>Bevestig.</strong> Het kluisje wordt weer vrij.</li>
+    </ol>
+    <p>Is de sleutel niet ingeleverd of de borg niet teruggestort, dan blijft het kluisje rood gemarkeerd met een waarschuwing, en kan het niet opnieuw worden toegewezen totdat dit is afgehandeld. Vanuit het detailscherm kunt u dit later alsnog op "afgehandeld" zetten.</p>
+
+    <h2 id="c-zoeken">Zoeken &amp; filteren</h2>
+    <p>Bovenaan vindt u een zoekbalk en filters:</p>
+    <ul>
+      <li><strong>Zoeken</strong> op kluisnummer, sleutelnummer, leerlingnaam of stamnummer.</li>
+      <li><strong>Filter</strong> op status: Alles, Vrij, Uitgeleend, Defect, of openstaande sleutel/borg.</li>
+      <li><strong>Cluster</strong> — beperk tot een gang of afdeling binnen de vestiging.</li>
+    </ul>
+    <p>Na een aanpassing blijft het detailscherm open staan, zodat u meerdere handelingen achter elkaar op hetzelfde kluisje kunt doen zonder de plek in de lijst kwijt te raken.</p>
+
+    <h2 id="c-rapport">Rapporten</h2>
+    <p>Via de werkbalk maakt u PDF-overzichten, per vestiging of klas:</p>
+    <ul>
+      <li><strong>Openstaande sleutels</strong> — wie heeft nog niet ingeleverd.</li>
+      <li><strong>Openstaande borg</strong> — niet betaald of niet teruggestort.</li>
+      <li><strong>Actieve toewijzingen</strong> en <strong>innameoverzicht</strong> — handig aan het eind van het schooljaar.</li>
+      <li><strong>Defecte kluisjes</strong> — overzicht voor de technische dienst.</li>
+    </ul>
+
+    <hr class="divider" />
+
+    <!-- ============ DEEL 2: IT ============ -->
+    <span class="section-tag tag-it">Deel 2 · Voor de IT-afdeling</span>
+
+    <h2 id="it-eisen">Systeemeisen</h2>
+    <p>De applicatie draait als systemd-service via Gunicorn (2 workers) op poort 5000, met NGINX als reverse proxy ervoor. Eén lichte virtuele machine in uw VMware-omgeving volstaat.</p>
+    <table>
+      <tr><th>Component</th><th>Minimaal</th><th>Aanbevolen</th></tr>
+      <tr><td>OS</td><td>Debian 12 / Ubuntu 22.04+</td><td>Debian 12 LTS</td></tr>
+      <tr><td>RAM</td><td>512 MB</td><td>1 GB</td></tr>
+      <tr><td>Opslag</td><td>1 GB</td><td>2 GB</td></tr>
+      <tr><td>Python</td><td>3.11+</td><td>3.12</td></tr>
+      <tr><td>Node.js</td><td>18 LTS</td><td>20 LTS</td></tr>
+      <tr><td>Webserver</td><td>NGINX</td><td>NGINX</td></tr>
+    </table>
+    <p>Uitgaand internetverkeer dat open moet staan:</p>
+    <table>
+      <tr><th>Bestemming</th><th>Poort</th><th>Doel</th></tr>
+      <tr><td><code>login.microsoftonline.com</code></td><td>443</td><td>Entra ID SSO</td></tr>
+      <tr><td><code>graph.microsoft.com</code></td><td>443</td><td>Gebruiker- &amp; groepscheck</td></tr>
+      <tr><td>Magister SOAP-endpoint</td><td>8800 (of 443)</td><td>Leerlingsync (optioneel)</td></tr>
+    </table>
+
+    <h2 id="it-entra">Entra ID (Azure AD)</h2>
+    <p>De app gebruikt Microsoft Entra ID voor single sign-on. Eén app-registratie en één beveiligingsgroep volstaan; de rolverdeling (beheerder vs. conciërge) en vestigingskoppeling regelt u verder in de app zelf.</p>
+    <ol class="steps">
+      <li><strong>App registration aanmaken</strong> — Azure Portal → App registrations → New registration. Type: Web, Redirect URI <code>https://[domein]/auth/callback</code>.</li>
+      <li><strong>Noteer</strong> Application (client) ID en Directory (tenant) ID.</li>
+      <li><strong>Client secret</strong> aanmaken onder Certificates &amp; secrets. Kopieer de Value direct — die is maar één keer zichtbaar.</li>
+      <li><strong>API-permissions</strong> toevoegen (Microsoft Graph, Delegated): <code>User.Read</code> en <code>GroupMember.Read.All</code>. Klik daarna op <em>Grant admin consent</em>.</li>
+      <li><strong>Beveiligingsgroep</strong> aanmaken (type Security, bijv. <code>Conciergebeheer-Kluisjes</code>). Voeg de medewerkers toe en noteer de Object ID.</li>
+    </ol>
+    <p>U levert vier waarden aan voor <code>config.json</code>:</p>
+    <table>
+      <tr><th>Veld</th><th>Waar te vinden</th></tr>
+      <tr><td><code>TenantId</code></td><td>App Registration → Overview → Directory (tenant) ID</td></tr>
+      <tr><td><code>ClientId</code></td><td>App Registration → Overview → Application (client) ID</td></tr>
+      <tr><td><code>ClientSecret</code></td><td>Certificates &amp; secrets → Value</td></tr>
+      <tr><td><code>DashboardGroupId</code></td><td>Groups → [groep] → Object ID</td></tr>
+    </table>
+
+    <h2 id="it-install">Installatie</h2>
+    <ol class="steps">
+      <li><strong>Bestanden plaatsen</strong><pre><code>scp -r kluisjesbeheer/ root@[server-ip]:/opt/</code></pre></li>
+      <li><strong>Deploy-script draaien</strong> — installeert dependencies, bouwt de frontend, maakt de systemd-service en een <code>kluisjes</code>-gebruiker aan.<pre><code>cd /opt/kluisjesbeheer
+bash deploy.sh</code></pre></li>
+      <li><strong>Configuratie invullen</strong><pre><code>cp backend/config.example.json backend/config.json
+nano backend/config.json</code></pre>
+      Minimaal vereiste velden:
+      <pre><code>{
+  "TenantId": "...",
+  "ClientId": "...",
+  "ClientSecret": "...",
+  "DashboardGroupId": "...",
+  "RedirectUri": "https://kluisjes.schooldomein.nl/auth/callback",
+  "SecretKey": "willekeurige-lange-string",
+  "AllowedOrigins": ["https://kluisjes.schooldomein.nl"]
+}</code></pre>
+      Genereer een veilige sleutel: <code>python3 -c "import secrets; print(secrets.token_hex(32))"</code></li>
+      <li><strong>Service starten</strong><pre><code>systemctl restart kluisjesbeheer
+systemctl status kluisjesbeheer</code></pre></li>
+    </ol>
+
+    <h2 id="it-nginx">NGINX &amp; SSL</h2>
+    <p>Configureer NGINX als HTTPS reverse proxy met een eigen certificaat en interne DNS-naam. Maak <code>/etc/nginx/sites-enabled/kluisjesbeheer</code>:</p>
+    <pre><code>server {
+    listen 80;
+    server_name kluisjes.schooldomein.nl;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name kluisjes.schooldomein.nl;
+
+    ssl_certificate     /etc/nginx/ssl/cert.crt;
+    ssl_certificate_key /etc/nginx/ssl/cert.key;
+
+    client_max_body_size 16M;
+
+    location /img/ {
+        root /opt/kluisjesbeheer/frontend/dist;
+        expires 1h;
+        add_header Cache-Control "public";
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</code></pre>
+    <pre><code>nginx -t && systemctl reload nginx</code></pre>
+
+    <h2 id="it-magister">Magister-koppeling (optioneel)</h2>
+    <p>De Magister-koppeling is niet nodig om de app uit te rollen — die kan later via Beheer → Instellingen worden ingesteld. Zonder koppeling kunt u kluisjes en leerlingen via een Excel-export importeren.</p>
+    <p>De koppeling verzorgt automatische synchronisatie van leerlinggegevens en het koppelen van leerlingen aan de juiste vestiging. Aan te vragen bij de Magister-beheerder:</p>
+    <ul>
+      <li>Medius SOAP-webservice URL (formaat <code>https://[school].swp.nl:8800/doc</code>)</li>
+      <li>Een <strong>service-account</strong> (niet persoonlijk) met leestoegang op de bibliotheken <code>Algemeen</code> (functie <code>Login</code>) en <code>ADFuncties</code> (functie <code>GetActiveStudents</code>)</li>
+    </ul>
+    <div class="callout">
+      <p class="ct">Beveiliging</p>
+      <p>De Magister-credentials worden via de app ingevoerd en versleuteld (AES-128-CBC + HMAC) opgeslagen in de database. Ze zijn niet uitleesbaar via de interface.</p>
+    </div>
+
+    <h2 id="it-backup">Back-up</h2>
+    <p>De applicatie maakt automatisch dagelijks een interne back-up van de database via de veilige <code>sqlite3.backup()</code>-API, met roterende bewaring (7 dagelijks + 4 wekelijks) in <code>backend/backups/</code>. Dit werkt direct na de eerste start, zonder configuratie.</p>
+    <p>Samen met uw eigen dagelijkse VM-back-up zijn dit twee onafhankelijke beschermingslagen. Een beheerder kan via de app ook handmatig een back-up maken en downloaden.</p>
+    <div class="callout warn">
+      <p class="ct">Belangrijk bij updates</p>
+      <p>Bij het uitrollen van een nieuwe versie: maak altijd vooraf een handmatige back-up, en zorg dat het databasebestand (<code>*.db</code>) en <code>config.json</code> nooit worden overschreven door het update-pakket. Deze worden bewust buiten elke deploy gehouden.</p>
+    </div>
+
+    <h2 id="it-onderhoud">Onderhoud</h2>
+    <ul>
+      <li><strong>Logs:</strong> <code>journalctl -u kluisjesbeheer -f</code></li>
+      <li><strong>Herstarten:</strong> <code>systemctl restart kluisjesbeheer</code></li>
+      <li><strong>Schoolvakanties:</strong> het bestand <code>schoolvakanties.json</code> wordt jaarlijks handmatig bijgewerkt (geen externe bron).</li>
+      <li><strong>Eerste inrichting in de app:</strong> branding (naam, logo, kleur), vestigingen en clusters aanmaken, en kluisjes importeren via een Excel-export. Het importscherm werkt in twee stappen: eerst een voorvertoning die de voorvoegsels herkent, daarna koppelt u die aan vestigingsnamen.</li>
+    </ul>
+
+    <p class="toc-footer">Kluisjesbeheer · Handleiding voor conciërges en IT-beheer · School, 2026</p>
+  </main>
+
+</div>
+</body>
+</html>
