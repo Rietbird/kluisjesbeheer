@@ -15,8 +15,8 @@ def test_dashboard_stats(client):
         'leerling_stamnr': '22001', 'leerling_naam': 'Emma', 'leerling_klas': '2A',
         'periode_van': '2026-01-01', 'periode_tot': '2026-07-31', 'borgbedrag': 15.0
     })
-    # Mark P003 as defect
-    client.put('/api/kluisjes/3', json={'status': 'defect'})
+    # Mark P003 as defect (apart van huurstatus)
+    client.put('/api/kluisjes/3', json={'is_defect': True})
 
     rv = client.get('/api/dashboard/stats')
     assert rv.status_code == 200
@@ -24,7 +24,7 @@ def test_dashboard_stats(client):
     assert len(stats) == 1  # one vestiging
     assert stats[0]['totaal'] == 3
     assert stats[0]['uitgeleend'] == 1
-    assert stats[0]['vrij'] == 1
+    assert stats[0]['vrij'] == 2  # P002 + P003 (defect blijft 'vrij' qua huurstatus)
     assert stats[0]['defect'] == 1
 
 def test_dashboard_sleutel_niet_ingeleverd(client):

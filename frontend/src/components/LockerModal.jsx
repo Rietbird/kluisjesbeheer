@@ -16,10 +16,13 @@ function InfoRow({ label, children }) {
 
 function StatusBadge({ status, sleutelNietIngeleverd }) {
   const cls = status === 'uitgeleend' ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300'
-    : status === 'defect' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
     : sleutelNietIngeleverd ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
     : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
   return <span className={`px-3 py-1 rounded-full font-semibold ${cls}`}>{status}</span>
+}
+
+function DefectBadge() {
+  return <span className="px-3 py-1 rounded-full font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">defect</span>
 }
 
 export default function LockerModal({ kluisje, onClose, onUpdate }) {
@@ -30,8 +33,11 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
   const [savingStatus, setSavingStatus] = useState(null)
   const { borgActiefVoor } = useInstellingen()
 
+  // Sync detail bij elke prop-update (na lijst-reload), zodat waarschuwingsblokken etc. up-to-date zijn
+  useEffect(() => { setDetail(kluisje) }, [kluisje])
+
+  // Bij wisseling naar ander kluisje: opmerkingen + mode + geschiedenis resetten
   useEffect(() => {
-    setDetail(kluisje)
     setOpmerkingen(kluisje.opmerkingen || '')
     setMode(null)
     api.get(`/api/kluisjes/${kluisje.id}/geschiedenis`)
@@ -50,9 +56,40 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
     }
   }
 
-  async function setStatus(status) {
+  async function toggleDefect() {
     try {
-      await api.put(`/api/kluisjes/${kluisje.id}`, { status })
+      const updated = await api.put(`/api/kluisjes/${kluisje.id}`, { is_defect: !detail.is_defect })
+      // Mergedetail lokaal direct (search-endpoint levert reservesleutel-velden mee, /kluisjes/:id niet)
+      setDetail(d => ({ ...d, is_defect: updated.is_defect, defect_sinds: updated.defect_sinds }))
+      onUpdate()
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  async function toggleReservesleutel() {
+    if (!detail.toewijzing_id) return
+    try {
+      const updated = await api.patch(`/api/toewijzingen/${detail.toewijzing_id}`, {
+        reservesleutel_uitgegeven: !detail.reservesleutel_uitgegeven,
+      })
+      setDetail(d => ({ ...d,
+        reservesleutel_uitgegeven: updated.reservesleutel_uitgegeven,
+        reservesleutel_datum: updated.reservesleutel_datum,
+      }))
+      onUpdate()
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  async function updateReservesleutelDatum(datum) {
+    if (!detail.toewijzing_id) return
+    try {
+      const updated = await api.patch(`/api/toewijzingen/${detail.toewijzing_id}`, {
+        reservesleutel_datum: datum || null,
+      })
+      setDetail(d => ({ ...d, reservesleutel_datum: updated.reservesleutel_datum }))
       onUpdate()
     } catch (err) {
       alert(err.message)
@@ -61,7 +98,7 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
 
   const isUitgeleend = detail.status === 'uitgeleend'
   const isVrij = detail.status === 'vrij'
-  const isDefect = detail.status === 'defect'
+  const isDefect = !!detail.is_defect
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -133,8 +170,26 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
           {/* Basic info */}
           <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 text-sm">
             <InfoRow label="Sleutelnummer">{detail.sleutelnummer || '—'}</InfoRow>
-            <InfoRow label="Status"><StatusBadge status={detail.status} sleutelNietIngeleverd={detail._sleutel_niet_ingeleverd} /></InfoRow>
+            <InfoRow label="Status">
+              <span className="inline-flex flex-wrap gap-1 justify-end">
+                <StatusBadge status={detail.status} sleutelNietIngeleverd={detail._sleutel_niet_ingeleverd} />
+                {isDefect && <DefectBadge />}
+              </span>
+            </InfoRow>
           </div>
+
+          {/* Defect-info bij uitgeleend kluisje */}
+          {isDefect && isUitgeleend && (
+            <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3">
+              <span className="text-xl">⚠</span>
+              <div className="flex-1">
+                <div className="font-semibold text-amber-800 dark:text-amber-300">Defect gemeld</div>
+                <div className="text-sm text-amber-600 dark:text-amber-400 mt-0.5">
+                  Kluisje is gemarkeerd als defect{detail.defect_sinds && ` sinds ${formatDate(detail.defect_sinds)}`}. De huurder is intact gebleven.
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Huurder section */}
           {isUitgeleend && (
@@ -157,6 +212,21 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                       {detail.borg_betaald ? ' (betaald)' : ' (NIET betaald)'}
                     </span>
                   </InfoRow>
+                )}
+              </div>
+              <div className="mt-3 pt-3 border-t border-sky-200 dark:border-sky-800 flex items-center justify-between gap-2 flex-wrap">
+                <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input type="checkbox"
+                    checked={!!detail.reservesleutel_uitgegeven}
+                    onChange={toggleReservesleutel}
+                    className="rounded border-slate-300 w-4 h-4" />
+                  <span>🔑 Reservesleutel uitgegeven</span>
+                </label>
+                {!!detail.reservesleutel_uitgegeven && (
+                  <input type="date"
+                    value={detail.reservesleutel_datum || ''}
+                    onChange={e => updateReservesleutelDatum(e.target.value)}
+                    className="text-sm border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-2 py-1" />
                 )}
               </div>
             </div>
@@ -236,11 +306,16 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
         {/* Action buttons footer */}
         {mode === null && (
           <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex flex-wrap gap-2">
-            {isVrij && (
+            {isVrij && !isDefect && (
               <button onClick={() => setMode('toewijzen')}
                 className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl py-3 text-sm font-bold hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm">
                 Toewijzen
               </button>
+            )}
+            {isVrij && isDefect && (
+              <div className="flex-1 text-center text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-xl py-3 border border-amber-200 dark:border-amber-800">
+                Hef defect op om toe te wijzen
+              </div>
             )}
             {isUitgeleend && (
               <button onClick={() => setMode('beeindigen')}
@@ -249,14 +324,14 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
               </button>
             )}
             {!isDefect ? (
-              <button onClick={() => setStatus('defect')}
+              <button onClick={toggleDefect}
                 className="border-2 border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-400 rounded-xl px-5 py-3 text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
                 Markeer als defect
               </button>
             ) : (
-              <button onClick={() => setStatus('vrij')}
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl py-3 text-sm font-bold hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-sm">
-                Markeer als vrij
+              <button onClick={toggleDefect}
+                className="border-2 border-emerald-400 dark:border-emerald-600 text-emerald-700 dark:text-emerald-400 rounded-xl px-5 py-3 text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
+                Defect opheffen
               </button>
             )}
           </div>

@@ -26,6 +26,7 @@ def search_kluisjes():
                t.id as toewijzing_id,
                t.leerling_naam, t.leerling_stamnr, t.leerling_klas,
                t.periode_van, t.periode_tot, t.borgbedrag, t.borg_betaald,
+               t.reservesleutel_uitgegeven, t.reservesleutel_datum,
                l.vertrokken_op as leerling_vertrokken_op,
                CASE
                  WHEN k.status = 'vrij' AND EXISTS (
@@ -71,6 +72,9 @@ def search_kluisjes():
                 AND t2.id = (SELECT MAX(t3.id) FROM toewijzingen t3 WHERE t3.kluisje_id = k.id)
             )
         )'''
+    elif status == 'defect':
+        # Defect is nu een aparte vlag, los van huurstatus
+        query += ' AND k.is_defect = 1'
     elif status:
         query += ' AND k.status = ?'
         params.append(status)
@@ -136,13 +140,32 @@ def update_kluisje(kid):
     locatie = data.get('locatie', row['locatie'])
     opmerkingen = data.get('opmerkingen', row['opmerkingen'])
     status = data.get('status', row['status'])
-    if status not in ('vrij', 'uitgeleend', 'defect'):
+    if status not in ('vrij', 'uitgeleend'):
+        # 'defect' als status mag niet meer (is_defect is nu apart veld)
         return jsonify({'error': 'Ongeldige status'}), 400
 
-    g.db.execute(
-        "UPDATE kluisjes SET sleutelnummer=?, locatie=?, opmerkingen=?, status=?, updated_at=datetime('now') WHERE id=?",
-        (sleutelnummer, locatie, opmerkingen, status, kid)
-    )
+    # is_defect is een aparte vlag, los van huurstatus
+    if 'is_defect' in data:
+        is_defect = 1 if data.get('is_defect') else 0
+        defect_sinds = row['defect_sinds']
+        if is_defect and not row['is_defect']:
+            defect_sinds = None  # zet onderstaand op datetime('now')
+        elif not is_defect:
+            defect_sinds = None
+    else:
+        is_defect = row['is_defect']
+        defect_sinds = row['defect_sinds']
+
+    if is_defect and defect_sinds is None:
+        g.db.execute(
+            "UPDATE kluisjes SET sleutelnummer=?, locatie=?, opmerkingen=?, status=?, is_defect=?, defect_sinds=datetime('now'), updated_at=datetime('now') WHERE id=?",
+            (sleutelnummer, locatie, opmerkingen, status, is_defect, kid)
+        )
+    else:
+        g.db.execute(
+            "UPDATE kluisjes SET sleutelnummer=?, locatie=?, opmerkingen=?, status=?, is_defect=?, defect_sinds=?, updated_at=datetime('now') WHERE id=?",
+            (sleutelnummer, locatie, opmerkingen, status, is_defect, defect_sinds, kid)
+        )
     g.db.commit()
     row = g.db.execute('SELECT * FROM kluisjes WHERE id = ?', (kid,)).fetchone()
     return jsonify(dict(row))
@@ -243,32 +266,48 @@ def _parse_bedrag(text):
 
 
 def _parse_periode_mx(text):
-    """Parse MX format: 'van 1-8-2025 tot en met 31-7-2026' -> (iso_van, iso_tot)."""
+    """Parse MX format: 'van 1-8-2025 tot en met 31-7-2026' -> (iso_van, iso_tot).
+
+    Accepts both d-m-yyyy and yyyy-m-d inside the 'van ... tot en met ...' string.
+    """
     import re
     if not text:
         return None, None
-    m = re.match(r'van\s+(\d{1,2}-\d{1,2}-\d{4})\s+tot en met\s+(\d{1,2}-\d{1,2}-\d{4}|-)', str(text).strip())
+    m = re.match(
+        r'van\s+([\d:\- ]+?)\s+tot en met\s+([\d:\- ]+?|-)\s*$',
+        str(text).strip()
+    )
     if not m:
         return None, None
-    def to_iso(d):
-        if not d or d == '-':
-            return None
-        parts = d.split('-')
-        return f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}" if len(parts) == 3 else d
-    return to_iso(m.group(1)), to_iso(m.group(2))
+    return _parse_date_desktop(m.group(1)), _parse_date_desktop(m.group(2))
 
 
 def _parse_date_desktop(text):
-    """Parse Desktop date format (d-m-yyyy or dd-mm-yyyy) to ISO."""
-    if not text:
+    """Parse a date to ISO (YYYY-MM-DD).
+
+    Handles three inputs that Magister/Excel produce:
+      - 'dd-mm-yyyy' or 'd-m-yyyy'           (string export)
+      - '2025-08-01 00:00:00'                (str() of an Excel datetime)
+      - a real datetime/date object
+    """
+    if text is None:
         return None
+    # Real datetime/date object (openpyxl gives these for date cells)
+    if hasattr(text, 'strftime'):
+        return text.strftime('%Y-%m-%d')
     text = str(text).strip()
     if not text or text == '-':
         return None
+    # Strip a trailing time component ('2025-08-01 00:00:00' or with 'T')
+    text = text.split(' ')[0].split('T')[0].strip()
     parts = text.split('-')
-    if len(parts) == 3:
-        return f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
-    return text
+    if len(parts) != 3:
+        return text
+    # ISO already (yyyy-mm-dd) -> normalise zero-padding, keep order
+    if len(parts[0]) == 4:
+        return f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
+    # dd-mm-yyyy -> yyyy-mm-dd
+    return f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
 
 
 def _detect_format(headers):
@@ -532,8 +571,9 @@ def import_kluisjes():
             else:
                 row_cluster_id = _get_or_create_cluster(row_vestiging_id, 'Standaard')
 
-            # Determine status
-            db_status = 'defect' if is_defect else ('uitgeleend' if is_uitgeleend else 'vrij')
+            # Determine status (defect is een aparte vlag, los van huurstatus)
+            db_status = 'uitgeleend' if is_uitgeleend else 'vrij'
+            db_is_defect = 1 if is_defect else 0
 
             # Check for duplicate kluisnummer in this vestiging
             existing = g.db.execute(
@@ -546,8 +586,8 @@ def import_kluisjes():
 
             # Insert kluisje
             cur = g.db.execute(
-                'INSERT INTO kluisjes (cluster_id, vestiging_id, kluisnummer, sleutelnummer, locatie, status, opmerkingen) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                (row_cluster_id, row_vestiging_id, kluisnummer, sleutelnummer, locatie, db_status, opmerkingen)
+                "INSERT INTO kluisjes (cluster_id, vestiging_id, kluisnummer, sleutelnummer, locatie, status, is_defect, defect_sinds, opmerkingen) VALUES (?, ?, ?, ?, ?, ?, ?, CASE WHEN ?=1 THEN datetime('now') ELSE NULL END, ?)",
+                (row_cluster_id, row_vestiging_id, kluisnummer, sleutelnummer, locatie, db_status, db_is_defect, db_is_defect, opmerkingen)
             )
             kluisjes_created += 1
 

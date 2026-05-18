@@ -28,7 +28,6 @@ function SortIcon({ col, sortCol, sortDir }) {
 function StatusBadge({ kluisje }) {
   const hasWarning = kluisje._sleutel_niet_ingeleverd || kluisje._borg_niet_teruggestort
   const cls = kluisje.status === 'uitgeleend' ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300'
-    : kluisje.status === 'defect' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'
     : hasWarning ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
     : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
   let label = kluisje.status
@@ -38,7 +37,17 @@ function StatusBadge({ kluisje }) {
     if (kluisje._borg_niet_teruggestort) icons.push('💰')
     label = `${icons.join('')} Vrij`
   }
-  return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>{label}</span>
+  return (
+    <span className="inline-flex gap-1">
+      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>{label}</span>
+      {!!kluisje.is_defect && (
+        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">defect</span>
+      )}
+      {!!kluisje.reservesleutel_uitgegeven && (
+        <span className="text-xs" title="Reservesleutel uitgegeven">🔑</span>
+      )}
+    </span>
+  )
 }
 
 export default function LockerTable({ kluisjes, onSelect, selectedId }) {

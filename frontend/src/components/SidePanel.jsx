@@ -16,10 +16,13 @@ function InfoRow({ label, children }) {
 
 function StatusBadge({ status, sleutelNietIngeleverd }) {
   const cls = status === 'uitgeleend' ? 'bg-sky-100 text-sky-700'
-    : status === 'defect' ? 'bg-amber-100 text-amber-700'
     : sleutelNietIngeleverd ? 'bg-red-100 text-red-700'
     : 'bg-emerald-100 text-emerald-700'
   return <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${cls}`}>{status}</span>
+}
+
+function DefectBadge() {
+  return <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">defect</span>
 }
 
 export default function SidePanel({ kluisje, onClose, onUpdate }) {
@@ -50,9 +53,34 @@ export default function SidePanel({ kluisje, onClose, onUpdate }) {
     }
   }
 
-  async function setStatus(status) {
+  async function toggleDefect() {
     try {
-      await api.put(`/api/kluisjes/${kluisje.id}`, { status })
+      const updated = await api.put(`/api/kluisjes/${kluisje.id}`, { is_defect: !detail.is_defect })
+      setDetail(d => ({ ...d, ...updated }))
+      onUpdate()
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  async function toggleReservesleutel() {
+    if (!detail.toewijzing_id) return
+    try {
+      await api.patch(`/api/toewijzingen/${detail.toewijzing_id}`, {
+        reservesleutel_uitgegeven: !detail.reservesleutel_uitgegeven,
+      })
+      onUpdate()
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  async function updateReservesleutelDatum(datum) {
+    if (!detail.toewijzing_id) return
+    try {
+      await api.patch(`/api/toewijzingen/${detail.toewijzing_id}`, {
+        reservesleutel_datum: datum || null,
+      })
       onUpdate()
     } catch (err) {
       alert(err.message)
@@ -61,7 +89,7 @@ export default function SidePanel({ kluisje, onClose, onUpdate }) {
 
   const isUitgeleend = detail.status === 'uitgeleend'
   const isVrij = detail.status === 'vrij'
-  const isDefect = detail.status === 'defect'
+  const isDefect = !!detail.is_defect
 
   return (
     <>
@@ -95,7 +123,12 @@ export default function SidePanel({ kluisje, onClose, onUpdate }) {
             <InfoRow label="Sleutelnr">{detail.sleutelnummer || '—'}</InfoRow>
             <InfoRow label="Cluster">{detail.cluster_naam || '—'}</InfoRow>
             <InfoRow label="Locatie">{detail.locatie || '—'}</InfoRow>
-            <InfoRow label="Status"><StatusBadge status={detail.status} sleutelNietIngeleverd={detail._sleutel_niet_ingeleverd} /></InfoRow>
+            <InfoRow label="Status">
+              <span className="inline-flex gap-1">
+                <StatusBadge status={detail.status} sleutelNietIngeleverd={detail._sleutel_niet_ingeleverd} />
+                {isDefect && <DefectBadge />}
+              </span>
+            </InfoRow>
           </div>
 
           {/* Sleutel niet ingeleverd warning */}
@@ -155,6 +188,34 @@ export default function SidePanel({ kluisje, onClose, onUpdate }) {
                   </span>
                 </InfoRow>
               )}
+              <div className="pt-2 mt-1 border-t border-sky-200 flex items-center justify-between gap-2">
+                <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                  <input type="checkbox"
+                    checked={!!detail.reservesleutel_uitgegeven}
+                    onChange={toggleReservesleutel}
+                    className="rounded border-slate-300" />
+                  <span>🔑 Reservesleutel uitgegeven</span>
+                </label>
+                {detail.reservesleutel_uitgegeven && (
+                  <input type="date"
+                    value={detail.reservesleutel_datum || ''}
+                    onChange={e => updateReservesleutelDatum(e.target.value)}
+                    className="text-xs border border-slate-300 rounded px-1.5 py-0.5" />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Defect-info bij uitgeleend kluisje */}
+          {isDefect && isUitgeleend && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+              <span className="text-amber-500 text-base mt-0.5">⚠</span>
+              <div className="flex-1">
+                <div className="text-sm font-medium text-amber-700">Defect gemeld</div>
+                <div className="text-xs text-amber-600 mt-0.5">
+                  Kluisje is gemarkeerd als defect{detail.defect_sinds && ` sinds ${formatDate(detail.defect_sinds)}`}. De huurder is intact gebleven.
+                </div>
+              </div>
             </div>
           )}
 
@@ -231,14 +292,14 @@ export default function SidePanel({ kluisje, onClose, onUpdate }) {
               </button>
             )}
             {!isDefect ? (
-              <button onClick={() => setStatus('defect')}
+              <button onClick={toggleDefect}
                 className="w-full border border-amber-300 text-amber-700 rounded-lg py-2 text-sm hover:bg-amber-50 transition-colors">
                 Markeer als defect
               </button>
             ) : (
-              <button onClick={() => setStatus('vrij')}
+              <button onClick={toggleDefect}
                 className="w-full border border-emerald-300 text-emerald-700 rounded-lg py-2 text-sm hover:bg-emerald-50 transition-colors">
-                Markeer als vrij
+                Defect opheffen
               </button>
             )}
           </div>

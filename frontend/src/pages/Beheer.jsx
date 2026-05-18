@@ -377,9 +377,11 @@ function KluisjesPanel({ clusterId }) {
                   {k.sleutelnummer && <span className="text-sm text-slate-500">sleutel {k.sleutelnummer}</span>}
                   <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
                     k.status === 'uitgeleend' ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300' :
-                    k.status === 'defect' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300' :
                     'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
                   }`}>{k.status}</span>
+                  {!!k.is_defect && (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">defect</span>
+                  )}
                 </div>
                 {!selectMode && (
                   <div className="flex gap-2" onClick={e => e.stopPropagation()}>

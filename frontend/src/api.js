@@ -29,6 +29,7 @@ export const api = {
   get: (path) => deduped(path),
   post: (path, body) => apiFetch(path, { method: 'POST', body: JSON.stringify(body) }),
   put: (path, body) => apiFetch(path, { method: 'PUT', body: JSON.stringify(body) }),
+  patch: (path, body) => apiFetch(path, { method: 'PATCH', body: JSON.stringify(body) }),
   del: (path) => apiFetch(path, { method: 'DELETE' }),
   upload: (path, formData) => fetch(path, { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(async r => {
     if (r.status === 401) { window.location.href = '/auth/login'; throw new Error('Niet ingelogd') }

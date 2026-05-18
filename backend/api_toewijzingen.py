@@ -11,6 +11,8 @@ def toewijzen(kid):
         return jsonify({'error': 'Kluisje niet gevonden'}), 404
     if kluisje['status'] == 'uitgeleend':
         return jsonify({'error': 'Kluisje is al uitgeleend'}), 409
+    if kluisje['is_defect']:
+        return jsonify({'error': 'Kluisje is defect — hef het defect eerst op'}), 409
 
     # Blokkeer toewijzing als er openstaande borg of sleutel is van de vorige verhuur
     laatste = g.db.execute(
@@ -125,6 +127,42 @@ def sleutel_ingeleverd(tid):
     g.db.commit()
     return jsonify({'ok': True})
 
+@toewijzingen_bp.route('/toewijzingen/<int:tid>', methods=['PATCH'])
+@login_required
+def patch_toewijzing(tid):
+    """Update specific fields on an active assignment (currently: reservesleutel)."""
+    row = g.db.execute('SELECT * FROM toewijzingen WHERE id = ? AND actief = 1', (tid,)).fetchone()
+    if not row:
+        return jsonify({'error': 'Toewijzing niet gevonden of niet actief'}), 404
+    data = request.get_json() or {}
+
+    fields = []
+    params = []
+    if 'reservesleutel_uitgegeven' in data:
+        uitgegeven = 1 if data.get('reservesleutel_uitgegeven') else 0
+        fields.append('reservesleutel_uitgegeven=?')
+        params.append(uitgegeven)
+        # Datum auto-zetten als uitgegeven en nog geen datum, leegmaken bij intrekken
+        if uitgegeven and not row['reservesleutel_datum'] and 'reservesleutel_datum' not in data:
+            fields.append("reservesleutel_datum=date('now')")
+        elif not uitgegeven:
+            fields.append('reservesleutel_datum=NULL')
+    if 'reservesleutel_datum' in data:
+        datum = data.get('reservesleutel_datum') or None
+        fields.append('reservesleutel_datum=?')
+        params.append(datum)
+
+    if not fields:
+        return jsonify({'error': 'Geen velden om bij te werken'}), 400
+
+    fields.append("updated_at=datetime('now')")
+    params.append(tid)
+    g.db.execute(f"UPDATE toewijzingen SET {', '.join(fields)} WHERE id=?", params)
+    g.db.commit()
+    row = g.db.execute('SELECT * FROM toewijzingen WHERE id = ?', (tid,)).fetchone()
+    return jsonify(dict(row))
+
+
 @toewijzingen_bp.route('/toewijzingen/<int:tid>/borg-teruggestort', methods=['POST'])
 @login_required
 def borg_teruggestort(tid):
@@ -213,6 +251,9 @@ def bulk_toewijzen():
                                (kid, 'uitgeleend')).fetchone()
         if not kluisje:
             skipped.append({'kluisje_id': kid, 'reden': 'Niet beschikbaar of al uitgeleend'})
+            continue
+        if kluisje['is_defect']:
+            skipped.append({'kluisje_id': kid, 'reden': 'Kluisje is defect'})
             continue
         laatste = g.db.execute(
             'SELECT * FROM toewijzingen WHERE kluisje_id = ? ORDER BY id DESC LIMIT 1', (kid,)

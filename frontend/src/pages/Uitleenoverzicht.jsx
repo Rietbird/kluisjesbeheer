@@ -167,6 +167,14 @@ export default function Uitleenoverzicht() {
   const [showBulk, setShowBulk] = useState(false)
   const [showBulkEnd, setShowBulkEnd] = useState(false)
 
+  // Houd geselecteerd kluisje gesynchroniseerd met de lijst na reload
+  useEffect(() => {
+    if (selected) {
+      const fresh = kluisjes.find(k => k.id === selected.id)
+      if (fresh && fresh !== selected) setSelected(fresh)
+    }
+  }, [kluisjes])
+
   const filtered = filters.cluster_id
     ? kluisjes.filter(k => k.cluster_id === Number(filters.cluster_id))
     : kluisjes
@@ -224,7 +232,7 @@ export default function Uitleenoverzicht() {
       )}
 
       {selected && (
-        <LockerModal kluisje={selected} onClose={() => setSelected(null)} onUpdate={() => { reload(); setSelected(null) }} />
+        <LockerModal kluisje={selected} onClose={() => setSelected(null)} onUpdate={() => reload()} />
       )}
       {showBulk && (
         <BulkWizard vestigingId={filters.vestiging_id} onClose={() => setShowBulk(false)} onDone={() => { setShowBulk(false); reload() }} />

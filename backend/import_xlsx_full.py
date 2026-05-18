@@ -116,18 +116,19 @@ def main():
             skipped_no_cluster += 1
             continue
 
-        # Determine status
+        # Determine status (defect is een aparte vlag, los van huurstatus)
         db_status = 'vrij'
+        db_is_defect = 0
         if status_text == 'Uitgeleend':
             db_status = 'uitgeleend'
         elif status_text == 'Defect':
-            db_status = 'defect'
+            db_is_defect = 1
 
         # Insert kluisje
         borg = parse_bedrag(borg_text)
         cur = conn.execute(
-            'INSERT INTO kluisjes (cluster_id, vestiging_id, kluisnummer, sleutelnummer, locatie, status) VALUES (?, ?, ?, ?, ?, ?)',
-            (clust_id, vest_id, kluis_code, sleutel, locatie, db_status)
+            "INSERT INTO kluisjes (cluster_id, vestiging_id, kluisnummer, sleutelnummer, locatie, status, is_defect, defect_sinds) VALUES (?, ?, ?, ?, ?, ?, ?, CASE WHEN ?=1 THEN datetime('now') ELSE NULL END)",
+            (clust_id, vest_id, kluis_code, sleutel, locatie, db_status, db_is_defect, db_is_defect)
         )
         kluisje_id = cur.lastrowid
         created_kluisjes += 1

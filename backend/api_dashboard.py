@@ -14,7 +14,7 @@ def stats():
             COUNT(k.id) as totaal,
             SUM(CASE WHEN k.status='uitgeleend' THEN 1 ELSE 0 END) as uitgeleend,
             SUM(CASE WHEN k.status='vrij' THEN 1 ELSE 0 END) as vrij,
-            SUM(CASE WHEN k.status='defect' THEN 1 ELSE 0 END) as defect
+            SUM(CASE WHEN k.is_defect=1 THEN 1 ELSE 0 END) as defect
         FROM vestigingen v
         LEFT JOIN kluisjes k ON k.vestiging_id = v.id AND k.verwijderd = 0
         GROUP BY v.id
@@ -98,7 +98,7 @@ def _get_rapport_data(report_type, vestiging_id, db):
             FROM kluisjes k
             JOIN vestigingen v ON k.vestiging_id = v.id
             JOIN clusters c ON k.cluster_id = c.id
-            WHERE k.verwijderd = 0 AND k.status = 'defect'
+            WHERE k.verwijderd = 0 AND k.is_defect = 1
         '''
         params = []
         if vestiging_id:

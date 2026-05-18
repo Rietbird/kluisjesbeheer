@@ -71,6 +71,42 @@ def init_db(db_path):
         conn.commit()
     except Exception:
         pass  # kolom bestaat al
+    # Migration: is_defect + defect_sinds op kluisjes (defect los van huurstatus)
+    try:
+        conn.execute("ALTER TABLE kluisjes ADD COLUMN is_defect INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE kluisjes ADD COLUMN defect_sinds DATETIME DEFAULT NULL")
+        conn.commit()
+    except Exception:
+        pass
+    # Migration: reservesleutel velden op toewijzingen
+    try:
+        conn.execute("ALTER TABLE toewijzingen ADD COLUMN reservesleutel_uitgegeven INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE toewijzingen ADD COLUMN reservesleutel_datum DATE DEFAULT NULL")
+        conn.commit()
+    except Exception:
+        pass
+    # Data-migratie: status='defect' -> is_defect=1, status terug naar 'vrij' of 'uitgeleend'
+    # Eenmalige conversie, idempotent (kluisje met status='defect' bestaat na conversie niet meer)
+    row = conn.execute("SELECT value FROM instellingen WHERE key='defect_split_done'").fetchone()
+    if not row:
+        # Kluisjes met actieve toewijzing -> uitgeleend, anders vrij
+        conn.execute('''
+            UPDATE kluisjes SET is_defect = 1, defect_sinds = COALESCE(updated_at, datetime('now')),
+                                status = CASE
+                                    WHEN EXISTS (SELECT 1 FROM toewijzingen t WHERE t.kluisje_id = kluisjes.id AND t.actief = 1)
+                                    THEN 'uitgeleend' ELSE 'vrij' END
+            WHERE status = 'defect'
+        ''')
+        conn.execute("INSERT OR REPLACE INTO instellingen (key, value) VALUES ('defect_split_done', '1')")
+        conn.commit()
     conn.commit()
     return conn
 
