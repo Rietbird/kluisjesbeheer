@@ -347,6 +347,55 @@ def _normaliseer_kluisnummer(nummer, breedte):
     return f"{prefix}{getal.zfill(breedte)}{rest}"
 
 
+def _analyseer_nummering(nummers):
+    """Analyseer kluisnummers per prefix.
+
+    Per prefix: is de cijferlengte variabel ('krom'), wat is de doelbreedte
+    (cijfers van het hoogste getal), en zou normalisatie collisions geven.
+    """
+    import re
+    by_prefix = {}
+    for nr in nummers:
+        m = re.match(r'^(.*?)(\d+)(.*)$', str(nr or ''))
+        if not m:
+            continue
+        prefix, getal, _ = m.group(1), m.group(2), m.group(3)
+        d = by_prefix.setdefault(prefix, {
+            'lengtes': set(), 'max': 0, 'nummers': []
+        })
+        d['lengtes'].add(len(getal))
+        d['max'] = max(d['max'], int(getal))
+        d['nummers'].append(nr)
+
+    prefixes = []
+    heeft_krom = False
+    heeft_collision = False
+    for prefix, d in sorted(by_prefix.items()):
+        krom = len(d['lengtes']) > 1
+        # Breedte minstens zo breed als het breedste bestaande nummer, anders
+        # zou normalisatie cijfers afkappen (MO-001 -> MO-01) en info verliezen.
+        breedte = max(len(str(d['max'])), max(d['lengtes']))
+        # Collision: na normalisatie nog evenveel unieke nummers?
+        genormaliseerd = {_normaliseer_kluisnummer(n, breedte) for n in d['nummers']}
+        collision = len(genormaliseerd) != len(set(d['nummers']))
+        if krom:
+            heeft_krom = True
+        if collision:
+            heeft_collision = True
+        prefixes.append({
+            'prefix': prefix,
+            'krom': krom,
+            'breedte': breedte,
+            'collision': collision,
+            'aantal': len(d['nummers']),
+        })
+    return {
+        'prefixes': prefixes,
+        'heeft_krom': heeft_krom,
+        'heeft_collision': heeft_collision,
+    }
+
+
 @kluisjes_bp.route('/kluisjes/import/preview', methods=['POST'])
 @login_required
 def import_preview():

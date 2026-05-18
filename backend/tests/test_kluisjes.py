@@ -76,3 +76,26 @@ def test_normaliseer_zonder_getal_ongewijzigd():
 
 def test_normaliseer_lege_invoer():
     assert _normaliseer_kluisnummer('', 4) == ''
+
+
+from api_kluisjes import _analyseer_nummering
+
+def test_analyse_detecteert_krom_en_consistent():
+    nummers = ['MO-1', 'MO-10', 'MO-100', 'MO-1000', 'BL-001', 'BL-002']
+    res = _analyseer_nummering(nummers)
+    mo = next(p for p in res['prefixes'] if p['prefix'] == 'MO-')
+    bl = next(p for p in res['prefixes'] if p['prefix'] == 'BL-')
+    assert mo['krom'] is True
+    assert mo['breedte'] == 4          # hoogste = 1000 -> 4 cijfers
+    assert mo['collision'] is False
+    assert bl['krom'] is False
+    assert res['heeft_krom'] is True
+    assert res['heeft_collision'] is False
+
+def test_analyse_detecteert_collision():
+    # MO-1 en MO-001 zouden beide MO-001 worden bij breedte 3
+    nummers = ['MO-1', 'MO-001', 'MO-50']
+    res = _analyseer_nummering(nummers)
+    mo = next(p for p in res['prefixes'] if p['prefix'] == 'MO-')
+    assert mo['collision'] is True
+    assert res['heeft_collision'] is True
