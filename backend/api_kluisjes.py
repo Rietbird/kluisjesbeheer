@@ -352,6 +352,10 @@ def _analyseer_nummering(nummers):
 
     Per prefix: is de cijferlengte variabel ('krom'), wat is de doelbreedte
     (cijfers van het hoogste getal), en zou normalisatie collisions geven.
+
+    Let op: 'prefix' is hier alles vóór het eerste cijferblok, inclusief
+    separator ('BL-001' -> 'BL-'). Dit wijkt bewust af van _extract_prefix()
+    (dat 'BL' geeft); deze functie redeneert puur over normalisatie-breedte.
     """
     import re
     by_prefix = {}
