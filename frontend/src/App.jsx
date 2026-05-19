@@ -21,6 +21,7 @@ export default function App() {
             <TopNav
               onOpenBeheer={() => { setHandleidingOpen(false); setBeheerOpen(true) }}
               onOpenHandleiding={() => { setBeheerOpen(false); setHandleidingOpen(true) }}
+              onGoHome={() => { setBeheerOpen(false); setHandleidingOpen(false) }}
             />
             {handleidingOpen
               ? <Handleiding onClose={() => setHandleidingOpen(false)} />

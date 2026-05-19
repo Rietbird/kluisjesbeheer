@@ -24,7 +24,7 @@ function UserPhoto({ user }) {
   )
 }
 
-export default function TopNav({ onOpenBeheer, onOpenHandleiding }) {
+export default function TopNav({ onOpenBeheer, onOpenHandleiding, onGoHome }) {
   const user = useAuth()
   const [dark, setDark] = useDarkMode()
   const { schoolNaam, schoolSubtitel, schoolLogo } = useBranding()
@@ -32,22 +32,17 @@ export default function TopNav({ onOpenBeheer, onOpenHandleiding }) {
   return (
     <header className="bg-gradient-to-r from-white via-primary-50 to-primary-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 border-b border-primary-100 dark:border-slate-700 shadow-sm">
       <div className="flex items-center justify-between px-5 py-2">
-        <div className="flex items-center gap-3">
+        <button onClick={onGoHome}
+          className="flex items-center gap-3 group cursor-pointer text-left"
+          title="Naar overzicht">
           <img src={schoolLogo} alt={schoolNaam} className="h-9 w-auto rounded-none"
             onError={e => { e.target.onerror = null; e.target.src = '/img/logo-placeholder.svg' }} />
           <div>
-            <div className="font-bold text-lg text-navy dark:text-white leading-tight">Kluisjesbeheer</div>
+            <div className="font-bold text-lg text-navy dark:text-white leading-tight group-hover:text-primary transition-colors">Kluisjesbeheer</div>
             {(schoolSubtitel || schoolNaam) && <div className="text-[10px] text-primary-700 dark:text-primary font-medium leading-tight">{schoolSubtitel || schoolNaam}</div>}
           </div>
-        </div>
+        </button>
         <div className="flex items-center gap-3">
-          {/* Handleiding — discrete ? knop */}
-          <button onClick={onOpenHandleiding}
-            className="w-7 h-7 flex items-center justify-center rounded-full border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:text-primary hover:border-primary dark:hover:text-primary transition-colors text-sm font-semibold"
-            title="Handleiding">
-            ?
-          </button>
-
           {/* Dark mode toggle */}
           <button onClick={() => setDark(!dark)}
             className="flex items-center gap-1.5 bg-amber-200 dark:bg-indigo-900 rounded-full p-0.5 w-14 h-7 relative transition-colors"
@@ -63,6 +58,13 @@ export default function TopNav({ onOpenBeheer, onOpenHandleiding }) {
                 </svg>
               )}
             </span>
+          </button>
+
+          {/* Handleiding — discrete ? knop, naast instellingen */}
+          <button onClick={onOpenHandleiding}
+            className="w-7 h-7 flex items-center justify-center rounded-full border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:text-primary hover:border-primary dark:hover:text-primary transition-colors text-sm font-semibold"
+            title="Handleiding">
+            ?
           </button>
 
           {/* Beheer tandwiel — alleen voor beheerders */}
