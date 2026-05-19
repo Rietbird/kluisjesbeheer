@@ -367,51 +367,56 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
         {/* Action buttons footer — primaire actie groot, rest subtiel */}
         {mode === null && (
           <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 space-y-3">
-            {/* Primaire actie */}
-            {isVrij && !isDefect && (
-              <button onClick={() => setMode('toewijzen')}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl py-3 text-sm font-bold hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm">
-                Toewijzen
+            {isVrij && isDefect ? (
+              /* Defect + vrij: enige zinvolle actie is defect opheffen */
+              <button onClick={toggleDefect}
+                className="w-full text-center text-sm font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-xl py-3 border border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
+                Defect opheffen
               </button>
-            )}
-            {isVrij && isDefect && (
-              <div className="w-full text-center text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-xl py-3 border border-amber-200 dark:border-amber-800">
-                Hef defect op om toe te wijzen
-              </div>
-            )}
-            {isUitgeleend && (
-              <button onClick={() => setMode('beeindigen')}
-                className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl py-3 text-sm font-bold hover:from-red-600 hover:to-red-700 transition-all shadow-sm">
-                Huur beëindigen
-              </button>
-            )}
+            ) : (
+              <>
+                {/* Primaire actie */}
+                {isVrij && !isDefect && (
+                  <button onClick={() => setMode('toewijzen')}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl py-3 text-sm font-bold hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm">
+                    Toewijzen
+                  </button>
+                )}
+                {isUitgeleend && (
+                  <button onClick={() => setMode('beeindigen')}
+                    className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl py-3 text-sm font-bold hover:from-red-600 hover:to-red-700 transition-all shadow-sm">
+                    Huur beëindigen
+                  </button>
+                )}
 
-            {/* Secundaire acties — kleinere knoppen, gedempt maar herkenbaar */}
-            <div className="flex flex-wrap gap-2">
-              {isUitgeleend && (
-                <button onClick={() => setMode('ruilen')}
-                  className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                  Ruilen met…
-                </button>
-              )}
-              {!isDefect ? (
-                <button onClick={toggleDefect}
-                  className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-amber-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
-                  Markeer als defect
-                </button>
-              ) : (
-                <button onClick={toggleDefect}
-                  className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-                  Defect opheffen
-                </button>
-              )}
-              {clusters.length > 1 && (
-                <button onClick={() => setMode('verplaats')}
-                  className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">
-                  Verplaats naar cluster
-                </button>
-              )}
-            </div>
+                {/* Secundaire acties — kleinere knoppen, gedempt maar herkenbaar */}
+                <div className="flex flex-wrap gap-2">
+                  {isUitgeleend && (
+                    <button onClick={() => setMode('ruilen')}
+                      className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                      Ruilen met…
+                    </button>
+                  )}
+                  {!isDefect ? (
+                    <button onClick={toggleDefect}
+                      className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-amber-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                      Markeer als defect
+                    </button>
+                  ) : (
+                    <button onClick={toggleDefect}
+                      className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                      Defect opheffen
+                    </button>
+                  )}
+                  {clusters.length > 1 && (
+                    <button onClick={() => setMode('verplaats')}
+                      className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">
+                      Verplaats naar cluster
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 
