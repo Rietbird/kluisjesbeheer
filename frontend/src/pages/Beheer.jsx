@@ -242,12 +242,20 @@ function KluisjesPanel({ clusterId, vestigingId }) {
   const [verplaatsPrefix, setVerplaatsPrefix] = useState('')
   const [verplaatsVan, setVerplaatsVan] = useState('')
   const [verplaatsTot, setVerplaatsTot] = useState('')
+  const [prefixes, setPrefixes] = useState([])
 
   function load() {
     if (!clusterId) { setKluisjes([]); return }
     api.get(`/api/clusters/${clusterId}/kluisjes`).then(setKluisjes).catch(() => {})
   }
   useEffect(() => { load(); setSelected(new Set()); setSelectMode(false) }, [clusterId])
+
+  useEffect(() => {
+    if (!vestigingId) { setPrefixes([]); return }
+    api.get(`/api/vestigingen/${vestigingId}/prefixes`)
+      .then(p => { setPrefixes(p); if (p.length === 1) setVerplaatsPrefix(p[0]) })
+      .catch(() => setPrefixes([]))
+  }, [vestigingId])
 
   async function handleVerplaatsReeks() {
     setError(''); setBulkMsg('')
@@ -449,8 +457,16 @@ function KluisjesPanel({ clusterId, vestigingId }) {
             naar <strong>dit cluster</strong> verplaatsen, op nummer-bereik.
           </p>
           <div className="grid grid-cols-3 gap-2 mb-2">
-            <input className={inputCls} placeholder="prefix (bv. BL-)"
-              value={verplaatsPrefix} onChange={e => setVerplaatsPrefix(e.target.value)} />
+            {prefixes.length > 0 ? (
+              <select className={inputCls} value={verplaatsPrefix}
+                onChange={e => setVerplaatsPrefix(e.target.value)}>
+                {prefixes.length !== 1 && <option value="">— prefix —</option>}
+                {prefixes.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            ) : (
+              <input className={inputCls} placeholder="prefix (bv. BL-)"
+                value={verplaatsPrefix} onChange={e => setVerplaatsPrefix(e.target.value)} />
+            )}
             <input className={inputCls} placeholder="van" inputMode="numeric"
               value={verplaatsVan} onChange={e => setVerplaatsVan(e.target.value)} />
             <input className={inputCls} placeholder="tot" inputMode="numeric"

@@ -57,3 +57,15 @@ def test_verplaats_selectie_cross_vestiging_geweigerd(client):
 def test_verplaats_selectie_leeg_geweigerd(client):
     rv = client.post('/api/clusters/2/verplaats-selectie', json={'kluisje_ids': []})
     assert rv.status_code == 400
+
+
+def test_vestiging_prefixes(client):
+    # vestiging 1 heeft MO-1..MO-5 uit de seed
+    rv = client.get('/api/vestigingen/1/prefixes')
+    assert rv.status_code == 200
+    assert rv.get_json() == ['MO-']
+
+def test_vestiging_prefixes_leeg(client):
+    rv = client.get('/api/vestigingen/2/prefixes')
+    assert rv.status_code == 200
+    assert rv.get_json() == []

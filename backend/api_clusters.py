@@ -136,3 +136,20 @@ def verplaats_selectie(cid):
         )
     g.db.commit()
     return jsonify({'verplaatst': len(rows)}), 200
+
+
+@clusters_bp.route('/vestigingen/<int:vid>/prefixes', methods=['GET'])
+@login_required
+def vestiging_prefixes(vid):
+    """Distinct kluisnummer-prefixes binnen een vestiging (bv. 'BL-', 'MO-')."""
+    import re
+    rows = g.db.execute(
+        'SELECT kluisnummer FROM kluisjes WHERE vestiging_id = ? AND verwijderd = 0',
+        (vid,)
+    ).fetchall()
+    prefixes = set()
+    for r in rows:
+        m = re.match(r'^(.*?)(\d+)(.*)$', r['kluisnummer'] or '')
+        if m and m.group(1):
+            prefixes.add(m.group(1))
+    return jsonify(sorted(prefixes))
