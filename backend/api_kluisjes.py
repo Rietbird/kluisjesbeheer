@@ -605,8 +605,9 @@ def import_kluisjes():
 
             row_dict = dict(zip(headers, [str(c or '').strip() for c in row]))
 
+            kluisnummer = _row_kluisnummer(fmt, row_dict)
+
             if fmt == 'mx':
-                kluisnummer = row_dict.get('kluis', '')
                 sleutelnummer = row_dict.get('sleutel', '')
                 locatie = row_dict.get('locatie', '')
                 status_text = row_dict.get('status', '')
@@ -620,7 +621,6 @@ def import_kluisjes():
                 is_defect = status_text.lower() == 'defect'
 
             elif fmt == 'desktop':
-                kluisnummer = row_dict.get('omschrijving kluisje', '') or row_dict.get('omschrijving\nkluisje', '')
                 sleutelnummer = row_dict.get('slotnummer', '')
                 locatie = ''
                 stamnr = row_dict.get('stamnr', '')
@@ -637,7 +637,6 @@ def import_kluisjes():
                 is_defect = False
 
             else:  # simple
-                kluisnummer = row_dict.get('kluisnummer', '') or row_dict.get('kluis', '')
                 sleutelnummer = row_dict.get('sleutelnummer', '') or row_dict.get('sleutel', '')
                 locatie = row_dict.get('locatie', '')
                 naam = ''

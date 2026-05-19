@@ -151,3 +151,13 @@ def test_import_normaliseert_niet_zonder_vlag(client):
     kl = client.get('/api/kluisjes?vestiging_id=1').get_json()
     nummers = sorted(k['kluisnummer'] for k in kl)
     assert nummers == ['MO-1', 'MO-10']
+
+def test_import_normaliseert_twee_prefixes_hengelo(client):
+    rows = [['MO-1'], ['MO-10'], ['MO-100'], ['BL-001'], ['BL-002'], ['BL-050']]
+    xlsx = _maak_xlsx(rows, ['omschrijving kluisje'])
+    rv = client.post('/api/kluisjes/import', data={
+        'file': (xlsx, 'k.xlsx'), 'vestiging_id': '1', 'normaliseer': '1',
+    }, content_type='multipart/form-data')
+    assert rv.status_code == 201
+    nummers = sorted(k['kluisnummer'] for k in client.get('/api/kluisjes?vestiging_id=1').get_json())
+    assert nummers == ['BL-001', 'BL-002', 'BL-050', 'MO-001', 'MO-010', 'MO-100']
