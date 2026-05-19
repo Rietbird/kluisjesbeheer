@@ -9,11 +9,36 @@ from magister_client import MagisterClient
 from db import get_db
 
 
+def _magister_from_db(db):
+    """Read Magister credentials from the instellingen table.
+    cron_sync runs outside a Flask request context, so MagisterClient's own
+    flask.g-based DB lookup is unavailable here -- read directly and pass as
+    an explicit override. Returns (url, user, password) or None if incomplete.
+    """
+    rows = db.execute(
+        "SELECT key, value FROM instellingen WHERE key IN ('magister_url', 'magister_user', 'magister_pass')"
+    ).fetchall()
+    cfg = {r['key']: r['value'] for r in rows}
+    if cfg.get('magister_url') and cfg.get('magister_user') and cfg.get('magister_pass'):
+        from crypto_util import decrypt
+        return cfg['magister_url'], cfg['magister_user'], decrypt(cfg['magister_pass'])
+    return None
+
+
 def main():
     print('=== CRON MAGISTER LEERLINGEN SYNC ===')
-    magister = MagisterClient()
     db_path = os.path.join(os.path.dirname(__file__), 'kluisjesbeheer.db')
     db = get_db(db_path)
+
+    db_creds = _magister_from_db(db)
+    if db_creds:
+        url, user, password = db_creds
+        print(f'Magister-config uit database: {url}')
+        magister = MagisterClient(url, user, password)
+    else:
+        # Fallback: config.json (legacy installs zoals School)
+        print('Geen volledige Magister-config in database, val terug op config.json')
+        magister = MagisterClient()
 
     try:
         leerlingen = magister.get_leerlingen()
