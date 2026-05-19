@@ -778,6 +778,37 @@ function ImportTab() {
   const [preview, setPreview] = useState(null) // result from /import/preview
   const [prefixNames, setPrefixNames] = useState({}) // prefix -> vestigingnaam
   const [normaliseer, setNormaliseer] = useState(false)
+  // Magister config
+  const [magUrl, setMagUrl] = useState('')
+  const [magUser, setMagUser] = useState('')
+  const [magPass, setMagPass] = useState('')
+  const [magPassSet, setMagPassSet] = useState(false)
+  const [magSaving, setMagSaving] = useState(false)
+  const [magMsg, setMagMsg] = useState('')
+
+  useEffect(() => {
+    api.get('/api/magister/config')
+      .then(data => {
+        setMagUrl(data.magister_url || '')
+        setMagUser(data.magister_user || '')
+        setMagPassSet(data.magister_pass_set)
+      })
+      .catch(() => {})
+  }, [])
+
+  async function handleSaveMagister(e) {
+    e.preventDefault(); setMagSaving(true); setMagMsg('')
+    try {
+      const body = { magister_url: magUrl, magister_user: magUser }
+      if (magPass) body.magister_pass = magPass
+      await api.put('/api/magister/config', body)
+      setMagPass('')
+      setMagPassSet(true)
+      setMagMsg('Opgeslagen!')
+      setTimeout(() => setMagMsg(''), 3000)
+    } catch (err) { setMagMsg(`Fout: ${err.message}`) }
+    finally { setMagSaving(false) }
+  }
 
   async function handlePreview() {
     if (!importFile) { setImportError('Kies een bestand.'); return }
@@ -946,6 +977,43 @@ function ImportTab() {
         </div>
       </div>
 
+      {/* Magister API koppeling */}
+      <div className={cardClass} style={{ marginTop: '1.25rem' }}>
+        <h2 className="text-base font-bold text-slate-800 dark:text-white mb-2">Magister API koppeling</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          Koppel de Magister Medius webservice om leerlinggegevens automatisch te synchroniseren. De URL is meestal <code className="text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">https://jouwschool.swp.nl:8800/doc</code>
+        </p>
+        <form onSubmit={handleSaveMagister} className="space-y-4">
+          <div>
+            <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">Webservice URL</label>
+            <input className={inputClass} value={magUrl} onChange={e => setMagUrl(e.target.value)}
+              placeholder="https://jouwschool.swp.nl:8800/doc" />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">Gebruikersnaam</label>
+            <input className={inputClass} value={magUser} onChange={e => setMagUser(e.target.value)}
+              placeholder="webuser" />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">
+              Wachtwoord {magPassSet && !magPass && <span className="text-emerald-600 font-normal">(ingesteld, laat leeg om te behouden)</span>}
+            </label>
+            <input type="password" className={inputClass} value={magPass} onChange={e => setMagPass(e.target.value)}
+              placeholder={magPassSet ? '••••••••' : 'Wachtwoord'} />
+          </div>
+          <div className="flex items-center gap-3">
+            <button type="submit" disabled={magSaving} className={btnClass}>
+              {magSaving ? 'Opslaan...' : 'Opslaan'}
+            </button>
+            {magMsg && (
+              <span className={`text-sm font-medium ${magMsg.startsWith('Fout') ? 'text-red-500' : 'text-emerald-600'}`}>
+                {magMsg}
+              </span>
+            )}
+          </div>
+        </form>
+      </div>
+
       {/* Magister sync */}
       <div className={cardClass} style={{ marginTop: '1.25rem' }}>
         <MagisterSyncPanel />
@@ -968,13 +1036,6 @@ function BeheerInstellingenTab() {
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
   const [loaded, setLoaded] = useState(false)
-  // Magister config
-  const [magUrl, setMagUrl] = useState('')
-  const [magUser, setMagUser] = useState('')
-  const [magPass, setMagPass] = useState('')
-  const [magPassSet, setMagPassSet] = useState(false)
-  const [magSaving, setMagSaving] = useState(false)
-  const [magMsg, setMagMsg] = useState('')
 
   useEffect(() => {
     api.get('/api/instellingen')
@@ -998,13 +1059,6 @@ function BeheerInstellingenTab() {
       })
       .catch(() => {})
       .finally(() => setLoaded(true))
-    api.get('/api/magister/config')
-      .then(data => {
-        setMagUrl(data.magister_url || '')
-        setMagUser(data.magister_user || '')
-        setMagPassSet(data.magister_pass_set)
-      })
-      .catch(() => {})
   }, [])
 
   async function handleSavePeriode(e) {
@@ -1042,19 +1096,6 @@ function BeheerInstellingenTab() {
     finally { setSaving(false) }
   }
 
-  async function handleSaveMagister(e) {
-    e.preventDefault(); setMagSaving(true); setMagMsg('')
-    try {
-      const body = { magister_url: magUrl, magister_user: magUser }
-      if (magPass) body.magister_pass = magPass
-      await api.put('/api/magister/config', body)
-      setMagPass('')
-      setMagPassSet(true)
-      setMagMsg('Opgeslagen!')
-      setTimeout(() => setMagMsg(''), 3000)
-    } catch (err) { setMagMsg(`Fout: ${err.message}`) }
-    finally { setMagSaving(false) }
-  }
 
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
   const btnClass = "bg-primary text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors"
@@ -1146,42 +1187,6 @@ function BeheerInstellingenTab() {
             )}
           </div>
         </div>
-      </div>
-
-      <div className={cardClass}>
-        <h2 className="text-base font-bold text-slate-800 dark:text-white mb-2">Magister API koppeling</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          Koppel de Magister Medius webservice om leerlinggegevens automatisch te synchroniseren. De URL is meestal <code className="text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">https://jouwschool.swp.nl:8800/doc</code>
-        </p>
-        <form onSubmit={handleSaveMagister} className="space-y-4">
-          <div>
-            <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">Webservice URL</label>
-            <input className={inputClass} value={magUrl} onChange={e => setMagUrl(e.target.value)}
-              placeholder="https://jouwschool.swp.nl:8800/doc" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">Gebruikersnaam</label>
-            <input className={inputClass} value={magUser} onChange={e => setMagUser(e.target.value)}
-              placeholder="webuser" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">
-              Wachtwoord {magPassSet && !magPass && <span className="text-emerald-600 font-normal">(ingesteld, laat leeg om te behouden)</span>}
-            </label>
-            <input type="password" className={inputClass} value={magPass} onChange={e => setMagPass(e.target.value)}
-              placeholder={magPassSet ? '••••••••' : 'Wachtwoord'} />
-          </div>
-          <div className="flex items-center gap-3">
-            <button type="submit" disabled={magSaving} className={btnClass}>
-              {magSaving ? 'Opslaan...' : 'Opslaan'}
-            </button>
-            {magMsg && (
-              <span className={`text-sm font-medium ${magMsg.startsWith('Fout') ? 'text-red-500' : 'text-emerald-600'}`}>
-                {magMsg}
-              </span>
-            )}
-          </div>
-        </form>
       </div>
 
       {/* Backups */}
