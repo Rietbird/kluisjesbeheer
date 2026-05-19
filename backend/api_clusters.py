@@ -62,3 +62,77 @@ def delete_cluster(cid):
     g.db.execute('DELETE FROM clusters WHERE id = ?', (cid,))
     g.db.commit()
     return jsonify({'ok': True})
+
+
+@clusters_bp.route('/clusters/<int:cid>/verplaats-reeks', methods=['POST'])
+@login_required
+def verplaats_reeks(cid):
+    """Verplaats bestaande kluisjes (op numeriek bereik) naar dit cluster.
+
+    Body: { prefix, van, tot }. Alleen binnen dezelfde vestiging.
+    """
+    doel = g.db.execute('SELECT id, vestiging_id FROM clusters WHERE id = ?', (cid,)).fetchone()
+    if not doel:
+        return jsonify({'error': 'Doelcluster niet gevonden'}), 404
+    data = request.get_json() or {}
+    prefix = str(data.get('prefix', ''))
+    try:
+        van = int(data.get('van'))
+        tot = int(data.get('tot'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'van en tot moeten getallen zijn'}), 400
+    if van > tot:
+        return jsonify({'error': 'van mag niet groter zijn dan tot'}), 400
+
+    import re
+    rows = g.db.execute(
+        'SELECT id, kluisnummer, vestiging_id FROM kluisjes WHERE verwijderd = 0'
+    ).fetchall()
+    te_verplaatsen = []
+    for r in rows:
+        m = re.match(r'^(.*?)(\d+)(.*)$', r['kluisnummer'] or '')
+        if not m:
+            continue
+        if m.group(1) != prefix:
+            continue
+        getal = int(m.group(2))
+        if not (van <= getal <= tot):
+            continue
+        if r['vestiging_id'] != doel['vestiging_id']:
+            return jsonify({'error': 'Kluisje hoort bij een andere vestiging dan het doelcluster'}), 409
+        te_verplaatsen.append(r['id'])
+
+    for kid in te_verplaatsen:
+        g.db.execute(
+            "UPDATE kluisjes SET cluster_id = ?, updated_at = datetime('now') WHERE id = ?",
+            (cid, kid)
+        )
+    g.db.commit()
+    return jsonify({'verplaatst': len(te_verplaatsen)}), 200
+
+
+@clusters_bp.route('/clusters/<int:cid>/verplaats-selectie', methods=['POST'])
+@login_required
+def verplaats_selectie(cid):
+    """Verplaats geselecteerde kluisjes naar dit cluster (zelfde vestiging)."""
+    doel = g.db.execute('SELECT id, vestiging_id FROM clusters WHERE id = ?', (cid,)).fetchone()
+    if not doel:
+        return jsonify({'error': 'Doelcluster niet gevonden'}), 404
+    data = request.get_json() or {}
+    ids = data.get('kluisje_ids', [])
+    if not ids:
+        return jsonify({'error': 'Geen kluisjes geselecteerd'}), 400
+    rows = g.db.execute(
+        'SELECT id, vestiging_id FROM kluisjes WHERE id IN (%s) AND verwijderd = 0'
+        % ','.join('?' * len(ids)), ids
+    ).fetchall()
+    for r in rows:
+        if r['vestiging_id'] != doel['vestiging_id']:
+            return jsonify({'error': 'Kluisje hoort bij een andere vestiging dan het doelcluster'}), 409
+    for r in rows:
+        g.db.execute(
+            "UPDATE kluisjes SET cluster_id = ?, updated_at = datetime('now') WHERE id = ?",
+            (cid, r['id'])
+        )
+    g.db.commit()
+    return jsonify({'verplaatst': len(rows)}), 200
