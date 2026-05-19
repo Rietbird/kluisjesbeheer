@@ -364,49 +364,54 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
           )}
         </div>
 
-        {/* Action buttons footer */}
+        {/* Action buttons footer — primaire actie groot, rest subtiel */}
         {mode === null && (
-          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex flex-wrap gap-2">
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 space-y-3">
+            {/* Primaire actie */}
             {isVrij && !isDefect && (
               <button onClick={() => setMode('toewijzen')}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl py-3 text-sm font-bold hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm">
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl py-3 text-sm font-bold hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm">
                 Toewijzen
               </button>
             )}
             {isVrij && isDefect && (
-              <div className="flex-1 text-center text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-xl py-3 border border-amber-200 dark:border-amber-800">
+              <div className="w-full text-center text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-xl py-3 border border-amber-200 dark:border-amber-800">
                 Hef defect op om toe te wijzen
               </div>
             )}
             {isUitgeleend && (
               <button onClick={() => setMode('beeindigen')}
-                className="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl py-3 text-sm font-bold hover:from-red-600 hover:to-red-700 transition-all shadow-sm">
+                className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl py-3 text-sm font-bold hover:from-red-600 hover:to-red-700 transition-all shadow-sm">
                 Huur beëindigen
               </button>
             )}
-            {isUitgeleend && (
-              <button onClick={() => setMode('ruilen')}
-                className="border-2 border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-400 rounded-xl px-5 py-3 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                Ruilen met…
-              </button>
-            )}
-            {!isDefect ? (
-              <button onClick={toggleDefect}
-                className="border-2 border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-400 rounded-xl px-5 py-3 text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
-                Markeer als defect
-              </button>
-            ) : (
-              <button onClick={toggleDefect}
-                className="border-2 border-emerald-400 dark:border-emerald-600 text-emerald-700 dark:text-emerald-400 rounded-xl px-5 py-3 text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
-                Defect opheffen
-              </button>
-            )}
-            {clusters.length > 1 && (
-              <button onClick={() => setMode('verplaats')}
-                className="border-2 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl px-5 py-3 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                Verplaats naar cluster
-              </button>
-            )}
+
+            {/* Secundaire acties — subtiel, op één regel */}
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs">
+              {isUitgeleend && (
+                <button onClick={() => setMode('ruilen')}
+                  className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                  Ruilen met…
+                </button>
+              )}
+              {!isDefect ? (
+                <button onClick={toggleDefect}
+                  className="text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                  Markeer als defect
+                </button>
+              ) : (
+                <button onClick={toggleDefect}
+                  className="text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                  Defect opheffen
+                </button>
+              )}
+              {clusters.length > 1 && (
+                <button onClick={() => setMode('verplaats')}
+                  className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">
+                  Verplaats naar cluster
+                </button>
+              )}
+            </div>
           </div>
         )}
 
