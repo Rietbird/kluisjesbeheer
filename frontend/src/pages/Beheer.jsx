@@ -221,7 +221,7 @@ function genereerReeks(prefix, van, tot, padding) {
   return items
 }
 
-function KluisjesPanel({ clusterId }) {
+function KluisjesPanel({ clusterId, vestigingId }) {
   const [kluisjes, setKluisjes] = useState([])
   const [kluisnummer, setKluisnummer] = useState('')
   const [sleutelnummer, setSleutelnummer] = useState('')
@@ -239,12 +239,48 @@ function KluisjesPanel({ clusterId }) {
   const [bulkPadding, setBulkPadding] = useState('3')
   const [bulkLocatie, setBulkLocatie] = useState('')
   const [bulkMsg, setBulkMsg] = useState('')
+  const [clusters, setClusters] = useState([])
+  const [verplaatsDoel, setVerplaatsDoel] = useState('')
+  const [verplaatsPrefix, setVerplaatsPrefix] = useState('')
+  const [verplaatsVan, setVerplaatsVan] = useState('')
+  const [verplaatsTot, setVerplaatsTot] = useState('')
 
   function load() {
     if (!clusterId) { setKluisjes([]); return }
     api.get(`/api/clusters/${clusterId}/kluisjes`).then(setKluisjes).catch(() => {})
   }
   useEffect(() => { load(); setSelected(new Set()); setSelectMode(false) }, [clusterId])
+
+  useEffect(() => {
+    if (!vestigingId) { setClusters([]); return }
+    api.get(`/api/vestigingen/${vestigingId}/clusters`).then(setClusters).catch(() => {})
+  }, [vestigingId, clusterId])
+
+  async function handleVerplaatsReeks() {
+    if (!verplaatsDoel) { setError('Kies een doelcluster.'); return }
+    setError(''); setBulkMsg('')
+    const van = parseInt(verplaatsVan), tot = parseInt(verplaatsTot)
+    if (isNaN(van) || isNaN(tot) || van > tot) { setError('Ongeldige reeks.'); return }
+    try {
+      const res = await api.post(`/api/clusters/${verplaatsDoel}/verplaats-reeks`,
+        { prefix: verplaatsPrefix, van, tot })
+      setBulkMsg(`${res.verplaatst} kluisjes verplaatst.`)
+      load()
+    } catch (err) { setError(err.message) }
+  }
+
+  async function handleVerplaatsSelectie() {
+    if (!verplaatsDoel) { setError('Kies een doelcluster.'); return }
+    if (selected.size === 0) return
+    setError(''); setBulkMsg('')
+    try {
+      const res = await api.post(`/api/clusters/${verplaatsDoel}/verplaats-selectie`,
+        { kluisje_ids: [...selected] })
+      setBulkMsg(`${res.verplaatst} kluisjes verplaatst.`)
+      setSelected(new Set()); setSelectMode(false)
+      load()
+    } catch (err) { setError(err.message) }
+  }
 
   async function handleAdd(e) {
     e.preventDefault(); setError('')
@@ -335,15 +371,32 @@ function KluisjesPanel({ clusterId }) {
 
       {/* Selectie toolbar */}
       {selectMode && (
-        <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2 mb-3 text-sm">
-          <button onClick={toggleAll} className="text-slate-500 dark:text-slate-400 hover:text-primary transition-colors">
-            {selected.size === kluisjes.filter(k => k.status !== 'uitgeleend').length ? 'Deselecteer alles' : 'Selecteer alle vrije'}
-          </button>
-          <span className="text-slate-400">{selected.size} geselecteerd</span>
-          <ConfirmButton onConfirm={handleBulkDelete}
-            className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${selected.size > 0 ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
-            Verwijder {selected.size > 0 ? `(${selected.size})` : ''}
-          </ConfirmButton>
+        <div className="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2 mb-3 text-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <button onClick={toggleAll} className="text-slate-500 dark:text-slate-400 hover:text-primary transition-colors">
+              {selected.size === kluisjes.filter(k => k.status !== 'uitgeleend').length ? 'Deselecteer alles' : 'Selecteer alle vrije'}
+            </button>
+            <span className="text-slate-400">{selected.size} geselecteerd</span>
+            <ConfirmButton onConfirm={handleBulkDelete}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${selected.size > 0 ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
+              Verwijder {selected.size > 0 ? `(${selected.size})` : ''}
+            </ConfirmButton>
+          </div>
+          {clusters.length > 1 && (
+            <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-600">
+              <select value={verplaatsDoel} onChange={e => setVerplaatsDoel(e.target.value)}
+                className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm dark:bg-slate-700 dark:text-white">
+                <option value="">— verplaats naar cluster —</option>
+                {clusters.filter(c => String(c.id) !== String(clusterId)).map(c => (
+                  <option key={c.id} value={c.id}>{c.naam}</option>
+                ))}
+              </select>
+              <button onClick={handleVerplaatsSelectie}
+                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${selected.size > 0 && verplaatsDoel ? 'bg-primary text-white hover:bg-primary-600' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
+                Verplaats {selected.size > 0 ? `(${selected.size})` : ''}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -402,14 +455,46 @@ function KluisjesPanel({ clusterId }) {
         {kluisjes.length === 0 && <p className="text-sm text-slate-400">Nog geen kluisjes in dit cluster.</p>}
       </div>
 
+      {/* Verplaats bestaande kluisjes naar cluster (reeks) */}
+      {!selectMode && clusters.length > 1 && (
+        <div className="mb-4 p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/40">
+          <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">
+            Bestaande kluisjes verplaatsen naar cluster
+          </div>
+          <select value={verplaatsDoel} onChange={e => setVerplaatsDoel(e.target.value)}
+            className={inputCls + ' mb-2'}>
+            <option value="">— kies doelcluster —</option>
+            {clusters.filter(c => String(c.id) !== String(clusterId)).map(c => (
+              <option key={c.id} value={c.id}>{c.naam}</option>
+            ))}
+          </select>
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            <input className={inputCls} placeholder="prefix (bv. MO-)"
+              value={verplaatsPrefix} onChange={e => setVerplaatsPrefix(e.target.value)} />
+            <input className={inputCls} placeholder="van" inputMode="numeric"
+              value={verplaatsVan} onChange={e => setVerplaatsVan(e.target.value)} />
+            <input className={inputCls} placeholder="tot" inputMode="numeric"
+              value={verplaatsTot} onChange={e => setVerplaatsTot(e.target.value)} />
+          </div>
+          <button onClick={handleVerplaatsReeks}
+            className="w-full px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors">
+            Verplaats reeks
+          </button>
+        </div>
+      )}
+
       {/* Toevoegen tabs */}
       {!selectMode && (
         <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+            Hiermee maak je <strong>nieuwe</strong> kluisjes aan in dit cluster.
+            Bestaande kluisjes verplaatsen doe je hierboven met "Verplaats".
+          </p>
           <div className="flex gap-1 mb-3">
             {['enkel', 'bulk'].map(m => (
               <button key={m} onClick={() => { setAddMode(m); setError(''); setBulkMsg('') }}
                 className={`px-3 py-1 text-xs rounded-lg font-medium transition-colors ${addMode === m ? 'bg-primary text-white' : 'border border-slate-300 dark:border-slate-600 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
-                {m === 'enkel' ? 'Eén kluisje' : 'Reeks toevoegen'}
+                {m === 'enkel' ? 'Eén kluisje aanmaken' : 'Reeks aanmaken'}
               </button>
             ))}
           </div>
@@ -693,6 +778,7 @@ function ImportTab() {
   const [importError, setImportError] = useState('')
   const [preview, setPreview] = useState(null) // result from /import/preview
   const [prefixNames, setPrefixNames] = useState({}) // prefix -> vestigingnaam
+  const [normaliseer, setNormaliseer] = useState(false)
 
   async function handlePreview() {
     if (!importFile) { setImportError('Kies een bestand.'); return }
@@ -702,6 +788,9 @@ function ImportTab() {
       formData.append('file', importFile)
       const res = await api.upload('/api/kluisjes/import/preview', formData)
       setPreview(res)
+      // Default AAN bij kromme data zonder collision; UIT anders
+      const n = res.normalisatie
+      setNormaliseer(!!(n && n.heeft_krom && !n.heeft_collision))
       // Pre-fill prefix names: use locatie if available, otherwise prefix itself
       const names = {}
       if (res.has_locaties) {
@@ -727,6 +816,7 @@ function ImportTab() {
       } else {
         formData.append('prefix_mapping', JSON.stringify(prefixNames))
       }
+      formData.append('normaliseer', normaliseer ? '1' : '')
       const res = await api.upload('/api/kluisjes/import', formData)
       const fmt = res.format === 'mx' ? 'Magister MX' : res.format === 'desktop' ? 'Magister Desktop' : 'standaard'
       let msg = `Import geslaagd (${fmt}): ${res.imported} kluisjes aangemaakt`
@@ -773,6 +863,28 @@ function ImportTab() {
                   {preview.format === 'mx' ? 'Magister MX' : preview.format === 'desktop' ? 'Magister Desktop' : 'Standaard'} — {preview.total} kluisjes gevonden
                 </span>
               </div>
+
+              {preview.normalisatie?.heeft_krom && (
+                <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 text-sm">
+                  {preview.normalisatie.heeft_collision ? (
+                    <p className="text-amber-700 dark:text-amber-300">
+                      De nummering is inconsistent, maar normaliseren is niet mogelijk:
+                      sommige nummers zouden samenvallen. De import gaat ongewijzigd door.
+                    </p>
+                  ) : (
+                    <label className="flex items-start gap-2 cursor-pointer text-slate-700 dark:text-slate-200">
+                      <input type="checkbox" checked={normaliseer}
+                        onChange={e => setNormaliseer(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 accent-primary" />
+                      <span>
+                        De nummering sorteert niet logisch (bv. MO-1, MO-10, MO-100…).
+                        <strong> Kluisnummers normaliseren naar vaste breedte</strong>
+                        {' '}(bv. MO-0001) zodat sortering overal klopt.
+                      </span>
+                    </label>
+                  )}
+                </div>
+              )}
 
               {preview.has_locaties ? (
                 <div>
@@ -1444,7 +1556,7 @@ export default function Beheer({ onClose }) {
             <ClustersPanel vestigingId={selectedVestiging} onSelect={setSelectedCluster} selectedId={selectedCluster} />
           </div>
           <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
-            <KluisjesPanel clusterId={selectedCluster} />
+            <KluisjesPanel clusterId={selectedCluster} vestigingId={selectedVestiging} />
           </div>
         </div>
       )}
