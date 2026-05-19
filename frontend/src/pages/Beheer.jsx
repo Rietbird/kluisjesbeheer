@@ -259,13 +259,16 @@ function KluisjesPanel({ clusterId, vestigingId }) {
 
   async function handleVerplaatsReeks() {
     setError(''); setBulkMsg('')
+    if (!verplaatsPrefix) { setError('Kies een prefix.'); return }
     const van = parseInt(verplaatsVan), tot = parseInt(verplaatsTot)
     if (isNaN(van) || isNaN(tot) || van > tot) { setError('Ongeldige reeks.'); return }
     try {
       const res = await api.post(`/api/clusters/${clusterId}/verplaats-reeks`,
         { prefix: verplaatsPrefix, van, tot })
       setBulkMsg(`${res.verplaatst} kluisjes naar dit cluster verplaatst.`)
-      setVerplaatsPrefix(''); setVerplaatsVan(''); setVerplaatsTot('')
+      // Prefix bewust NIET resetten: je doet vaak meerdere reeksen met
+      // dezelfde prefix achter elkaar.
+      setVerplaatsVan(''); setVerplaatsTot('')
       load()
     } catch (err) { setError(err.message) }
   }
