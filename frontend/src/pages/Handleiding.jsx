@@ -32,6 +32,7 @@ const SECTIES = [
   ['defect', 'Een defect melden'],
   ['reserve', 'Reservesleutel'],
   ['innemen', 'Een huur beëindigen'],
+  ['eindeschooljaar', 'Einde schooljaar'],
   ['ruilen', 'Kluisjes ruilen'],
   ['clusters', 'Kluisjes indelen in clusters'],
   ['zoeken', 'Zoeken & filteren'],
@@ -122,6 +123,26 @@ export default function Handleiding({ onClose }) {
               <Stap><strong>Bevestig.</strong> Het kluisje wordt weer vrij.</Stap>
             </ol>
             <p>Is de sleutel niet ingeleverd of de borg niet teruggestort, dan blijft het kluisje rood gemarkeerd met een waarschuwing, en kan het niet opnieuw worden toegewezen totdat dit is afgehandeld. Vanuit het detailscherm kunt u dit later alsnog op "afgehandeld" zetten.</p>
+          </Sectie>
+
+          <Sectie id="eindeschooljaar" titel="Einde schooljaar">
+            <p>Aan het einde van het schooljaar stromen leerlingen uit (ze verlaten de school) en moeten kluisjes worden vrijgemaakt voor het nieuwe jaar. Zo werkt dat:</p>
+
+            <p className="font-semibold text-navy dark:text-white mt-4">Vertrokken leerlingen</p>
+            <p>Als de Magister-koppeling actief is, wordt een leerling die niet meer in Magister staat automatisch gemarkeerd als <strong>vertrokken</strong>. Zo'n leerling verdwijnt niet uit de app zolang hij nog een kluisje heeft — overal is een rode markering zichtbaar:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>In het overzicht: een rood <strong>⚠</strong> vóór de naam (tooltip "Vertrokken van school")</li>
+              <li>In het detailscherm: een rood <strong>"Vertrokken"</strong>-label</li>
+              <li>In de lijstweergave en in de PDF-rapporten: <strong>[V]</strong> / "Vertrokken" achter de naam</li>
+            </ul>
+
+            <Tip>Een vertrokken leerling houdt zijn kluisje totdat u de huur beëindigt — het kluisje wordt <strong>niet</strong> automatisch vrijgegeven. U moet immers nog de sleutel innemen en eventueel de borg terugstorten.</Tip>
+
+            <p className="font-semibold text-navy dark:text-white mt-4">Kluisjes vrijmaken — collectief beëindigen</p>
+            <p>Om niet elk kluisje los te hoeven afhandelen, is er <strong>"Collectief beëindigen"</strong> in de werkbalk van het overzicht: hiermee beëindigt u in één keer de huur van een selectie of een hele klas. Vink per kluisje af of de sleutel is ingeleverd en de borg is teruggestort. Gebruik de rapporten <strong>"Openstaande sleutels"</strong> en <strong>"Innameoverzicht"</strong> als werklijst om te zien wat er nog open staat.</p>
+
+            <p className="font-semibold text-navy dark:text-white mt-4">Nieuw schooljaar — automatisch</p>
+            <p>U hoeft de standaardperiode niet zelf te wijzigen. Vanaf 1 augustus stelt het systeem bij een nieuwe toewijzing automatisch de periode van het nieuwe schooljaar voor (1 september tot de zomervakantie erna). Bestaande huren van het oude jaar blijven gewoon staan tot u ze beëindigt — de overgang verandert daar niets aan.</p>
           </Sectie>
 
           <Sectie id="ruilen" titel="Kluisjes ruilen">
