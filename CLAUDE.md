@@ -109,6 +109,10 @@ Three layers of backup protection:
 **XLSX Import:**
 - All-or-nothing: duplicate kluisnummer rollt hele import terug
 - Duplicate detectie via `'UNIQUE' in str(e)` — fragiel
+- Normalisatie van kluisnummers optioneel via `normaliseer=1` form-veld; preview retourneert `normalisatie`-advies (krom/breedte/collision). Default aan bij kromme data, geblokkeerd bij collisions. Import doet een voor-scan (workbook 2x lezen via file.seek(0))
+
+**Cluster verplaatsen:**
+- `POST /api/clusters/<id>/verplaats-reeks` (prefix+van+tot, op getal) en `/verplaats-selectie` (kluisje_ids) — alleen binnen dezelfde vestiging (409 anders)
 
 **Deploy:**
 - `schoolvakanties.json` moet jaarlijks handmatig bijgewerkt worden (geen API)
