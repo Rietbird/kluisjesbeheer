@@ -467,9 +467,19 @@ server {
     <p>De Magister-koppeling is niet nodig om de app uit te rollen — die kan later via Beheer → Instellingen worden ingesteld. Zonder koppeling kunt u kluisjes en leerlingen via een Excel-export importeren.</p>
     <p>De koppeling verzorgt automatische synchronisatie van leerlinggegevens en het koppelen van leerlingen aan de juiste vestiging. Aan te vragen bij de Magister-beheerder:</p>
     <ul>
-      <li>Medius SOAP-webservice URL (formaat <code>https://[school].swp.nl:8800/doc</code>)</li>
-      <li>Een <strong>service-account</strong> (niet persoonlijk) met leestoegang op de bibliotheken <code>Algemeen</code> (functie <code>Login</code>) en <code>ADFuncties</code> (functie <code>GetActiveStudents</code>)</li>
+      <li>Medius SOAP/XML-webservice URL (formaat <code>https://[school].swp.nl:8800/doc</code>). De server moet vanaf het IP-adres van de kluisjes-server bereikbaar zijn op poort 8800 — vaak moet dit IP bij de Magister-/SWP-beheerder op een <strong>whitelist</strong> worden gezet.</li>
+      <li>Een <strong>service-account</strong> (niet persoonlijk) met leestoegang op de volgende functies:
+        <ul>
+          <li><code>Algemeen</code> &rarr; <code>Login</code> — voor het inloggen / verkrijgen van een sessietoken</li>
+          <li><code>ADFuncties</code> &rarr; <code>GetActiveStudents</code> — voor het ophalen van de actieve leerlingen</li>
+          <li><code>Data</code> &rarr; <code>GetData</code> met de ddlijst-layout <code>kluisjes-actueel</code> — voor het ophalen van de kluisjesgegevens. Deze <strong>ddlijst moet in Magister bestaan</strong> (Data &rarr; ddlijsten) en het service-account moet er leesrecht op hebben.</li>
+        </ul>
+      </li>
     </ul>
+    <div class="callout warn">
+      <p class="ct">Veelvoorkomende oorzaken als de koppeling niet werkt</p>
+      <p>1. <strong>Timeout / niet bereikbaar</strong>: poort 8800 wordt geblokkeerd of het server-IP staat niet op de SWP-whitelist (test met <code>openssl s_client -connect [host]:8800</code> vanaf de server). 2. <strong>Login mislukt</strong>: verkeerde gebruikersnaam/wachtwoord of account zonder rechten op <code>Algemeen.Login</code>. 3. <strong>Wel leerlingen, geen kluisjes</strong>: de ddlijst <code>kluisjes-actueel</code> ontbreekt of het account heeft er geen leesrecht op.</p>
+    </div>
     <div class="callout">
       <p class="ct">Beveiliging</p>
       <p>De Magister-credentials worden via de app ingevoerd en versleuteld (AES-128-CBC + HMAC) opgeslagen in de database. Ze zijn niet uitleesbaar via de interface.</p>
