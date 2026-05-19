@@ -125,3 +125,29 @@ def test_preview_geeft_normalisatie_advies(client):
     assert body['normalisatie']['heeft_collision'] is False
     mo = next(p for p in body['normalisatie']['prefixes'] if p['prefix'] == 'MO-')
     assert mo['breedte'] == 4
+
+
+def test_import_normaliseert_bij_vlag(client):
+    rows = [['MO-1'], ['MO-10'], ['MO-100']]
+    xlsx = _maak_xlsx(rows, ['omschrijving kluisje'])
+    rv = client.post('/api/kluisjes/import', data={
+        'file': (xlsx, 'k.xlsx'),
+        'vestiging_id': '1',
+        'normaliseer': '1',
+    }, content_type='multipart/form-data')
+    assert rv.status_code == 201
+    kl = client.get('/api/kluisjes?vestiging_id=1').get_json()
+    nummers = sorted(k['kluisnummer'] for k in kl)
+    assert nummers == ['MO-001', 'MO-010', 'MO-100']
+
+def test_import_normaliseert_niet_zonder_vlag(client):
+    rows = [['MO-1'], ['MO-10']]
+    xlsx = _maak_xlsx(rows, ['omschrijving kluisje'])
+    rv = client.post('/api/kluisjes/import', data={
+        'file': (xlsx, 'k.xlsx'),
+        'vestiging_id': '1',
+    }, content_type='multipart/form-data')
+    assert rv.status_code == 201
+    kl = client.get('/api/kluisjes?vestiging_id=1').get_json()
+    nummers = sorted(k['kluisnummer'] for k in kl)
+    assert nummers == ['MO-1', 'MO-10']

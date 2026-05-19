@@ -506,6 +506,7 @@ def import_kluisjes():
     cluster_id = request.form.get('cluster_id') or None
     vestiging_id = request.form.get('vestiging_id') or None
     auto_vestiging = request.form.get('auto_vestiging') == '1'
+    normaliseer = request.form.get('normaliseer') == '1'
     # prefix_mapping: JSON string {"BL": "Blauwlaken", "MO": "Molenstraat"}
     prefix_mapping = {}
     pm_raw = request.form.get('prefix_mapping', '')
@@ -541,7 +542,48 @@ def import_kluisjes():
         return jsonify({'error': 'Alleen .xlsx bestanden worden geaccepteerd'}), 400
 
     import openpyxl
+    import re
     from datetime import date
+
+    def _row_kluisnummer(fmt, row_dict):
+        """Extract the kluisnummer string for a row, per format. Used in
+        both the normalization pre-scan and the main import loop (DRY)."""
+        if fmt == 'mx':
+            return row_dict.get('kluis', '')
+        elif fmt == 'desktop':
+            return row_dict.get('omschrijving kluisje', '') or row_dict.get('omschrijving\nkluisje', '')
+        else:  # simple
+            return row_dict.get('kluisnummer', '') or row_dict.get('kluis', '')
+
+    # Pre-scan: een read_only workbook-iterator is eenmalig, dus om de
+    # doelbreedte per prefix te kennen lezen we alle kluisnummers in een
+    # aparte pass. Daarna file.seek(0) + workbook opnieuw openen.
+    breedte_per_prefix = {}
+    if normaliseer:
+        try:
+            file.seek(0)
+            wb_scan = openpyxl.load_workbook(file, read_only=True)
+            ws_scan = wb_scan.active
+            scan_headers = None
+            scan_fmt = None
+            scan_nummers = []
+            for i, row in enumerate(ws_scan.iter_rows(values_only=True), start=1):
+                if i == 1:
+                    scan_headers = [str(c or '').strip().lower() for c in row]
+                    scan_fmt = _detect_format(scan_headers)
+                    if not scan_fmt:
+                        break
+                    continue
+                row_dict = dict(zip(scan_headers, [str(c or '').strip() for c in row]))
+                nr = _row_kluisnummer(scan_fmt, row_dict)
+                if nr:
+                    scan_nummers.append(nr)
+            wb_scan.close()
+            for p in _analyseer_nummering(scan_nummers)['prefixes']:
+                breedte_per_prefix[p['prefix']] = p['breedte']
+        except Exception:
+            return jsonify({'error': 'Kan bestand niet verwerken. Controleer het formaat.'}), 400
+        file.seek(0)
 
     try:
         wb = openpyxl.load_workbook(file, read_only=True)
@@ -610,6 +652,16 @@ def import_kluisjes():
 
             if not kluisnummer:
                 continue
+
+            # Normaliseer kluisnummer (zelfde prefix-definitie als
+            # _analyseer_nummering: alles vóór het eerste cijferblok).
+            if normaliseer:
+                m_norm = re.match(r'^(.*?)(\d+)(.*)$', str(kluisnummer))
+                if m_norm:
+                    nprefix = m_norm.group(1)
+                    nbreedte = breedte_per_prefix.get(nprefix)
+                    if nbreedte:
+                        kluisnummer = _normaliseer_kluisnummer(kluisnummer, nbreedte)
 
             # Determine vestiging for this row
             if prefix_mapping:
