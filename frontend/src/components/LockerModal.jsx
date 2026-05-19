@@ -386,28 +386,28 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
               </button>
             )}
 
-            {/* Secundaire acties — subtiel, op één regel */}
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs">
+            {/* Secundaire acties — kleinere knoppen, gedempt maar herkenbaar */}
+            <div className="flex flex-wrap gap-2">
               {isUitgeleend && (
                 <button onClick={() => setMode('ruilen')}
-                  className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                  className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                   Ruilen met…
                 </button>
               )}
               {!isDefect ? (
                 <button onClick={toggleDefect}
-                  className="text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                  className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-amber-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
                   Markeer als defect
                 </button>
               ) : (
                 <button onClick={toggleDefect}
-                  className="text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                  className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
                   Defect opheffen
                 </button>
               )}
               {clusters.length > 1 && (
                 <button onClick={() => setMode('verplaats')}
-                  className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">
+                  className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">
                   Verplaats naar cluster
                 </button>
               )}
