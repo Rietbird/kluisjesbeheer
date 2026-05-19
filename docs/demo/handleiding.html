@@ -218,6 +218,7 @@
     <a href="#c-defect">Defect melden</a>
     <a href="#c-reserve">Reservesleutel</a>
     <a href="#c-innemen">Huur beëindigen</a>
+    <a href="#c-clusters">Kluisjes indelen in clusters</a>
     <a href="#c-zoeken">Zoeken &amp; filteren</a>
     <a href="#c-rapport">Rapporten</a>
 
@@ -300,6 +301,37 @@
       <li><strong>Bevestig.</strong> Het kluisje wordt weer vrij.</li>
     </ol>
     <p>Is de sleutel niet ingeleverd of de borg niet teruggestort, dan blijft het kluisje rood gemarkeerd met een waarschuwing, en kan het niet opnieuw worden toegewezen totdat dit is afgehandeld. Vanuit het detailscherm kunt u dit later alsnog op "afgehandeld" zetten.</p>
+
+    <h2 id="c-clusters">Kluisjes indelen in clusters</h2>
+    <p>Een vestiging kan meerdere <strong>clusters</strong> hebben (bijvoorbeeld per verdieping of gang). Na een import staan alle kluisjes meestal in het cluster "Standaard". U kunt ze daarna herindelen — op drie manieren, allemaal via <strong>Beheer &rarr; Vestigingen</strong> (een cluster selecteren), behalve de losse verplaatsing die ook vanuit het overzicht kan.</p>
+
+    <h3>Een reeks kluisjes verplaatsen</h3>
+    <p>Voor het grootste deel van het werk: hele reeksen ineens.</p>
+    <ol class="steps">
+      <li><strong>Maak het doelcluster aan</strong> (bijv. "1e verdieping") en <strong>selecteer het</strong> in de Clusters-kolom.</li>
+      <li>In het Kluisjes-paneel, bij <strong>"Bestaande kluisjes naar dit cluster halen"</strong>: kies de <strong>prefix</strong> uit de keuzelijst (bijv. <code>MO-</code>), en vul <strong>van</strong> en <strong>tot</strong> in (bijv. 1 t/m 100).</li>
+      <li>Klik <strong>"Verplaats reeks naar dit cluster"</strong>. De kluisjes met dat nummer-bereik verhuizen naar het geselecteerde cluster.</li>
+    </ol>
+    <div class="callout">
+      <p class="ct">Goed om te weten</p>
+      <p>De prefix kiest u uit een lijst — u hoeft niets te typen. De van/tot zijn gewone getallen; voorloopnullen maken niet uit (1 vindt ook MO-0001). U kunt meerdere reeksen achter elkaar doen; de prefix blijft staan.</p>
+    </div>
+
+    <h3>Een handmatige selectie verplaatsen</h3>
+    <ol class="steps">
+      <li>Selecteer het doelcluster.</li>
+      <li>Klik rechtsboven op <strong>"Selecteer voor verwijderen"</strong> (dit is ook de selectie-modus voor verplaatsen) en vink de gewenste kluisjes aan.</li>
+      <li>Klik <strong>"Verplaats naar dit cluster"</strong>. Alleen de aangevinkte kluisjes verhuizen.</li>
+    </ol>
+
+    <h3>Eén los kluisje verplaatsen (vanuit het overzicht)</h3>
+    <p>Voor losse kluisjes die nog "verkeerd" staan, hoeft u niet naar Beheer:</p>
+    <ol class="steps">
+      <li>Open het kluisje in het overzicht.</li>
+      <li>Klik onderaan op <strong>"Verplaats naar cluster"</strong>.</li>
+      <li>Kies het doelcluster en bevestig.</li>
+    </ol>
+    <p>Verplaatsen verandert alleen de indeling — een eventuele huurder, borg, sleutel en opmerkingen blijven ongewijzigd. Verplaatsen kan alleen binnen dezelfde vestiging.</p>
 
     <h2 id="c-zoeken">Zoeken &amp; filteren</h2>
     <p>Bovenaan vindt u een zoekbalk en filters:</p>
@@ -442,6 +474,7 @@ server {
       <li><strong>Herstarten:</strong> <code>systemctl restart kluisjesbeheer</code></li>
       <li><strong>Schoolvakanties:</strong> het bestand <code>schoolvakanties.json</code> wordt jaarlijks handmatig bijgewerkt (geen externe bron).</li>
       <li><strong>Eerste inrichting in de app:</strong> branding (naam, logo, kleur), vestigingen en clusters aanmaken, en kluisjes importeren via een Excel-export. Het importscherm werkt in twee stappen: eerst een voorvertoning die de voorvoegsels herkent, daarna koppelt u die aan vestigingsnamen.</li>
+      <li><strong>Nummering normaliseren bij import:</strong> als de kluisnummers een wisselende lengte hebben (bijv. MO-1, MO-10, MO-100), sorteren ze overal verkeerd. De import-voorvertoning detecteert dit en biedt een keuzevakje <em>"Kluisnummers normaliseren naar vaste breedte"</em> aan (bijv. MO-0001). Dit staat standaard aan zodra scheve nummering wordt gedetecteerd. Zou normaliseren ertoe leiden dat twee nummers samenvallen, dan wordt de optie geblokkeerd en gaat de import ongewijzigd door. Tip: doe dit bij de eerste/definitieve import — opnieuw importeren is de schoonste manier om bestaande scheve nummering recht te trekken.</li>
     </ul>
 
     <p class="toc-footer">Kluisjesbeheer · Handleiding voor conciërges en IT-beheer · School, 2026</p>
