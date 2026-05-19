@@ -126,7 +126,7 @@ export default function Handleiding({ onClose }) {
           </Sectie>
 
           <Sectie id="eindeschooljaar" titel="Einde schooljaar">
-            <p>Aan het einde van het schooljaar stromen leerlingen uit (ze verlaten de school) en moeten kluisjes worden vrijgemaakt voor het nieuwe jaar. Zo werkt dat:</p>
+            <p>De meeste leerlingen gaan gewoon over naar het volgende leerjaar en houden hun kluisje. Alleen <strong>examengeslaagden en uitstromers</strong> verlaten de school — hun kluisjes moeten worden vrijgemaakt voor het nieuwe jaar. Zo werkt dat:</p>
 
             <p className="font-semibold text-navy dark:text-white mt-4">Vertrokken leerlingen</p>
             <p>Als de Magister-koppeling actief is, wordt een leerling die niet meer in Magister staat automatisch gemarkeerd als <strong>vertrokken</strong>. Zo'n leerling verdwijnt niet uit de app zolang hij nog een kluisje heeft — overal is een rode markering zichtbaar:</p>
