@@ -83,9 +83,9 @@ Three layers of backup protection:
 - Bulk operaties zijn niet atomisch — partial state bij crash
 
 **Magister API:**
-- SSL verificatie staat uit (`verify=False`) — oude SWPI/SOMtoday systemen hebben cert-issues
+- SSL-verificatie configureerbaar via `MAGISTER_SSL_VERIFY` (True / CA-bundle pad / False) — oude SWP-systemen hebben soms cert-issues
 - Session tokens gecacht voor 60 seconden, geen retry bij verlopen token
-- `sync_magister.py` hardcoded `vestiging_id=1` — werkt alleen voor eerste vestiging
+- Dagelijkse leerling-sync = `cron_sync.py` (cron 06:00 op CT101); roept alleen `get_leerlingen()` aan. De kluisjes-import is een eenmalige Excel-export uit Magister (geen API)
 
 **Database:**
 - Migraties zijn try-catch `ALTER TABLE` in `init_db()` — geen versie-tracking of rollback

@@ -359,7 +359,7 @@ Klik **Importeren**. De applicatie maakt vestigingen/clusters/kluisjes aan en ko
 
 > ⚠️ **All-or-nothing.** Bij een duplicaat kluisnummer wordt de hele import teruggedraaid. Splits in dat geval het bestand op of corrigeer eerst de duplicaten.
 
-**Magister-sync** draait dagelijks via cron op de server. Een handmatige sync forceren kan via `python sync_magister.py` op de container. Zie [docs/onderhoud.md](../onderhoud.md).
+**Magister leerling-sync** draait dagelijks via cron op de server (`cron_sync.py`, 06:00). Een handmatige sync forceren kan via `python cron_sync.py` op de container. Zie [docs/onderhoud.md](../onderhoud.md).
 
 ### 12.3 Vestigingen
 
@@ -424,7 +424,7 @@ Een nieuwe school in gebruik nemen vereist server- en cloud-werk. Hieronder een 
 
 **Cron / dagelijkse sync:**
 
-Stel een systemd-timer of cron-job in voor `python sync_magister.py` (1× per dag, 's nachts). Zonder dit komen nieuwe leerlingen niet vanzelf in het systeem.
+Stel een cron-job in voor `python cron_sync.py` (1× per dag, 's ochtends — productie draait 06:00). Zonder dit komen nieuwe leerlingen niet vanzelf in het systeem en worden vertrokken leerlingen niet automatisch gemarkeerd.
 
 ---
 

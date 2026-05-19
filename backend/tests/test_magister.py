@@ -42,55 +42,6 @@ MOCK_STUDENTS_XML = '''<?xml version="1.0"?>
     </Data>
 </Response>'''
 
-MOCK_KLUISJES_XML = '''<?xml version="1.0"?>
-<Response>
-    <Result>True</Result>
-    <Table>
-        <Kluisjes>
-            <Kluisje>
-                <KluisCode>O054A</KluisCode>
-                <Omschrijving>Kluisje O054A</Omschrijving>
-                <Slotnummer_def></Slotnummer_def>
-                <Volgnr>3</Volgnr>
-                <Hangslotnr_def></Hangslotnr_def>
-                <Sleutel_def>4884 D</Sleutel_def>
-                <Leerlingnummer>22001</Leerlingnummer>
-                <DatumVan>2025/08/01</DatumVan>
-                <DatumTot>2026/07/31</DatumTot>
-                <Borg>5</Borg>
-                <Huur>10</Huur>
-                <BorgOntvangen></BorgOntvangen>
-                <BorgRetour></BorgRetour>
-                <Slotnummer_toew></Slotnummer_toew>
-                <Hangslotnr_toew></Hangslotnr_toew>
-                <Sleutel_toew></Sleutel_toew>
-                <Info></Info>
-                <Ingeleverd>False</Ingeleverd>
-            </Kluisje>
-            <Kluisje>
-                <KluisCode>O055A</KluisCode>
-                <Omschrijving>Kluisje O055A</Omschrijving>
-                <Slotnummer_def></Slotnummer_def>
-                <Volgnr>4</Volgnr>
-                <Hangslotnr_def></Hangslotnr_def>
-                <Sleutel_def>1234 D</Sleutel_def>
-                <Leerlingnummer></Leerlingnummer>
-                <DatumVan>1899/12/30</DatumVan>
-                <DatumTot>1899/12/30</DatumTot>
-                <Borg></Borg>
-                <Huur></Huur>
-                <BorgOntvangen></BorgOntvangen>
-                <BorgRetour></BorgRetour>
-                <Slotnummer_toew></Slotnummer_toew>
-                <Hangslotnr_toew></Hangslotnr_toew>
-                <Sleutel_toew></Sleutel_toew>
-                <Info></Info>
-                <Ingeleverd></Ingeleverd>
-            </Kluisje>
-        </Kluisjes>
-    </Table>
-</Response>'''
-
 MOCK_LOGIN_FAILED_XML = '''<?xml version="1.0"?>
 <Response>
     <Result>False</Result>
@@ -145,21 +96,6 @@ def test_get_klassen(mag_client):
         namen = [k['naam'] for k in result]
         assert '1C' in namen
         assert '2A' in namen
-
-
-def test_get_kluisjes(mag_client):
-    with patch('magister_client.requests.get', side_effect=_mock_get([MOCK_LOGIN_XML, MOCK_KLUISJES_XML])):
-        result = mag_client.get_kluisjes()
-        assert len(result) == 2
-        assert result[0]['kluis_code'] == 'O054A'
-        assert result[0]['stamnr'] == '22001'
-        assert result[0]['sleutel'] == '4884 D'
-        assert result[0]['borg'] == '5'
-        assert result[0]['ingeleverd'] == 'False'
-        # Second kluisje has no student
-        assert result[1]['kluis_code'] == 'O055A'
-        assert result[1]['stamnr'] == ''
-        assert result[1]['sleutel'] == '1234 D'
 
 
 def test_login_failed(mag_client):

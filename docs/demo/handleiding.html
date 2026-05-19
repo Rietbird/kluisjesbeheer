@@ -472,13 +472,13 @@ server {
         <ul>
           <li><code>Algemeen</code> &rarr; <code>Login</code> — voor het inloggen / verkrijgen van een sessietoken</li>
           <li><code>ADFuncties</code> &rarr; <code>GetActiveStudents</code> — voor het ophalen van de actieve leerlingen</li>
-          <li><code>Data</code> &rarr; <code>GetData</code> met de ddlijst-layout <code>kluisjes-actueel</code> — voor het ophalen van de kluisjesgegevens. Deze <strong>ddlijst moet in Magister bestaan</strong> (Data &rarr; ddlijsten) en het service-account moet er leesrecht op hebben.</li>
         </ul>
       </li>
     </ul>
     <div class="callout warn">
       <p class="ct">Veelvoorkomende oorzaken als de koppeling niet werkt</p>
-      <p>1. <strong>Timeout / niet bereikbaar</strong>: poort 8800 wordt geblokkeerd of het server-IP staat niet op de SWP-whitelist (test met <code>openssl s_client -connect [host]:8800</code> vanaf de server). 2. <strong>Login mislukt</strong>: verkeerde gebruikersnaam/wachtwoord of account zonder rechten op <code>Algemeen.Login</code>. 3. <strong>Wel leerlingen, geen kluisjes</strong>: de ddlijst <code>kluisjes-actueel</code> ontbreekt of het account heeft er geen leesrecht op.</p>
+      <p>1. <strong>Timeout / niet bereikbaar</strong>: poort 8800 wordt geblokkeerd of het server-IP staat niet op de SWP-whitelist (test met <code>openssl s_client -connect [host]:8800</code> vanaf de server). 2. <strong>Login mislukt</strong>: verkeerde gebruikersnaam/wachtwoord of account zonder rechten op <code>Algemeen.Login</code>. 3. <strong>Geen leerlingen</strong>: het service-account heeft geen leesrecht op <code>ADFuncties.GetActiveStudents</code>.</p>
+      <p class="muted" style="margin-top:.4rem"><em>De kluisjesgegevens zelf komen niet via de Magister-koppeling binnen, maar via een eenmalige Excel-export uit Magister die je in de app importeert (zie Import). De koppeling is uitsluitend voor de dagelijkse leerling-sync.</em></p>
     </div>
     <div class="callout">
       <p class="ct">Beveiliging</p>

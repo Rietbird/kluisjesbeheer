@@ -114,64 +114,6 @@ class MagisterClient:
         self._cache[cache_key] = {'data': data, 'time': time.time()}
         return data
 
-    def _call_data(self, layout):
-        """Call the Data/GetData function with a named layout (ddlijsten).
-        Returns the root element; caller should use .iter() or .findall() to find rows."""
-        cache_key = f"GetData:{layout}"
-        cached = self._cache.get(cache_key)
-        if cached and time.time() - cached['time'] < self.CACHE_TTL:
-            return cached['data']
-
-        token = self._login()
-        params = {
-            'Library': 'Data',
-            'Function': 'GetData',
-            'SessionToken': token,
-            'Layout': layout,
-            'Type': 'XML',
-        }
-        resp = requests.get(self.url, params=params, timeout=60, verify=MAGISTER_SSL_VERIFY)
-        root = ET.fromstring(resp.text)
-
-        result = root.findtext('Result')
-        if result == 'False':
-            msg = root.findtext('.//Fout_omschrijving') or 'Onbekende fout'
-            raise ConnectionError(f'Medius GetData fout: {msg}')
-
-        exc = root.findtext('Exception')
-        if exc:
-            raise ConnectionError(f'Medius fout: {exc}: {root.findtext("ExceptionMsg")}')
-
-        self._cache[cache_key] = {'data': root, 'time': time.time()}
-        return root
-
-    def get_kluisjes(self):
-        """Get all current locker data from Magister via GetData layout 'kluisjes-actueel'."""
-        root = self._call_data('kluisjes-actueel')
-        if root is None:
-            return []
-
-        kluisjes = []
-        for node in root.findall('.//Kluisje'):
-            kluisjes.append({
-                'kluis_code': node.findtext('KluisCode', ''),
-                'omschrijving': node.findtext('Omschrijving', ''),
-                'slotnummer': node.findtext('Slotnummer_def', ''),
-                'volgnr': node.findtext('Volgnr', ''),
-                'stamnr': node.findtext('Leerlingnummer', ''),
-                'datum_van': node.findtext('DatumVan', ''),
-                'datum_tot': node.findtext('DatumTot', ''),
-                'borg': node.findtext('Borg', ''),
-                'huur': node.findtext('Huur', ''),
-                'borg_ontvangen': node.findtext('BorgOntvangen', ''),
-                'borg_retour': node.findtext('BorgRetour', ''),
-                'sleutel': node.findtext('Sleutel_toew', '') or node.findtext('Sleutel_def', ''),
-                'hangslotnr': node.findtext('Hangslotnr_toew', '') or node.findtext('Hangslotnr_def', ''),
-                'info': node.findtext('Info', ''),
-                'ingeleverd': node.findtext('Ingeleverd', ''),
-            })
-        return kluisjes
-
     def get_leerlingen(self):
         """Get all active students, returns list of dicts."""
         data = self._call('GetActiveStudents')

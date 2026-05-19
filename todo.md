@@ -17,3 +17,5 @@ Bij inlog alleen eigen locatie voor de locatie, beheer alles
 [ ] Toewijzen van kluiskes aan nieuwe clusters
 [ ] V2 Plattegrond weergave met daarop de clusters met kluisjes.
 [ ] http://school.swp.nl:8800
+[ ] Einde schooljaar ? Hoe gaan we hiermee om?>
+[] Wat gebeurt er nu met schoolverlaters/uitstroom en opvolging daarvan?
