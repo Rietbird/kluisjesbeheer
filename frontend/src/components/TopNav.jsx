@@ -24,7 +24,7 @@ function UserPhoto({ user }) {
   )
 }
 
-export default function TopNav({ onOpenBeheer }) {
+export default function TopNav({ onOpenBeheer, onOpenHandleiding }) {
   const user = useAuth()
   const [dark, setDark] = useDarkMode()
   const { schoolNaam, schoolSubtitel, schoolLogo } = useBranding()
@@ -41,6 +41,13 @@ export default function TopNav({ onOpenBeheer }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {/* Handleiding — discrete ? knop */}
+          <button onClick={onOpenHandleiding}
+            className="w-7 h-7 flex items-center justify-center rounded-full border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:text-primary hover:border-primary dark:hover:text-primary transition-colors text-sm font-semibold"
+            title="Handleiding">
+            ?
+          </button>
+
           {/* Dark mode toggle */}
           <button onClick={() => setDark(!dark)}
             className="flex items-center gap-1.5 bg-amber-200 dark:bg-indigo-900 rounded-full p-0.5 w-14 h-7 relative transition-colors"
