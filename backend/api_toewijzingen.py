@@ -163,6 +163,49 @@ def patch_toewijzing(tid):
     return jsonify(dict(row))
 
 
+@toewijzingen_bp.route('/toewijzingen/ruilen', methods=['POST'])
+@login_required
+def ruilen():
+    """Wissel het kluisje van twee actieve toewijzingen binnen dezelfde vestiging.
+
+    Body: { toewijzing_a_id, toewijzing_b_id }
+    Beide huren lopen ongewijzigd door; alleen kluisje_id wordt gewisseld.
+    """
+    data = request.get_json() or {}
+    a_id = data.get('toewijzing_a_id')
+    b_id = data.get('toewijzing_b_id')
+    if not a_id or not b_id:
+        return jsonify({'error': 'toewijzing_a_id en toewijzing_b_id zijn verplicht'}), 400
+    if a_id == b_id:
+        return jsonify({'error': 'Kan een kluisje niet met zichzelf ruilen'}), 400
+
+    a = g.db.execute('SELECT * FROM toewijzingen WHERE id = ? AND actief = 1', (a_id,)).fetchone()
+    b = g.db.execute('SELECT * FROM toewijzingen WHERE id = ? AND actief = 1', (b_id,)).fetchone()
+    if not a or not b:
+        return jsonify({'error': 'Een van beide toewijzingen is niet (meer) actief'}), 409
+
+    kluisje_a = g.db.execute('SELECT vestiging_id FROM kluisjes WHERE id = ?', (a['kluisje_id'],)).fetchone()
+    kluisje_b = g.db.execute('SELECT vestiging_id FROM kluisjes WHERE id = ?', (b['kluisje_id'],)).fetchone()
+    if not kluisje_a or not kluisje_b:
+        return jsonify({'error': 'Kluisje niet gevonden'}), 404
+    if kluisje_a['vestiging_id'] != kluisje_b['vestiging_id']:
+        return jsonify({'error': 'Ruilen kan alleen binnen dezelfde vestiging'}), 409
+
+    kid_a = a['kluisje_id']
+    kid_b = b['kluisje_id']
+    # 3-staps swap: A tijdelijk inactief zodat de partiele unique index
+    # idx_active_toewijzing_per_kluisje (WHERE actief=1) nooit twee actieve
+    # rijen op hetzelfde kluisje ziet.
+    g.db.execute("UPDATE toewijzingen SET actief = 0 WHERE id = ?", (a_id,))
+    g.db.execute("UPDATE toewijzingen SET kluisje_id = ?, updated_at = datetime('now') WHERE id = ?", (kid_a, b_id))
+    g.db.execute("UPDATE toewijzingen SET kluisje_id = ?, actief = 1, updated_at = datetime('now') WHERE id = ?", (kid_b, a_id))
+    g.db.commit()
+
+    a_new = g.db.execute('SELECT * FROM toewijzingen WHERE id = ?', (a_id,)).fetchone()
+    b_new = g.db.execute('SELECT * FROM toewijzingen WHERE id = ?', (b_id,)).fetchone()
+    return jsonify({'a': dict(a_new), 'b': dict(b_new)}), 200
+
+
 @toewijzingen_bp.route('/toewijzingen/<int:tid>/borg-teruggestort', methods=['POST'])
 @login_required
 def borg_teruggestort(tid):
