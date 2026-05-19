@@ -102,3 +102,33 @@ def test_login_failed(mag_client):
     with patch('magister_client.requests.get', side_effect=_mock_get([MOCK_LOGIN_FAILED_XML])):
         with pytest.raises(ConnectionError, match='login mislukt|Ongeldige'):
             mag_client.search_leerlingen('test')
+
+
+def test_timeout_error_does_not_leak_password(mag_client):
+    """A network timeout must produce a friendly message WITHOUT the password.
+    The SWP webservice sends credentials as URL query params, so a raw requests
+    exception would otherwise leak the Magister password into the UI."""
+    import requests
+    # requests' real exception text includes the full request URL incl. password
+    boom = requests.ConnectionError(
+        "HTTPSConnectionPool(host='test.swp.nl', port=8800): Max retries exceeded "
+        "with url: /doc?Library=Algemeen&Function=Login&UserName=testuser"
+        "&Password=testpass&Type=XML (Caused by ConnectTimeoutError(...))"
+    )
+    with patch('magister_client.requests.get', side_effect=boom):
+        with pytest.raises(ConnectionError) as ei:
+            mag_client.search_leerlingen('test')
+    msg = str(ei.value)
+    assert 'testpass' not in msg
+    assert 'Password=' not in msg
+    assert 'poort 8800' in msg and 'whitelist' in msg
+
+
+def test_safe_error_strips_password():
+    """api_magister._safe_error masks any Password=... query param."""
+    from api_magister import _safe_error
+    raw = ("Max retries exceeded with url: /doc?UserName=u&Password=REMOVED-PW1"
+           "REMOVED-PW2&Type=XML")
+    cleaned = _safe_error(ConnectionError(raw))
+    assert '***REMOVED-Demo-PW***' not in cleaned
+    assert 'Password=***' in cleaned

@@ -1,8 +1,19 @@
+import re
+
 from flask import Blueprint, request, jsonify, g
 from auth import login_required
 from magister_client import magister
 
 magister_bp = Blueprint('magister', __name__, url_prefix='/api')
+
+
+def _safe_error(e):
+    """Strip any Password=... query param from an error message before
+    returning it to the client. Defense-in-depth: the SWP webservice sends
+    credentials as URL query params, so a raw requests exception would leak
+    the Magister password into the UI."""
+    msg = str(e)
+    return re.sub(r'(?i)password=[^&\s\'")]*', 'Password=***', msg)
 
 
 def _sync_to_db(leerlingen):
@@ -172,7 +183,7 @@ def sync_leerlingen():
         leerlingen = magister.get_leerlingen()
         klassen = sorted(set(l['klas'] for l in leerlingen if l['klas']))
     except ConnectionError as e:
-        return jsonify({'error': f'Magister niet bereikbaar: {e}'}), 502
+        return jsonify({'error': _safe_error(e)}), 502
 
     _sync_to_db(leerlingen)
 

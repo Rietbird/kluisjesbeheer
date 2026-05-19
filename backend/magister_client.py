@@ -81,8 +81,24 @@ class MagisterClient:
             self._session_token = root.findtext('SessionToken')
             self._token_time = time.time()
             return self._session_token
-        except (requests.RequestException, Exception) as e:
-            raise ConnectionError(f'Medius niet bereikbaar: {e}')
+        except (requests.Timeout, requests.ConnectionError):
+            # Network-level failure (port blocked / not whitelisted / DNS).
+            # Never include the request URL: it carries the password as a query param.
+            raise ConnectionError(
+                'Geen verbinding met de Magister-webservice (poort 8800). '
+                'Controleer of het server-IP op de SWP-whitelist staat en of de URL klopt.'
+            )
+        except ConnectionError:
+            # Our own 'login mislukt' message -- pass through unchanged.
+            raise
+        except requests.RequestException:
+            raise ConnectionError('Magister-webservice gaf een onverwacht antwoord (HTTP-fout).')
+        except ET.ParseError:
+            raise ConnectionError('Magister-webservice gaf een ongeldig antwoord (geen geldige XML).')
+        except Exception:
+            # Catch-all so an unexpected error never escapes as a raw exception
+            # (which could leak the request URL incl. password). No {e}.
+            raise ConnectionError('Onverwachte fout bij het benaderen van de Magister-webservice.')
 
     def _call(self, function, stamnr=None):
         """Call an ADFuncties function and return the parsed XML Data element."""
