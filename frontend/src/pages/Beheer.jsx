@@ -239,8 +239,6 @@ function KluisjesPanel({ clusterId, vestigingId }) {
   const [bulkPadding, setBulkPadding] = useState('3')
   const [bulkLocatie, setBulkLocatie] = useState('')
   const [bulkMsg, setBulkMsg] = useState('')
-  const [clusters, setClusters] = useState([])
-  const [verplaatsDoel, setVerplaatsDoel] = useState('')
   const [verplaatsPrefix, setVerplaatsPrefix] = useState('')
   const [verplaatsVan, setVerplaatsVan] = useState('')
   const [verplaatsTot, setVerplaatsTot] = useState('')
@@ -251,32 +249,26 @@ function KluisjesPanel({ clusterId, vestigingId }) {
   }
   useEffect(() => { load(); setSelected(new Set()); setSelectMode(false) }, [clusterId])
 
-  useEffect(() => {
-    if (!vestigingId) { setClusters([]); return }
-    api.get(`/api/vestigingen/${vestigingId}/clusters`).then(setClusters).catch(() => {})
-  }, [vestigingId, clusterId])
-
   async function handleVerplaatsReeks() {
-    if (!verplaatsDoel) { setError('Kies een doelcluster.'); return }
     setError(''); setBulkMsg('')
     const van = parseInt(verplaatsVan), tot = parseInt(verplaatsTot)
     if (isNaN(van) || isNaN(tot) || van > tot) { setError('Ongeldige reeks.'); return }
     try {
-      const res = await api.post(`/api/clusters/${verplaatsDoel}/verplaats-reeks`,
+      const res = await api.post(`/api/clusters/${clusterId}/verplaats-reeks`,
         { prefix: verplaatsPrefix, van, tot })
-      setBulkMsg(`${res.verplaatst} kluisjes verplaatst.`)
+      setBulkMsg(`${res.verplaatst} kluisjes naar dit cluster verplaatst.`)
+      setVerplaatsPrefix(''); setVerplaatsVan(''); setVerplaatsTot('')
       load()
     } catch (err) { setError(err.message) }
   }
 
   async function handleVerplaatsSelectie() {
-    if (!verplaatsDoel) { setError('Kies een doelcluster.'); return }
     if (selected.size === 0) return
     setError(''); setBulkMsg('')
     try {
-      const res = await api.post(`/api/clusters/${verplaatsDoel}/verplaats-selectie`,
+      const res = await api.post(`/api/clusters/${clusterId}/verplaats-selectie`,
         { kluisje_ids: [...selected] })
-      setBulkMsg(`${res.verplaatst} kluisjes verplaatst.`)
+      setBulkMsg(`${res.verplaatst} kluisjes naar dit cluster verplaatst.`)
       setSelected(new Set()); setSelectMode(false)
       load()
     } catch (err) { setError(err.message) }
@@ -382,21 +374,12 @@ function KluisjesPanel({ clusterId, vestigingId }) {
               Verwijder {selected.size > 0 ? `(${selected.size})` : ''}
             </ConfirmButton>
           </div>
-          {clusters.length > 1 && (
-            <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-600">
-              <select value={verplaatsDoel} onChange={e => setVerplaatsDoel(e.target.value)}
-                className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm dark:bg-slate-700 dark:text-white">
-                <option value="">— verplaats naar cluster —</option>
-                {clusters.filter(c => String(c.id) !== String(clusterId)).map(c => (
-                  <option key={c.id} value={c.id}>{c.naam}</option>
-                ))}
-              </select>
-              <button onClick={handleVerplaatsSelectie}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${selected.size > 0 && verplaatsDoel ? 'bg-primary text-white hover:bg-primary-600' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
-                Verplaats {selected.size > 0 ? `(${selected.size})` : ''}
-              </button>
-            </div>
-          )}
+          <div className="flex items-center justify-end pt-2 border-t border-slate-200 dark:border-slate-600">
+            <button onClick={handleVerplaatsSelectie}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${selected.size > 0 ? 'bg-primary text-white hover:bg-primary-600' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
+              Verplaats naar dit cluster {selected.size > 0 ? `(${selected.size})` : ''}
+            </button>
+          </div>
         </div>
       )}
 
@@ -455,21 +438,18 @@ function KluisjesPanel({ clusterId, vestigingId }) {
         {kluisjes.length === 0 && <p className="text-sm text-slate-400">Nog geen kluisjes in dit cluster.</p>}
       </div>
 
-      {/* Verplaats bestaande kluisjes naar cluster (reeks) */}
-      {!selectMode && clusters.length > 1 && (
+      {/* Verplaats bestaande kluisjes NAAR dit cluster (reeks) */}
+      {!selectMode && (
         <div className="mb-4 p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/40">
-          <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">
-            Bestaande kluisjes verplaatsen naar cluster
+          <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+            Bestaande kluisjes naar dit cluster halen
           </div>
-          <select value={verplaatsDoel} onChange={e => setVerplaatsDoel(e.target.value)}
-            className={inputCls + ' mb-2'}>
-            <option value="">— kies doelcluster —</option>
-            {clusters.filter(c => String(c.id) !== String(clusterId)).map(c => (
-              <option key={c.id} value={c.id}>{c.naam}</option>
-            ))}
-          </select>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+            Een reeks bestaande kluisjes uit een ander cluster (binnen deze vestiging)
+            naar <strong>dit cluster</strong> verplaatsen, op nummer-bereik.
+          </p>
           <div className="grid grid-cols-3 gap-2 mb-2">
-            <input className={inputCls} placeholder="prefix (bv. MO-)"
+            <input className={inputCls} placeholder="prefix (bv. BL-)"
               value={verplaatsPrefix} onChange={e => setVerplaatsPrefix(e.target.value)} />
             <input className={inputCls} placeholder="van" inputMode="numeric"
               value={verplaatsVan} onChange={e => setVerplaatsVan(e.target.value)} />
@@ -478,7 +458,7 @@ function KluisjesPanel({ clusterId, vestigingId }) {
           </div>
           <button onClick={handleVerplaatsReeks}
             className="w-full px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors">
-            Verplaats reeks
+            Verplaats reeks naar dit cluster
           </button>
         </div>
       )}
