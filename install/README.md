@@ -23,12 +23,9 @@ export SSH_PORT="22"                    # of 2222 als poort 22 geblokkeerd is
 export SSH_USER="root"                  # of de standaard sudo-user op de VM
 ```
 
-🐧 **Doelserver** (in de console-sessie zodra je ingelogd bent):
-
-```bash
-export ADMIN_USER="kluisjesadmin"       # nieuw aan te maken admin-account
-                                        # (als de VM al een sudo-user heeft, sla 1.4-1.6 over)
-```
+> 🔒 Dit stappenplan kiest voor `root` + wachtwoord — snel en prima
+> voor een server op een intern beheernet. Wil je productie-veilig
+> (admin-account + SSH-key)? Zie de tip onderaan stap 1.6.
 
 ---
 
@@ -58,7 +55,36 @@ apt-get update && apt-get upgrade -y
 apt-get install -y openssh-server sudo curl nano less ca-certificates
 ```
 
-### 1.3 SSH-daemon controleren / starten
+### 1.3 Locale instellen (voorkomt `perl: warning`-spam)
+
+Verse Debian-VMs hebben vaak geen gegenereerde locale. Veel programma's
+(perl, apt, dpkg) gooien dan bij elke run schermenvol `perl: warning:
+Setting locale failed`. Onschuldig maar maakt latere output onleesbaar.
+Eenmalig fixen:
+
+```bash
+sed -i 's/^# *en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
+locale-gen
+update-locale LANG=en_US.UTF-8
+exec bash                                # nieuwe LANG actief in deze sessie
+locale | head -3                         # controle: LANG=en_US.UTF-8
+```
+
+### 1.4 SWP-whitelist alvast aanvragen
+
+> ⏱️ SWP heeft soms 1-2 werkdagen nodig om een IP te whitelisten. Door
+> dit hier al te doen, loopt de aanvraag parallel aan de rest van de
+> installatie — in stap 7 hoef je alleen nog te verifiëren.
+
+```bash
+curl -s https://ifconfig.me ; echo
+```
+
+Noteer dit IP en mail het direct naar de Magister-/SWP-beheerder van
+de school met het verzoek: *"Whitelisten voor toegang tot
+`<jouwschool>.swp.nl` op poort 8800."*
+
+### 1.5 SSH-daemon controleren + root-login toestaan
 
 ```bash
 systemctl enable --now ssh
@@ -66,60 +92,37 @@ systemctl status ssh --no-pager | head -3
 ss -tlnp | grep :22 || echo "ssh luistert NIET op poort 22"
 ```
 
-> Als poort 22 geblokkeerd is en je 2222 wilt: bewerk
+Standaard staat Debian 12/13 op `PermitRootLogin prohibit-password`
+(root mag in, maar **alleen met SSH-key**). Voor wachtwoord-auth als
+root moet dit op `yes`:
+
+```bash
+sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+systemctl restart ssh
+grep -E '^PermitRootLogin' /etc/ssh/sshd_config       # controle: yes
+```
+
+> 💡 Als poort 22 geblokkeerd is en je 2222 wilt: bewerk
 > `/etc/ssh/sshd_config`, regel `#Port 22` → `Port 2222`, dan
 > `systemctl restart ssh`. Update dan ook `SSH_PORT` in stap 0.
 
-### 1.4 Admin-account aanmaken (alleen als de VM nog geen sudo-user heeft)
-
-```bash
-adduser "$ADMIN_USER"                   # vraagt om wachtwoord
-usermod -aG sudo "$ADMIN_USER"
-```
-
-### 1.5 SSH key-based login aanzetten voor `$ADMIN_USER`
-
-Veiliger en handiger dan steeds een wachtwoord typen.
-
-🖥️ **Werkstation** — public key vinden (of nieuw genereren):
-
-```bash
-ls -la ~/.ssh/id_*.pub 2>/dev/null || ssh-keygen -t ed25519 -C "vincent-werkstation"
-cat ~/.ssh/id_ed25519.pub             # kopieer de hele regel
-```
-
-🐧 **Server** — public key plakken in `authorized_keys`:
-
-```bash
-mkdir -p /home/$ADMIN_USER/.ssh
-nano /home/$ADMIN_USER/.ssh/authorized_keys
-# plak de regel uit ~/.ssh/id_ed25519.pub, sla op (Ctrl+O, Enter, Ctrl+X)
-chmod 700 /home/$ADMIN_USER/.ssh
-chmod 600 /home/$ADMIN_USER/.ssh/authorized_keys
-chown -R "$ADMIN_USER:$ADMIN_USER" /home/$ADMIN_USER/.ssh
-```
-
-### 1.6 (Optioneel maar aanbevolen) Root-login over SSH uitschakelen
-
-```bash
-sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
-sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-systemctl restart ssh
-```
-
-> ⚠️ Doe deze stap **pas nadat je hebt getest dat key-based login als
-> `$ADMIN_USER` werkt** (volgende stap), anders sluit je jezelf buiten.
-
-### 1.7 SSH-verbinding testen vanaf je werkstation
+### 1.6 SSH-verbinding testen vanaf je werkstation
 
 🖥️ **Werkstation**:
 
 ```bash
-ssh -p "$SSH_PORT" "$ADMIN_USER@$SERVER_IP" "echo 'SSH werkt'; cat /etc/debian_version"
+ssh -p "$SSH_PORT" "$SSH_USER@$SERVER_IP" "echo 'SSH werkt'; cat /etc/debian_version"
 ```
 
-Verwacht: `SSH werkt` + versie-nummer. Werkt het? Door naar stap 2.
-Werkt het niet? Niet verder gaan — eerst dit oplossen.
+Eerste keer: SSH vraagt om host-key bevestiging (`yes`) + het root-
+wachtwoord. Verwacht: `SSH werkt` + versie-nummer. Werkt het? Door naar
+stap 2. Werkt het niet? Niet verder gaan — eerst dit oplossen.
+
+> 🔒 **Productie-tip:** voor een server die ook van buiten het beheernet
+> bereikbaar is, schakel root + wachtwoord-auth ná de installatie uit en
+> gebruik een admin-account met SSH-key. Dit stappenplan kiest voor de
+> snelle weg (root + wachtwoord) omdat het in de meeste school-uitrollen
+> om een server op een intern beheernet gaat.
 
 ---
 
@@ -140,7 +143,7 @@ Kopieer naar de server:
 ```bash
 scp -P "$SSH_PORT" \
     install/dist/kluisjesbeheer-install.tgz \
-    "$ADMIN_USER@$SERVER_IP:/tmp/"
+    "$SSH_USER@$SERVER_IP:/tmp/"
 ```
 
 ---
@@ -150,7 +153,7 @@ scp -P "$SSH_PORT" \
 🐧 **Server** — log in via SSH:
 
 ```bash
-ssh -p "$SSH_PORT" "$ADMIN_USER@$SERVER_IP"
+ssh -p "$SSH_PORT" "$SSH_USER@$SERVER_IP"
 ```
 
 Eenmaal binnen — naar root + uitpakken + installeren:
@@ -252,20 +255,21 @@ Klik *Opslaan*. Het wachtwoord wordt versleuteld (Fernet / AES-128-CBC
 
 ---
 
-## Stap 7 — IP-whitelist bij SWP aanvragen
+## Stap 7 — IP-whitelist verifiëren (aangevraagd in 1.4)
 
-🐧 **Server** — bepaal het uitgaande IP (stond ook in het script-rapport):
+🐧 **Server** — controleer dat het uitgaande IP nog hetzelfde is als
+wat je in stap 1.4 hebt doorgegeven:
 
 ```bash
-curl -s https://ifconfig.me
+curl -s https://ifconfig.me ; echo
 ```
 
-Geef dit IP-adres door aan de Magister-/SWP-beheerder van de school
-met het verzoek: *"Whitelisten voor toegang tot
-`<jouwschool>.swp.nl` op poort 8800."*
+Wijkt het af van wat je gemaild hebt? Stuur de SWP-beheerder een
+correctie. Bij verhuizing naar een ander netwerk moet de whitelist-
+aanvraag herhaald worden.
 
-Bij verhuizing naar een ander netwerk moet dit opnieuw aangevraagd
-worden.
+> Niet aangevraagd in 1.4 (vergeten / overgeslagen)? Doe het nu —
+> verwerking duurt 1-2 werkdagen.
 
 ---
 
@@ -339,7 +343,7 @@ Zelfde procedure als stap 2-3:
 cd /c/Projects/kluisjesbeheer
 git pull                                 # nieuwste code
 bash install/build-bundle.sh
-scp -P "$SSH_PORT" install/dist/kluisjesbeheer-install.tgz "$ADMIN_USER@$SERVER_IP:/tmp/"
+scp -P "$SSH_PORT" install/dist/kluisjesbeheer-install.tgz "$SSH_USER@$SERVER_IP:/tmp/"
 ```
 
 🐧 **Server**:
