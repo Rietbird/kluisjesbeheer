@@ -1,11 +1,11 @@
 # Kluisjesbeheer — uitrol-stappenplan
 
-Voor jezelf (Vincent). Stap-voor-stap copy-paste vanaf een **kale Debian
-12/13 installatie** tot een draaiende app.
+Stap-voor-stap copy-paste vanaf een **kale Debian 12/13 installatie**
+tot een draaiende app.
 
 > 📋 **Werkwijze:** vul stap 0 één keer in (variabelen), daarna kun je de
 > commando's letterlijk plakken in de juiste shell. Markering:
-> 🖥️ = jouw werkstation · 🐧 = Demo-server (via console of SSH).
+> 🖥️ = jouw werkstation · 🐧 = doelserver (via console of SSH).
 
 ---
 
@@ -18,24 +18,24 @@ verder gaat**.
 🖥️ **Werkstation** (Git Bash / WSL):
 
 ```bash
-export SERVER_IP="10.x.x.x"             # IP van de Demo-VM
+export SERVER_IP="10.x.x.x"             # intern IP van de doelserver
 export SSH_PORT="22"                    # of 2222 als poort 22 geblokkeerd is
-export SSH_USER="root"                  # of debian / Demo
+export SSH_USER="root"                  # of de standaard sudo-user op de VM
 ```
 
-🐧 **Demo-server** (in de console-sessie zodra je ingelogd bent):
+🐧 **Doelserver** (in de console-sessie zodra je ingelogd bent):
 
 ```bash
-export ADMIN_USER="Demo"             # nieuw aan te maken admin-account
+export ADMIN_USER="kluisjesadmin"       # nieuw aan te maken admin-account
                                         # (als de VM al een sudo-user heeft, sla 1.4-1.6 over)
 ```
 
 ---
 
-## Stap 1 — Kale Debian voorbereiden (op de Demo-server)
+## Stap 1 — Kale Debian voorbereiden (op de doelserver)
 
-> Demo levert een verse Debian 12/13 VM op via VMware. Vermoedelijk
-> alleen root-toegang via de console (geen SSH nog).
+> Uitgangspunt: een verse Debian 12/13 VM (VMware / LXC / VPS), waarop
+> alleen root-toegang via de console beschikbaar is (geen SSH nog).
 
 ### 1.1 Op de VMware-console: inloggen en netwerk verifiëren
 
@@ -49,7 +49,7 @@ cat /etc/debian_version
 
 Je moet zien: een statisch intern IP, werkende internetverbinding, en
 versie `12.x` of `13.x`. Werkt internet niet, los dat eerst op met
-Demo IT — verder zonder internet kan niet (apt + npm-install).
+de netwerkbeheerder — verder zonder internet kan niet (apt + npm-install).
 
 ### 1.2 Apt updaten + basistools installeren
 
@@ -66,7 +66,7 @@ systemctl status ssh --no-pager | head -3
 ss -tlnp | grep :22 || echo "ssh luistert NIET op poort 22"
 ```
 
-> Als Demo poort 22 geblokkeerd heeft en je 2222 wilt: bewerk
+> Als poort 22 geblokkeerd is en je 2222 wilt: bewerk
 > `/etc/ssh/sshd_config`, regel `#Port 22` → `Port 2222`, dan
 > `systemctl restart ssh`. Update dan ook `SSH_PORT` in stap 0.
 
@@ -145,7 +145,7 @@ scp -P "$SSH_PORT" \
 
 ---
 
-## Stap 3 — Installatiescript draaien (Demo-server)
+## Stap 3 — Installatiescript draaien (doelserver)
 
 🐧 **Server** — log in via SSH:
 
@@ -175,7 +175,7 @@ Het script draait nu ~3-5 minuten. Aan het eind toont het:
 
 ---
 
-## Stap 4 — `config.json` invullen (Demo-server, nog steeds root)
+## Stap 4 — `config.json` invullen (doelserver, nog steeds root)
 
 🐧 **Server**:
 
@@ -191,9 +191,9 @@ Vervang de `VUL_IN_*`-velden:
 | `ClientId` | Entra App Registration GUID |
 | `ClientSecret` | Entra Client Secret |
 | `DashboardGroupId` | Entra-groep-GUID met toegang |
-| `RedirectUri` | bv. `https://kluisjes.intern.Demo.nl/auth/callback` |
-| `AllowedOrigins` | lijst: `["https://kluisjes.intern.Demo.nl"]` |
-| `SchoolNaam` | `OSG Demo` (of wat zij willen) |
+| `RedirectUri` | bv. `https://kluisjes.intern.<school>.nl/auth/callback` |
+| `AllowedOrigins` | lijst: `["https://kluisjes.intern.<school>.nl"]` |
+| `SchoolNaam` | naam van de school (zichtbaar in UI) |
 | `SchoolSubtitel` | optioneel |
 | `SchoolLogo` | `/img/logo.png` (vervang via Beheer later) |
 | `SchoolKleur` | hex, bv. `#0066CC` |
@@ -213,28 +213,29 @@ Verwacht: `active (running)` + `HTTP 200`.
 
 ---
 
-## Stap 5 — Reverse proxy of TLS regelen (door Demo netwerkbeheer)
+## Stap 5 — Reverse proxy of TLS regelen (door netwerkbeheer)
 
 ⚠️ **Aandachtspunt:** Entra ID vereist HTTPS voor de RedirectUri
 (behalve `http://localhost`). Het installatiescript regelt **geen** TLS.
 
-Demo netwerkbeheer moet één van twee regelen voordat SSO werkt:
+De netwerkbeheerder van de school moet één van twee regelen voordat
+SSO werkt:
 
 - **A.** Interne reverse-proxy (NGINX / IIS / F5) met intern CA-cert
-  die `https://kluisjes.intern.Demo.nl` proxied naar
+  die `https://kluisjes.intern.<school>.nl` proxied naar
   `http://<server-ip>:5000`
 - **B.** Publiek bereikbaar subdomein met Let's Encrypt, eveneens via
   reverse-proxy
 
 De `RedirectUri` in `config.json` (stap 4) moet **exact** matchen met
-wat in de Entra app-registration staat — dus eerst eens worden met
+wat in de Entra app-registration staat — dus eerst eens worden met de
 Entra-beheerder welke URL gebruikt wordt.
 
 ---
 
 ## Stap 6 — Eerste login + Magister-koppeling (browser)
 
-Open `https://kluisjes.intern.Demo.nl` (of de URL die in
+Open `https://kluisjes.intern.<school>.nl` (of de URL die in
 `RedirectUri` staat) in een browser. Log in met een beheerderaccount.
 
 > 🔑 De **eerste gebruiker die inlogt wordt automatisch beheerder**.
@@ -242,8 +243,8 @@ Open `https://kluisjes.intern.Demo.nl` (of de URL die in
 > conciërges toevoegen.
 
 Ga naar **Beheer → Import → Magister-koppeling**:
-- URL: `https://school.swp.nl:8800/doc`
-- Account: het service-account (door Demo aangevraagd)
+- URL: `https://<jouwschool>.swp.nl:8800/doc`
+- Account: het service-account (door de Magister-beheerder aangevraagd)
 - Wachtwoord: het service-account-wachtwoord
 
 Klik *Opslaan*. Het wachtwoord wordt versleuteld (Fernet / AES-128-CBC
@@ -259,9 +260,9 @@ Klik *Opslaan*. Het wachtwoord wordt versleuteld (Fernet / AES-128-CBC
 curl -s https://ifconfig.me
 ```
 
-Geef dit IP-adres door aan de Magister-/SWP-beheerder van Demo
+Geef dit IP-adres door aan de Magister-/SWP-beheerder van de school
 met het verzoek: *"Whitelisten voor toegang tot
-`school.swp.nl` op poort 8800."*
+`<jouwschool>.swp.nl` op poort 8800."*
 
 Bij verhuizing naar een ander netwerk moet dit opnieuw aangevraagd
 worden.
@@ -279,7 +280,7 @@ sudo -u kluisjes /opt/kluisjesbeheer/.venv/bin/python /opt/kluisjesbeheer/backen
 **Werkt het?** Verwachte output:
 ```
 === CRON MAGISTER LEERLINGEN SYNC ===
-Magister-config uit database: https://school.swp.nl:8800/doc
+Magister-config uit database: https://<jouwschool>.swp.nl:8800/doc
 1234 leerlingen opgehaald, 56 klassen
 Database bijgewerkt. Done!
 ```
@@ -297,7 +298,7 @@ De cron staat al ingepland voor 06:00 dagelijks
 
 Test de netwerkverbinding los van credentials:
 ```bash
-openssl s_client -connect school.swp.nl:8800 </dev/null 2>&1 | head -5
+openssl s_client -connect <jouwschool>.swp.nl:8800 </dev/null 2>&1 | head -5
 ```
 Krijg je geen TLS-handshake = poort dicht = whitelist niet actief.
 
@@ -372,7 +373,7 @@ Voor diepere problemen: `journalctl -u kluisjesbeheer -n 200 --no-pager`
 
 ---
 
-## Voor Demo IT (overhandig na uitrol)
+## Voor school-IT (overhandig na uitrol)
 
 Geef hen:
 1. `install/dist/kluisjesbeheer-install.tgz` — voor toekomstige updates
