@@ -29,3 +29,6 @@ Thumbs.db
 
 # Claude lokale sessie-data
 .claude/
+
+# Install-bundle output (per-release rebuild via install/build-bundle.sh)
+install/dist/*.tgz
