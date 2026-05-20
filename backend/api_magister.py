@@ -1,19 +1,8 @@
-import re
-
 from flask import Blueprint, request, jsonify, g
 from auth import login_required
-from magister_client import magister
+from magister_client import magister, safe_error as _safe_error
 
 magister_bp = Blueprint('magister', __name__, url_prefix='/api')
-
-
-def _safe_error(e):
-    """Strip any Password=... query param from an error message before
-    returning it to the client. Defense-in-depth: the SWP webservice sends
-    credentials as URL query params, so a raw requests exception would leak
-    the Magister password into the UI."""
-    msg = str(e)
-    return re.sub(r'(?i)password=[^&\s\'")]*', 'Password=***', msg)
 
 
 def _sync_to_db(leerlingen):

@@ -1,9 +1,33 @@
 import os
+import re
 import time
 import urllib3
 import xml.etree.ElementTree as ET
 import requests
 from config import config
+
+
+# Patterns for credentials that can appear in raw exception messages or URLs.
+# The SWP webservice takes credentials as URL query params, so any raw requests
+# exception could otherwise leak them via str(e).
+_PW_PATTERNS = [
+    re.compile(r'(?i)(password|pwd|pass)=[^&\s\'")>}]*'),
+    re.compile(r'(?i)(password|pwd|pass)%3d[^&%\s\'")>}]*'),
+]
+
+
+def safe_error(e, password=None):
+    """Strip credential leaks from an exception/string before showing it.
+    Masks Password=... and URL-encoded Password%3D... variants. If the literal
+    password value is known, also strip any remaining unescaped occurrence."""
+    msg = str(e)
+    for pat in _PW_PATTERNS:
+        msg = pat.sub(lambda m: m.group(1) + '=***', msg)
+    if password:
+        # Last-resort defense: blank out any literal occurrence of the actual
+        # password value (handles odd quoting or encoding we did not anticipate).
+        msg = msg.replace(password, '***')
+    return msg
 
 # Magister/SWP servers often have self-signed or outdated certificates.
 # Set MAGISTER_VERIFY_SSL=1 to enable verification, or provide a CA bundle path.
@@ -118,8 +142,20 @@ class MagisterClient:
         if stamnr:
             params['StamNr'] = stamnr
 
-        resp = requests.get(self.url, params=params, timeout=15, verify=MAGISTER_SSL_VERIFY)
-        root = ET.fromstring(resp.text)
+        try:
+            resp = requests.get(self.url, params=params, timeout=15, verify=MAGISTER_SSL_VERIFY)
+            root = ET.fromstring(resp.text)
+        except (requests.Timeout, requests.ConnectionError):
+            raise ConnectionError(
+                'Geen verbinding met de Magister-webservice tijdens datavraag (poort 8800).'
+            )
+        except requests.RequestException:
+            raise ConnectionError('Magister-webservice gaf een onverwacht antwoord (HTTP-fout).')
+        except ET.ParseError:
+            raise ConnectionError('Magister-webservice gaf een ongeldig antwoord (geen geldige XML).')
+        except Exception:
+            # Catch-all: never let a raw exception escape with URL incl. SessionToken.
+            raise ConnectionError('Onverwachte fout bij het benaderen van de Magister-webservice.')
 
         # Check for exceptions in the response
         exc = root.findtext('Exception')

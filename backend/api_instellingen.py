@@ -141,4 +141,12 @@ def update_magister_config():
         )
 
     g.db.commit()
+
+    # Flush the cached Magister session-token in this worker -- otherwise the
+    # next sync attempt may still use the old credentials (TTL 60s). Note:
+    # under multi-worker Gunicorn this only flushes the current worker; other
+    # workers' tokens still expire naturally within CACHE_TTL.
+    from magister_client import magister
+    magister.flush_cache()
+
     return jsonify({'ok': True})

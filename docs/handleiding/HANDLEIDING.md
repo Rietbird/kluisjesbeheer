@@ -410,24 +410,29 @@ Een nieuwe school in gebruik nemen vereist server- en cloud-werk. Hieronder een 
    - `TenantId`, `ClientId`, `ClientSecret` (Entra)
    - `DashboardGroupId` (Entra-groep)
    - `RedirectUri` (productie-URL)
-   - `MagisterUrl`, `MagisterUser`, `MagisterPass`
+   - `SecretKey` (random string, ≥ 32 tekens — wordt gebruikt om het Magister-wachtwoord in de DB te versleutelen; **niet wijzigen na eerste gebruik** of je verliest opgeslagen credentials)
    - `SchoolNaam`, `SchoolKleur`, `SchoolLogo`
    - `AllowedOrigins` (alleen frontend-URL)
+
+> ℹ️ **Magister-credentials (URL/account/wachtwoord) staan niet in `config.json`**. Die voer je later via **Beheer → Import** in de app in; ze worden versleuteld (AES-128-CBC + HMAC, key afgeleid van `SecretKey`) in de database opgeslagen. De velden `MagisterUrl`/`MagisterUser`/`MagisterPass` in `config.json` zijn alleen een legacy-fallback voor oudere installaties.
 
 **Eerste login en setup:**
 
 1. Open de site → log in met je beheerderaccount → je wordt automatisch beheerder gemaakt
 2. Ga naar **Beheer → Vestigingen** en maak vestigingen + clusters aan, óf
 3. Ga naar **Beheer → Import** en upload de eerste xlsx — vestigingen worden dan automatisch aangemaakt
-4. Koppel Magister-locaties aan vestigingen (anders matcht leerling-zoek niet)
-5. Voeg via **Beheer → Gebruikers** de conciërges toe (medewerker-rol + koppel hun vestiging)
-6. Pas branding aan in **Beheer → Instellingen**
+4. Vul op datzelfde tabblad de **Magister-koppeling** in (URL/account/wachtwoord — versleuteld opgeslagen)
+5. Koppel Magister-locaties aan vestigingen (anders matcht leerling-zoek niet)
+6. Voeg via **Beheer → Gebruikers** de conciërges toe (medewerker-rol + koppel hun vestiging)
+7. Pas branding aan in **Beheer → Instellingen**
 
 **Cron / dagelijkse sync:**
 
 Stel een cron-job in voor `python cron_sync.py` (1× per dag, 's ochtends — productie draait 06:00). Zonder dit komen nieuwe leerlingen niet vanzelf in het systeem en worden vertrokken leerlingen niet automatisch gemarkeerd.
 
-> 🔧 **Sync faalt met een timeout (`Medius niet bereikbaar` / `Connection timed out` op poort 8800)?** Dit is vrijwel altijd de IP-whitelist (zie stap 2 hierboven), niet de URL of het wachtwoord. Controleer met `openssl s_client -connect <school>.swp.nl:8800` vanaf de server: krijg je geen TLS-handshake, dan staat het server-IP niet op de SWP-whitelist. De Magister-config (URL/account/wachtwoord) staat in **Beheer → Import**; `cron_sync.py` leest die uit de database (legacy installs vallen terug op `config.json`).
+> 🔧 **Sync faalt met "Geen verbinding met de Magister-webservice (poort 8800)"?** Dit is vrijwel altijd de IP-whitelist (zie stap 2 hierboven), niet de URL of het wachtwoord. Controleer met `openssl s_client -connect <school>.swp.nl:8800` vanaf de server: krijg je geen TLS-handshake, dan staat het server-IP niet op de SWP-whitelist. De Magister-config (URL/account/wachtwoord) staat in **Beheer → Import**; `cron_sync.py` leest die uit de database (legacy installs vallen terug op `config.json`).
+>
+> ⚠️ **Bescherm het cron-logbestand**: `/var/log/kluisjes-sync.log` mag niet wereld-leesbaar zijn. Standaard rechten: `chmod 640 /var/log/kluisjes-sync.log` (root:root). Het script saneert bekende wachtwoord-patronen uit foutmeldingen, maar een verkeerd-gerechte logfile is altijd een onnodig risico.
 
 ---
 

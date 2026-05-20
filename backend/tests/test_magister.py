@@ -125,10 +125,30 @@ def test_timeout_error_does_not_leak_password(mag_client):
 
 
 def test_safe_error_strips_password():
-    """api_magister._safe_error masks any Password=... query param."""
-    from api_magister import _safe_error
-    raw = ("Max retries exceeded with url: /doc?UserName=u&Password=REMOVED-PW1"
-           "REMOVED-PW2&Type=XML")
-    cleaned = _safe_error(ConnectionError(raw))
-    assert '***REMOVED-Demo-PW***' not in cleaned
+    """magister_client.safe_error masks any Password=... query param."""
+    from magister_client import safe_error
+    dummy_pw = 'DUMMY_PW_FOR_TEST_DO_NOT_USE'
+    raw = f"Max retries exceeded with url: /doc?UserName=u&Password={dummy_pw}&Type=XML"
+    cleaned = safe_error(ConnectionError(raw))
+    assert dummy_pw not in cleaned
     assert 'Password=***' in cleaned
+
+
+def test_safe_error_strips_url_encoded_password():
+    """URL-encoded Password%3D... also gets masked."""
+    from magister_client import safe_error
+    dummy_pw = 'DUMMY_URLENC_PW'
+    raw = f"url: /doc?Password%3D{dummy_pw}%26Type%3DXML"
+    cleaned = safe_error(ConnectionError(raw))
+    assert dummy_pw not in cleaned
+
+
+def test_safe_error_literal_password_fallback():
+    """When the literal password is known, it is masked even if it leaks
+    through a path the regex did not anticipate."""
+    from magister_client import safe_error
+    dummy_pw = 'unusual_pw_in_text'
+    raw = f"Some weird log line that just embeds the password ({dummy_pw}) without query format"
+    cleaned = safe_error(ConnectionError(raw), password=dummy_pw)
+    assert dummy_pw not in cleaned
+    assert '***' in cleaned

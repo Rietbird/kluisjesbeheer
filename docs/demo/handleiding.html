@@ -209,7 +209,7 @@
 
   <nav class="side">
     <p class="brand">Kluisjesbeheer</p>
-    <p class="brand-sub">Handleiding · School</p>
+    <p class="brand-sub">Handleiding</p>
 
     <h4>Voor de conciërge</h4>
     <a href="#c-start">Inloggen &amp; overzicht</a>
@@ -485,6 +485,13 @@ server {
       <p>De Magister-credentials worden via de app ingevoerd en versleuteld (AES-128-CBC + HMAC) opgeslagen in de database. Ze zijn niet uitleesbaar via de interface.</p>
     </div>
 
+    <div class="callout">
+      <p class="ct">Dagelijkse leerling-sync (cron)</p>
+      <p>De applicatie installeert geen cron-job automatisch. Stel deze op de server zelf in zodat nieuwe leerlingen elke ochtend automatisch binnenkomen en vertrokken leerlingen worden gemarkeerd. Voorbeeld voor 06:00:</p>
+      <pre><code>0 6 * * * /opt/kluisjesbeheer/.venv/bin/python /opt/kluisjesbeheer/backend/cron_sync.py &gt;&gt; /var/log/kluisjes-sync.log 2&gt;&amp;1</code></pre>
+      <p>Het script leest de Magister-credentials uit de database (die u via <strong>Beheer → Import</strong> hebt ingevuld) en logt naar <code>/var/log/kluisjes-sync.log</code>. Maak dat logbestand niet wereld-leesbaar: <code>chmod 640 /var/log/kluisjes-sync.log</code>.</p>
+    </div>
+
     <h2 id="it-backup">Back-up</h2>
     <p>De applicatie maakt automatisch dagelijks een interne back-up van de database via de veilige <code>sqlite3.backup()</code>-API, met roterende bewaring (7 dagelijks + 4 wekelijks) in <code>backend/backups/</code>. Dit werkt direct na de eerste start, zonder configuratie.</p>
     <p>Samen met uw eigen dagelijkse VM-back-up zijn dit twee onafhankelijke beschermingslagen. Een beheerder kan via de app ook handmatig een back-up maken en downloaden.</p>
@@ -502,7 +509,7 @@ server {
       <li><strong>Nummering normaliseren bij import:</strong> als de kluisnummers een wisselende lengte hebben (bijv. MO-1, MO-10, MO-100), sorteren ze overal verkeerd. De import-voorvertoning detecteert dit en biedt een keuzevakje <em>"Kluisnummers normaliseren naar vaste breedte"</em> aan (bijv. MO-0001). Dit staat standaard aan zodra scheve nummering wordt gedetecteerd. Zou normaliseren ertoe leiden dat twee nummers samenvallen, dan wordt de optie geblokkeerd en gaat de import ongewijzigd door. Tip: doe dit bij de eerste/definitieve import — opnieuw importeren is de schoonste manier om bestaande scheve nummering recht te trekken.</li>
     </ul>
 
-    <p class="toc-footer">Kluisjesbeheer · Handleiding voor conciërges en IT-beheer · School, 2026</p>
+    <p class="toc-footer">Kluisjesbeheer · Handleiding voor conciërges en IT-beheer · 2026</p>
   </main>
 
 </div>
