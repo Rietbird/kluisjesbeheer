@@ -387,6 +387,13 @@ server {
 
     client_max_body_size 16M;
 
+    # Grote proxy-buffers nodig: na Entra-login stuurt Flask een Set-Cookie
+    # header met de sessie + access_token; samen >8KB. Default nginx-buffer
+    # is te klein -> "upstream sent too big header" -> Bad Gateway.
+    proxy_buffer_size       16k;
+    proxy_buffers           8 16k;
+    proxy_busy_buffers_size 32k;
+
     # Statische frontend-assets (img) direct serveren
     location /img/ {
         root $APP_DIR/frontend/dist;
