@@ -267,7 +267,6 @@ ensure_config() {
   "TenantId": "VUL_IN_TENANT_ID",
   "ClientId": "VUL_IN_CLIENT_ID",
   "ClientSecret": "VUL_IN_CLIENT_SECRET",
-  "DashboardGroupId": "VUL_IN_ENTRA_GROUP_ID",
   "RedirectUri": "VUL_IN_REDIRECT_URI",
   "SecretKey": "$secret",
   "SchoolNaam": "Mijn School",
@@ -528,12 +527,14 @@ Uitgaand IP voor SWP-whitelist:
 Volgende stappen (handmatig):
 
   1. Bewerk $APP_DIR/backend/config.json:
-     - TenantId, ClientId, ClientSecret, DashboardGroupId (Entra)
+     - TenantId, ClientId, ClientSecret (Entra)
      - RedirectUri (bv. https://$lan_ip/auth/callback)
      - AllowedOrigins (frontend-URL, bv. ["https://$lan_ip"])
      LET OP: SecretKey is al automatisch ingevuld -- NIET wijzigen na
      gebruik (versleutelt Magister-wachtwoord in DB).
      (SchoolNaam/Logo/Kleur stel je later via Beheer -> Instellingen in.)
+     Toegangscontrole gaat via Entra "Assignment required: Yes" op de
+     Enterprise App -- niet via een groep in config.json.
 
   2. systemctl restart $SERVICE_NAME
 

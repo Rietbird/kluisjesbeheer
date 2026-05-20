@@ -27,7 +27,7 @@ Open `https://kluisjes.<jouwschool>.nl` in een moderne browser (Edge, Chrome, Fi
 
 Toegang vereist twee dingen:
 
-- Je account is lid van de Entra-groep die in `config.json` staat (`DashboardGroupId`).
+- Je account is toegewezen aan de Enterprise Application in Entra (*"Users and groups"*) — eventueel via een Security-groep.
 - Je account staat als gebruiker geregistreerd in Kluisjesbeheer (rol `beheerder` of `medewerker`).
 
 De allereerste persoon die ooit inlogt op een nieuwe installatie wordt automatisch beheerder. Daarna voegt de beheerder anderen toe via **Beheer → Gebruikers**.
@@ -408,7 +408,6 @@ Een nieuwe school in gebruik nemen vereist server- en cloud-werk. Hieronder een 
 1. Volg [docs/installatie.md](../installatie.md): Debian 12, Python 3.11, Gunicorn, NGINX, systemd
 2. Kopieer `backend/config.example.json` naar `backend/config.json` en vul in:
    - `TenantId`, `ClientId`, `ClientSecret` (Entra)
-   - `DashboardGroupId` (Entra-groep)
    - `RedirectUri` (productie-URL)
    - `SecretKey` (random string, ≥ 32 tekens — wordt gebruikt om het Magister-wachtwoord in de DB te versleutelen; **niet wijzigen na eerste gebruik** of je verliest opgeslagen credentials)
    - `SchoolNaam`, `SchoolKleur`, `SchoolLogo`

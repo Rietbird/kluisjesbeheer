@@ -4,7 +4,7 @@
 
 Zorg dat je de volgende gegevens bij de hand hebt (zie [Systeemeisen](systeemeisen.md)):
 
-- Entra ID: TenantId, ClientId, ClientSecret, DashboardGroupId
+- Entra ID: TenantId, ClientId, ClientSecret (+ *"Assignment required: Yes"* op de Enterprise App, met gebruikers/groepen toegewezen)
 - Een HTTPS-domein (bijv. `kluisjes.jouwschool.nl`)
 - Servertoegang (SSH als root)
 
@@ -44,7 +44,6 @@ nano /opt/kluisjesbeheer/backend/config.json
   "TenantId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "ClientId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "ClientSecret": "je-client-secret",
-  "DashboardGroupId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "RedirectUri": "https://kluisjes.jouwschool.nl/auth/callback",
   "SecretKey": "willekeurige-lange-string",
   "AllowedOrigins": ["https://kluisjes.jouwschool.nl"]

@@ -405,8 +405,8 @@
       <tr><td><code>TenantId</code></td><td>App Registration → Overview → Directory (tenant) ID</td></tr>
       <tr><td><code>ClientId</code></td><td>App Registration → Overview → Application (client) ID</td></tr>
       <tr><td><code>ClientSecret</code></td><td>Certificates &amp; secrets → Value</td></tr>
-      <tr><td><code>DashboardGroupId</code></td><td>Groups → [groep] → Object ID</td></tr>
     </table>
+    <p class="muted"><em>Toegangscontrole loopt via <strong>"Assignment required: Yes"</strong> op de Enterprise Application — geen groep-GUID meer in <code>config.json</code>. Wijs users (of een security-groep) toe via Enterprise applications → [app] → Users and groups.</em></p>
 
     <h2 id="it-install">Installatie</h2>
     <ol class="steps">
@@ -420,7 +420,6 @@ nano backend/config.json</code></pre>
   "TenantId": "...",
   "ClientId": "...",
   "ClientSecret": "...",
-  "DashboardGroupId": "...",
   "RedirectUri": "https://kluisjes.schooldomein.nl/auth/callback",
   "SecretKey": "willekeurige-lange-string",
   "AllowedOrigins": ["https://kluisjes.schooldomein.nl"]

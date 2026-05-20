@@ -35,3 +35,15 @@ def test_me_authenticated(unauth_client):
 def test_protected_endpoint_requires_login(unauth_client):
     rv = unauth_client.get('/api/vestigingen')
     assert rv.status_code == 401
+
+
+def test_no_dashboard_group_check():
+    """Toegangscontrole hoort 100% in Entra (Assignment required) te zitten,
+    niet in onze code. Regressie-bescherming: zorg dat we nooit per ongeluk
+    terug een group-check inbouwen die DashboardGroupId honoreert."""
+    import auth
+    src = open(auth.__file__, encoding='utf-8').read()
+    assert 'checkMemberGroups' not in src, \
+        'auth.py mag geen Graph checkMemberGroups-call meer doen (oude flow)'
+    assert "config.get('DashboardGroupId'" not in src, \
+        'auth.py mag DashboardGroupId niet meer uit config lezen'

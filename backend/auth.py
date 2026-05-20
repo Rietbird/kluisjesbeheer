@@ -93,22 +93,10 @@ def callback():
 
     import requests as http_requests
 
-    # Check Entra group membership (single group for access)
-    group_id = config.get('DashboardGroupId', '')
-    if group_id:
-        headers_auth = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
-        resp = http_requests.post(
-            'https://graph.microsoft.com/v1.0/me/checkMemberGroups',
-            headers=headers_auth,
-            json={'groupIds': [group_id]},
-            timeout=10,
-        )
-        if resp.ok:
-            member_groups = resp.json().get('value', [])
-            if group_id not in member_groups:
-                return _error_page('Geen toegang', 'Je bent geen lid van de juiste groep. Neem contact op met je ICT-beheerder als je denkt dat dit niet klopt.')
-        else:
-            return _error_page('Groepscontrole mislukt', 'De groepscontrole bij Microsoft kon niet worden uitgevoerd. Probeer het later opnieuw.')
+    # Toegangscontrole gebeurt in Entra zelf via "Assignment required: Yes"
+    # op de Enterprise Application (Microsoft regelt vóór we hier komen).
+    # Onze gebruikers-tabel hieronder bepaalt vervolgens rol + vestigingen.
+    # (DashboardGroupId-config wordt genegeerd; was de oude flow.)
 
     # Get user info from Microsoft Graph
     headers = {'Authorization': f'Bearer {token}'}

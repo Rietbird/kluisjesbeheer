@@ -29,6 +29,62 @@ export SSH_USER="root"                  # of de standaard sudo-user op de VM
 
 ---
 
+## Stap 0.5 — Entra ID voorbereiden (vóór de uitrol)
+
+Dit hoeft niet op de server, maar wil je vóór stap 1 geregeld hebben.
+Toegang tot de app loopt 100% via Microsoft Entra ID (single sign-on).
+De wachttijd zit in de Entra-acties, niet in de code — dus regel dit
+vooraf, dan is de uitrol zelf vlot.
+
+> 🔑 **Toegangsbeleid:** wij gebruiken Entra's **"Assignment required"**.
+> Microsoft regelt vóór onze app überhaupt iets ziet wie wel/niet
+> binnen mag. Geen aparte groep-check in onze code; je wijst gewoon
+> users en/of groepen toe aan de Enterprise Application. De eerste
+> persoon die inlogt wordt automatisch lokale beheerder; rollen +
+> vestigingen beheer je daarna in *Beheer → Gebruikers* in de app
+> zelf.
+
+### Checklist (vraag dit aan de tenant-beheerder)
+
+| # | Wat | Waar in Entra | Resultaat |
+|---|---|---|---|
+| 1 | App-registratie aanmaken | Entra → App registrations → New registration | `ClientId` (GUID) + `TenantId` (GUID) |
+| 2 | Redirect URI toevoegen | App registration → Authentication → Web platform → Add URI | URL eindigend op `/auth/callback`, bv. `https://<server-ip>/auth/callback` of `https://kluisjes.intern.<school>.nl/auth/callback` |
+| 3 | Client-secret aanmaken | App registration → Certificates & secrets → New client secret | `ClientSecret` (string — **direct kopiëren**, na 1× tonen onleesbaar) |
+| 4 | API permissions | App registration → API permissions | `Microsoft Graph → Delegated → User.Read` + **"Grant admin consent"** |
+| 5 | Assignment required = Yes | Enterprise applications → [jouw app] → Properties | "Assignment required" op **Yes** |
+| 6 | Users toewijzen | Enterprise applications → [jouw app] → Users and groups → Add user/group | Voeg jezelf + de Demo-beheerders toe (later kun je daar groepen aan koppelen) |
+
+> 💡 **Stap 6 mag ook met een Security-groep** — handiger als je veel
+> users hebt en het beheer bij iemand anders ligt. Maak dan een groep
+> aan, voeg de groep toe in *Users and groups*, en beheer members in
+> de groep i.p.v. in de app-registratie.
+
+### Variabelen voor `config.json` (stap 4 van de installatie)
+
+Vul tijdens de Entra-setup deze tabel in, dan kun je 'm morgen letterlijk
+overnemen:
+
+```
+TenantId      = ________________________________
+ClientId      = ________________________________
+ClientSecret  = ________________________________
+RedirectUri   = https://________________/auth/callback
+```
+
+`DashboardGroupId` is **verouderd** en hoef je niet meer in te vullen
+(toegangscontrole zit nu in Entra Assignment, niet in onze code).
+
+### Aandachtspunt — HTTPS vereiste
+
+Entra accepteert geen HTTP-RedirectUri (behalve `http://localhost`).
+Self-signed cert is wel OK — `install.sh` genereert er zelf één bij
+installatie. Browser geeft 1× "Niet beveiligd"-waarschuwing
+("Geavanceerd → Doorgaan"), daarna werkt SSO normaal. Voor productie
+met een echt cert: zie stap 7.
+
+---
+
 ## Stap 1 — Kale Debian voorbereiden (op de doelserver)
 
 > Uitgangspunt: een verse Debian 12/13 VM (VMware / LXC / VPS), waarop
@@ -178,7 +234,6 @@ Vervang de `VUL_IN_*`-velden:
 | `TenantId` | Entra Tenant-GUID |
 | `ClientId` | Entra App Registration GUID |
 | `ClientSecret` | Entra Client Secret |
-| `DashboardGroupId` | Entra-groep-GUID met toegang |
 | `RedirectUri` | bv. `https://kluisjes.intern.<school>.nl/auth/callback` |
 | `AllowedOrigins` | lijst: `["https://kluisjes.intern.<school>.nl"]` |
 | `SchoolNaam` | naam van de school (zichtbaar in UI) |

@@ -2,7 +2,6 @@
   "TenantId": "",
   "ClientId": "",
   "ClientSecret": "",
-  "DashboardGroupId": "",
   "RedirectUri": "http://localhost:5000/auth/callback",
   "SecretKey": "change-me-to-random-string",
   "MagisterUrl": "https://jouschool.swp.nl/doc",

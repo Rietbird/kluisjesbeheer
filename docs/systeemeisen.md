@@ -54,14 +54,18 @@ Er is maar 1 groep nodig. De rolverdeling (beheerder vs. concierge) en vestiging
 
 ### Benodigde gegevens voor config.json
 
-Na bovenstaande stappen heb je deze 4 waarden nodig:
+Na bovenstaande stappen heb je deze 3 waarden nodig:
 
 | Veld in config.json | Waar te vinden |
 |---------------------|----------------|
 | `TenantId` | App Registration > Overview > Directory (tenant) ID |
 | `ClientId` | App Registration > Overview > Application (client) ID |
 | `ClientSecret` | App Registration > Certificates & secrets > Value |
-| `DashboardGroupId` | Entra ID > Groups > [groep] > Object ID |
+
+> 🔑 **Toegangscontrole** loopt via *"Assignment required: Yes"* op de
+> Enterprise App, niet via een groep in `config.json`. Wijs users (of
+> een security-groep) toe via *Enterprise applications → [jouw app] →
+> Users and groups*.
 
 ## Magister API
 

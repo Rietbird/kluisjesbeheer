@@ -44,17 +44,28 @@ de Microsoft-tenantbeheerder van de school):
 - **TenantId** — GUID van de Entra-tenant
 - **ClientId** — GUID van de Entra app-registratie
 - **ClientSecret** — geheim bij de app-registratie
-- **DashboardGroupId** — GUID van een Entra-beveiligingsgroep met de
-  gebruikers die toegang krijgen
 - **RedirectUri** — de URL waarop de app draait, eindigend op
-  `/auth/callback` (bijv. `https://kluisjes.intern.school.nl/auth/callback`)
+  `/auth/callback` (bijv. `https://kluisjes.intern.school.nl/auth/callback`of `https://[ipadres]/auth/callback`)
+
+**Toegangscontrole** loopt via Entra zelf:
+- Op de Enterprise Application (de andere kant van de App-Registration)
+  zet je *"Assignment required: Yes"*
+- Onder *Users and groups* voeg je de personen (of een security-groep)
+  toe die toegang krijgen
+- Microsoft regelt vóór onze code überhaupt iets ziet wie wel/niet
+  binnen mag
+
+> 💡 **API-permissie:** `Microsoft Graph → Delegated → User.Read` is
+> nodig (voor naam + e-mail van de ingelogde gebruiker). In de meeste
+> tenants kan elke gebruiker hier zelf consent voor geven; als de
+> tenant strict is (*"User consent disabled"*) moet de tenant-admin
+> één keer op *"Grant admin consent"* klikken.
 
 > ⚠️ **Belangrijk over de RedirectUri:** Entra ID vereist HTTPS, behalve
-> voor `http://localhost`. Als je de app via een interne IP of HTTP-only
-> hostname benadert, regel dan een interne TLS-certificaat (interne CA of
-> reverse-proxy met cert) of een publiek bereikbaar subdomein. Het
-> installatiescript regelt dit **niet** — bespreek dit met je
-> netwerkbeheerder vooraf.
+> voor `http://localhost`. Een self-signed cert (zoals `install.sh`
+> automatisch genereert) werkt prima — Entra controleert het cert niet.
+> Browser geeft 1× "Niet beveiligd"-waarschuwing, daarna werkt SSO
+> normaal. Voor een echt cert: zie sectie 5.
 
 ### 1.4 Magister (voor leerling-sync)
 
@@ -137,7 +148,6 @@ Vervang de `VUL_IN_*`-velden:
 | `TenantId` | Entra Tenant-GUID |
 | `ClientId` | Entra App Registration GUID |
 | `ClientSecret` | Entra Client Secret |
-| `DashboardGroupId` | Entra-groep-GUID met toegestane gebruikers |
 | `RedirectUri` | Volledige URL incl. `/auth/callback` |
 | `AllowedOrigins` | Lijst met frontend-URLs, bv. `["https://kluisjes.intern.school.nl"]` |
 | `SchoolNaam` | Naam van de school (zichtbaar in UI) |

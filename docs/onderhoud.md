@@ -130,7 +130,7 @@ pct exec 101 -- bash -c '
 |----------|---------|-----------|
 | Login redirect loop | Verkeerde RedirectUri of ClientId | Check config.json, moet exact matchen met App Registration |
 | "Geen toegang — vraag je beheerder" | E-mailadres niet als gebruiker toegevoegd | Beheerder voegt toe via Beheer > Gebruikers |
-| "Niet lid van de juiste groep" | Account niet in Entra security group | Voeg toe aan de DashboardGroupId groep in Entra |
+| Microsoft: "you can't access this app" | Account niet toegewezen aan de Enterprise App | Entra → Enterprise applications → [app] → Users and groups → Add |
 | Magister sync mislukt | Verkeerde URL of credentials | Check via Beheer > Instellingen > Magister API koppeling |
 | "Magister niet bereikbaar" | Firewall blokkeert poort 8800 | Controleer uitgaand verkeer naar Magister-server |
 | Logo laadt niet | Browsercache | Hard refresh (Ctrl+Shift+R) |
