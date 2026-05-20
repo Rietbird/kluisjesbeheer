@@ -34,6 +34,47 @@ info()   { echo -e "    $*"; }
 warn()   { echo -e "${YELLOW}!!  $*${NC}"; }
 err()    { echo -e "${RED}xx  $*${NC}" >&2; }
 
+# Voer een commando uit met een draaiende spinner op stderr; output van het
+# commando wordt opgeslagen in een tmp-file en alleen getoond bij een fout.
+# Gebruik: run_with_spinner "label" some-command --args
+run_with_spinner() {
+    local label="$1"; shift
+    local log
+    log=$(mktemp)
+    # Spinner-subshell
+    (
+        local i=0
+        local frames='|/-\'
+        while :; do
+            printf "\r    %s [%s] " "$label" "${frames:i++%${#frames}:1}" >&2
+            sleep 0.15
+        done
+    ) &
+    local spin_pid=$!
+    # disown om "Terminated"-melding te onderdrukken bij kill
+    disown "$spin_pid" 2>/dev/null || true
+
+    # Werkelijk commando — exit-code vasthouden
+    local rc=0
+    "$@" >"$log" 2>&1 || rc=$?
+
+    # Spinner stoppen en regel opschonen
+    kill "$spin_pid" 2>/dev/null || true
+    wait "$spin_pid" 2>/dev/null || true
+    printf "\r    %s " "$label" >&2
+
+    if [[ $rc -eq 0 ]]; then
+        printf "${GREEN}OK${NC}\n" >&2
+        rm -f "$log"
+    else
+        printf "${RED}FOUT (exit %d)${NC}\n" "$rc" >&2
+        echo "    --- output van mislukt commando: ---" >&2
+        sed 's/^/    /' "$log" >&2
+        rm -f "$log"
+        return "$rc"
+    fi
+}
+
 require_root() {
     if [[ $EUID -ne 0 ]]; then
         err "Draai als root: sudo bash install.sh"
@@ -82,6 +123,19 @@ preflight() {
     else
         info "curl nog niet aanwezig — wordt zo via apt geïnstalleerd"
     fi
+
+    # Locale-check: voorkomt schermenvol "perl: warning: Setting locale
+    # failed" tijdens apt-installs op verse Debian VMs.
+    if ! locale 2>/dev/null | grep -q '^LANG=.*UTF-8'; then
+        warn "Locale is niet ingesteld (LANG=$(locale 2>/dev/null | awk -F= '/^LANG=/ {print $2}')).
+    Dit veroorzaakt geen fout, maar wel veel \"perl: warning\"-spam.
+    Fix vóór je install.sh opnieuw draait:
+      sed -i 's/^# *en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
+      apt-get install -y locales >/dev/null 2>&1 || true
+      locale-gen
+      update-locale LANG=en_US.UTF-8
+      exec bash   # nieuwe LANG actief"
+    fi
 }
 
 # ============================================================
@@ -90,13 +144,29 @@ preflight() {
 install_packages() {
     step "Systeem-packages installeren"
     export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -y -qq \
-        python3 python3-venv python3-pip \
-        nodejs npm \
-        curl ca-certificates rsync sudo \
-        cron sqlite3
-    info "Pakketten OK"
+    run_with_spinner "apt-get update" \
+        apt-get update -qq
+
+    # Locale fixen vóór andere installs — anders schermt perl onze
+    # output vol met "Setting locale failed"-warnings tijdens elke
+    # apt-aanroep.
+    if ! locale 2>/dev/null | grep -q '^LANG=.*UTF-8'; then
+        run_with_spinner "locale (en_US.UTF-8) genereren" bash -c "
+            apt-get install -y -qq locales >/dev/null 2>&1
+            sed -i 's/^# *en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
+            locale-gen >/dev/null 2>&1
+            update-locale LANG=en_US.UTF-8
+        "
+        export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+    fi
+
+    run_with_spinner "apt-get install (python, node, nginx, ...)" \
+        apt-get install -y -qq \
+            python3 python3-venv python3-pip \
+            nodejs npm \
+            curl ca-certificates rsync sudo \
+            cron sqlite3 \
+            nginx
 }
 
 # ============================================================
@@ -154,15 +224,17 @@ deploy_code() {
 setup_python() {
     step "Python-omgeving"
     if [[ ! -d "$VENV_DIR" ]]; then
-        python3 -m venv "$VENV_DIR"
-        info "venv aangemaakt"
+        run_with_spinner "venv aanmaken" \
+            python3 -m venv "$VENV_DIR"
     else
-        info "venv bestaat"
+        info "venv bestaat al"
     fi
-    "$VENV_DIR/bin/pip" install --quiet --upgrade pip
-    "$VENV_DIR/bin/pip" install --quiet -r "$APP_DIR/backend/requirements.txt"
-    "$VENV_DIR/bin/pip" install --quiet gunicorn
-    info "Python-dependencies OK"
+    run_with_spinner "pip upgraden" \
+        "$VENV_DIR/bin/pip" install --quiet --upgrade pip
+    run_with_spinner "pip install (Flask, MSAL, cryptography, ...)" \
+        "$VENV_DIR/bin/pip" install --quiet -r "$APP_DIR/backend/requirements.txt"
+    run_with_spinner "pip install gunicorn" \
+        "$VENV_DIR/bin/pip" install --quiet gunicorn
 }
 
 # ============================================================
@@ -171,8 +243,10 @@ setup_python() {
 build_frontend() {
     step "Frontend bouwen (Vite)"
     cd "$APP_DIR/frontend"
-    npm ci --silent --no-audit --no-fund
-    npm run build --silent
+    run_with_spinner "npm ci (dependencies downloaden)" \
+        npm ci --silent --no-audit --no-fund
+    run_with_spinner "npm run build (Vite-build)" \
+        npm run build --silent
     cd - >/dev/null
     info "dist/ klaar in $APP_DIR/frontend/dist"
 }
@@ -238,7 +312,7 @@ Type=simple
 User=$APP_USER
 Group=$APP_USER
 WorkingDirectory=$APP_DIR/backend
-ExecStart=$VENV_DIR/bin/gunicorn --bind 0.0.0.0:$APP_PORT --workers 2 "app:create_app()"
+ExecStart=$VENV_DIR/bin/gunicorn --bind 127.0.0.1:$APP_PORT --workers 2 "app:create_app()"
 Restart=on-failure
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
@@ -249,6 +323,104 @@ EOF
     systemctl daemon-reload
     systemctl enable "$SERVICE_NAME" >/dev/null
     info "Service ingeschakeld (start automatisch bij boot)"
+}
+
+# ============================================================
+# Self-signed TLS-cert genereren (idempotent)
+# ============================================================
+ensure_tls_cert() {
+    local cert_dir="/etc/nginx/ssl"
+    local cert="$cert_dir/self.crt"
+    local key="$cert_dir/self.key"
+    mkdir -p "$cert_dir"
+
+    if [[ -f "$cert" && -f "$key" ]]; then
+        info "TLS-cert bestaat al ($cert)"
+        return
+    fi
+
+    run_with_spinner "self-signed TLS-cert genereren (10 jaar)" \
+        openssl req -x509 -nodes -newkey rsa:2048 \
+            -days 3650 \
+            -subj "/CN=kluisjesbeheer.local" \
+            -keyout "$key" -out "$cert"
+    chmod 644 "$cert"
+    chmod 600 "$key"
+    info "Self-signed cert: $cert"
+    info "(Vervang door officieel cert+key wanneer beschikbaar -- zelfde bestandsnamen.)"
+}
+
+# ============================================================
+# NGINX reverse-proxy (HTTP 80 -> HTTPS 443 -> 127.0.0.1:5000)
+# ============================================================
+install_nginx() {
+    step "NGINX reverse-proxy met TLS"
+
+    ensure_tls_cert
+
+    # Verwijder default site als die nog actief is (conflict op :80)
+    if [[ -L /etc/nginx/sites-enabled/default ]]; then
+        rm -f /etc/nginx/sites-enabled/default
+        info "default-site uitgeschakeld"
+    fi
+
+    cat > "/etc/nginx/sites-available/${SERVICE_NAME}" <<EOF
+# Kluisjesbeheer reverse-proxy met TLS
+# Beheerd door install.sh -- niet handmatig bewerken.
+#
+# Standaard: self-signed cert (genereert in ensure_tls_cert). Vervang
+# /etc/nginx/ssl/self.{crt,key} door echte cert+key bestanden voor productie
+# (zelfde bestandsnamen -> geen nginx-config-wijziging nodig).
+
+# HTTP -> HTTPS redirect
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    return 301 https://\$host\$request_uri;
+}
+
+# HTTPS-server
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/ssl/self.crt;
+    ssl_certificate_key /etc/nginx/ssl/self.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+
+    client_max_body_size 16M;
+
+    # Statische frontend-assets (img) direct serveren
+    location /img/ {
+        root $APP_DIR/frontend/dist;
+        expires 1h;
+        add_header Cache-Control "public";
+    }
+
+    # Alles overig -> Gunicorn
+    location / {
+        proxy_pass http://127.0.0.1:$APP_PORT;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 60s;
+    }
+}
+EOF
+
+    # Symlink naar sites-enabled (idempotent)
+    ln -sf "/etc/nginx/sites-available/${SERVICE_NAME}" \
+           "/etc/nginx/sites-enabled/${SERVICE_NAME}"
+
+    # Config testen voor we (her)laden
+    run_with_spinner "nginx -t (configtest)" nginx -t
+    # LANG/LC_ALL explicit zetten — anders klaagt invoke-rc.d/perl
+    LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 systemctl enable nginx >/dev/null 2>&1
+    systemctl reload nginx 2>/dev/null || systemctl restart nginx
+    info "NGINX luistert op 80 (redirect) + 443 (TLS) -> 127.0.0.1:$APP_PORT"
 }
 
 # ============================================================
@@ -294,12 +466,34 @@ start_service() {
 # ============================================================
 smoketest() {
     step "Smoketest"
-    local code
-    code=$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:$APP_PORT/" || true)
-    if [[ "$code" =~ ^(200|302)$ ]]; then
-        info "HTTP $code op poort $APP_PORT — OK"
+    # Test backend direct
+    local backend_code
+    backend_code=$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:$APP_PORT/" || true)
+    if [[ "$backend_code" =~ ^(200|302|500)$ ]]; then
+        info "Backend (gunicorn :$APP_PORT) -> HTTP $backend_code"
     else
-        warn "HTTP $code op poort $APP_PORT — controleer config.json en logs"
+        warn "Backend op :$APP_PORT geeft HTTP $backend_code -- check journalctl"
+    fi
+    # Test via nginx — HTTP poort 80 (verwacht 301 redirect naar HTTPS)
+    local http_code
+    http_code=$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1/" || true)
+    if [[ "$http_code" == "301" ]]; then
+        info "NGINX (poort 80) -> HTTP 301 (redirect naar HTTPS) -- OK"
+    else
+        warn "NGINX op poort 80 geeft HTTP $http_code -- verwacht 301"
+    fi
+    # Test via nginx — HTTPS poort 443 (self-signed, dus -k)
+    local https_code
+    https_code=$(curl -sS -k -o /dev/null -w '%{http_code}' "https://127.0.0.1/" || true)
+    if [[ "$https_code" =~ ^(200|302|500)$ ]]; then
+        info "NGINX (poort 443, self-signed) -> HTTP $https_code"
+    else
+        warn "NGINX op poort 443 geeft HTTP $https_code -- check 'nginx -t' en journalctl -u nginx"
+    fi
+    # Een 500 bij een verse install is verwacht (config.json bevat nog VUL_IN_*).
+    # We willen alleen dat de stack reageert; de Entra-config komt in stap 4 van de README.
+    if [[ "$backend_code" == "500" || "$https_code" == "500" ]]; then
+        info "(HTTP 500 is normaal voor een verse install -- config.json staat nog op VUL_IN_*)"
     fi
 }
 
@@ -307,10 +501,11 @@ smoketest() {
 # Eindrapport
 # ============================================================
 final_report() {
-    local ip
+    local ip lan_ip
     ip=$(curl -sS -m 5 https://ifconfig.me 2>/dev/null || echo "(kon niet bepalen)")
-    # Note: bash heredoc does not interpret \e escape sequences, so we echo
-    # the colored header separately and then the plain body.
+    lan_ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+    [[ -z "$lan_ip" ]] && lan_ip="<server-ip>"
+
     echo ""
     echo "================================================================"
     echo -e "${GREEN}Kluisjesbeheer installatie afgerond${NC}"
@@ -319,40 +514,47 @@ final_report() {
 
 Service:        systemctl status $SERVICE_NAME
 App-logs:       journalctl -u $SERVICE_NAME -f
+NGINX-logs:     tail -f /var/log/nginx/access.log /var/log/nginx/error.log
 Cron-logs:      tail -f $CRON_LOG
 Database:       $APP_DIR/backend/kluisjesbeheer.db
 Config:         $APP_DIR/backend/config.json
 Backups:        $APP_DIR/backend/backups/
 
-App draait op:  http://0.0.0.0:$APP_PORT
-Server uitgaand IP (voor SWP-whitelist):
-                $ip
+App bereikbaar op:    https://$lan_ip/   (self-signed cert -- browser geeft 1x
+                      "Niet beveiligd"-waarschuwing, dan "Geavanceerd ->
+                      Doorgaan")
+HTTP poort 80:        redirect naar HTTPS
+Backend (intern):     http://127.0.0.1:$APP_PORT (alleen lokaal, niet vanaf LAN)
+Uitgaand IP voor SWP-whitelist:
+                      $ip
 
 ================================================================
 Volgende stappen (handmatig):
 
   1. Bewerk $APP_DIR/backend/config.json:
      - TenantId, ClientId, ClientSecret, DashboardGroupId (Entra)
-     - RedirectUri (productie-URL incl. /auth/callback)
-     - AllowedOrigins (intern frontend-adres)
-     - SchoolNaam / SchoolSubtitel / SchoolLogo / SchoolKleur
-     LET OP: SecretKey is al automatisch ingevuld — NIET wijzigen na
+     - RedirectUri (bv. https://$lan_ip/auth/callback)
+     - AllowedOrigins (frontend-URL, bv. ["https://$lan_ip"])
+     LET OP: SecretKey is al automatisch ingevuld -- NIET wijzigen na
      gebruik (versleutelt Magister-wachtwoord in DB).
+     (SchoolNaam/Logo/Kleur stel je later via Beheer -> Instellingen in.)
 
   2. systemctl restart $SERVICE_NAME
 
-  3. Open de app in de browser → log in met je beheerderaccount.
-     Eerste login = automatisch beheerder.
+  3. Open https://$lan_ip/ in de browser -> log in met je beheerder-
+     account. Eerste login = automatisch beheerder.
 
-  4. Vul Magister-koppeling in via Beheer → Import:
+  4. Vul Magister-koppeling in via Beheer -> Import:
      URL (https://<jouwschool>.swp.nl:8800/doc), account, wachtwoord.
      Wordt versleuteld in de database opgeslagen.
 
-  5. Vraag bij de Magister-/SWP-beheerder een IP-whitelist aan voor
-     bovenstaand uitgaand IP-adres op poort 8800.
-
-  6. Test de leerling-sync:
+  5. Test de leerling-sync:
      sudo -u $APP_USER $VENV_DIR/bin/python $APP_DIR/backend/cron_sync.py
+
+  6. (Later, voor productie) Vervang het self-signed cert door een echt
+     cert: overschrijf /etc/nginx/ssl/self.crt en /etc/nginx/ssl/self.key
+     met de echte bestanden (zelfde bestandsnamen). Daarna:
+     nginx -t && systemctl reload nginx
 ================================================================
 EOF
 }
@@ -371,6 +573,7 @@ main() {
     ensure_config
     set_permissions
     install_service
+    install_nginx
     install_cron
     start_service
     smoketest

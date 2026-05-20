@@ -25,7 +25,7 @@ export SSH_USER="root"                  # of de standaard sudo-user op de VM
 
 > 🔒 Dit stappenplan kiest voor `root` + wachtwoord — snel en prima
 > voor een server op een intern beheernet. Wil je productie-veilig
-> (admin-account + SSH-key)? Zie de tip onderaan stap 1.6.
+> (admin-account + SSH-key)? Zie de tip onderaan stap 1.5.
 
 ---
 
@@ -55,22 +55,7 @@ apt-get update && apt-get upgrade -y
 apt-get install -y openssh-server sudo curl nano less ca-certificates
 ```
 
-### 1.3 Locale instellen (voorkomt `perl: warning`-spam)
-
-Verse Debian-VMs hebben vaak geen gegenereerde locale. Veel programma's
-(perl, apt, dpkg) gooien dan bij elke run schermenvol `perl: warning:
-Setting locale failed`. Onschuldig maar maakt latere output onleesbaar.
-Eenmalig fixen:
-
-```bash
-sed -i 's/^# *en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
-locale-gen
-update-locale LANG=en_US.UTF-8
-exec bash                                # nieuwe LANG actief in deze sessie
-locale | head -3                         # controle: LANG=en_US.UTF-8
-```
-
-### 1.4 SWP-whitelist alvast aanvragen
+### 1.3 SWP-whitelist alvast aanvragen
 
 > ⏱️ SWP heeft soms 1-2 werkdagen nodig om een IP te whitelisten. Door
 > dit hier al te doen, loopt de aanvraag parallel aan de rest van de
@@ -84,7 +69,7 @@ Noteer dit IP en mail het direct naar de Magister-/SWP-beheerder van
 de school met het verzoek: *"Whitelisten voor toegang tot
 `<jouwschool>.swp.nl` op poort 8800."*
 
-### 1.5 SSH-daemon controleren + root-login toestaan
+### 1.4 SSH-daemon controleren + root-login toestaan
 
 ```bash
 systemctl enable --now ssh
@@ -106,7 +91,7 @@ grep -E '^PermitRootLogin' /etc/ssh/sshd_config       # controle: yes
 > `/etc/ssh/sshd_config`, regel `#Port 22` → `Port 2222`, dan
 > `systemctl restart ssh`. Update dan ook `SSH_PORT` in stap 0.
 
-### 1.6 SSH-verbinding testen vanaf je werkstation
+### 1.5 SSH-verbinding testen vanaf je werkstation
 
 🖥️ **Werkstation**:
 
@@ -365,7 +350,7 @@ frontend opnieuw gebouwd, service herstart.
 | Symptoom | Oplossing |
 |---|---|
 | `scp`: "Connection refused" | Check `SSH_PORT` (22 vs 2222) en `systemctl status ssh` op de server |
-| `scp`: "Permission denied (publickey)" | SSH-key nog niet in `authorized_keys` (stap 1.5) of `PasswordAuthentication no` zonder key (stap 1.6) |
+| `scp`: "Permission denied" | Wachtwoord-auth uit / wrong user / `PermitRootLogin` niet op `yes` (stap 1.4) |
 | `bash install.sh`: crasht direct | Vergeten `cd kluisjesbeheer-install`? Pwd moet eindigen op `/kluisjesbeheer-install` |
 | `npm ci` faalt | Geen internet naar `registry.npmjs.org` — proxy/firewall check |
 | Service start niet (`failed`) | `journalctl -u kluisjesbeheer -n 50` — meestal ontbreekt een veld in `config.json` of klopt `RedirectUri` niet |
