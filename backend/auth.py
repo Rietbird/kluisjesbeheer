@@ -108,18 +108,23 @@ def callback():
     geb = g.db.execute('SELECT id, rol FROM gebruikers WHERE LOWER(email) = ? AND actief = 1', (email,)).fetchone()
 
     if not geb:
-        # First user ever? Auto-create as beheerder
+        # Auto-create user op basis van Entra-login. Toegang is op dit punt
+        # al gevalideerd door Entra ("Assignment required" op de Enterprise
+        # App), dus iedereen die hier komt mag in principe binnen.
+        #   - Eerste gebruiker ooit -> beheerder (bootstrap)
+        #   - Daarna -> concierge zonder vestiging
+        # De foutpagina "Geen vestigingen" hieronder dwingt af dat een
+        # bestaande beheerder de nieuwe user nog aan een vestiging koppelt
+        # voor hij iets kan doen.
         has_any = g.db.execute('SELECT COUNT(*) as cnt FROM gebruikers').fetchone()['cnt']
-        if has_any == 0:
-            display = user_data.get('displayName', '')
-            cur = g.db.execute(
-                'INSERT INTO gebruikers (email, naam, rol) VALUES (?, ?, ?)',
-                (email, display, 'beheerder')
-            )
-            g.db.commit()
-            geb = g.db.execute('SELECT id, rol FROM gebruikers WHERE id = ?', (cur.lastrowid,)).fetchone()
-        else:
-            return _error_page('Geen toegang', 'Je account is niet bekend in het systeem. Vraag je beheerder om je toe te voegen.')
+        nieuwe_rol = 'beheerder' if has_any == 0 else 'concierge'
+        display = user_data.get('displayName', '')
+        cur = g.db.execute(
+            'INSERT INTO gebruikers (email, naam, rol) VALUES (?, ?, ?)',
+            (email, display, nieuwe_rol)
+        )
+        g.db.commit()
+        geb = g.db.execute('SELECT id, rol FROM gebruikers WHERE id = ?', (cur.lastrowid,)).fetchone()
 
     is_beheerder = geb['rol'] == 'beheerder'
 
