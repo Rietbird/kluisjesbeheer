@@ -58,9 +58,11 @@ run_with_spinner() {
     local rc=0
     "$@" >"$log" 2>&1 || rc=$?
 
-    # Spinner stoppen en regel opschonen
+    # Spinner stoppen en regel opschonen — extra spaties om "[X] " (4 chars)
+    # van de laatste spinner-frame te overschrijven.
     kill "$spin_pid" 2>/dev/null || true
     wait "$spin_pid" 2>/dev/null || true
+    printf "\r    %s     " "$label" >&2
     printf "\r    %s " "$label" >&2
 
     if [[ $rc -eq 0 ]]; then
@@ -124,17 +126,11 @@ preflight() {
         info "curl nog niet aanwezig — wordt zo via apt geïnstalleerd"
     fi
 
-    # Locale-check: voorkomt schermenvol "perl: warning: Setting locale
-    # failed" tijdens apt-installs op verse Debian VMs.
+    # Locale-check: install_packages() lost dit zelf op door en_US.UTF-8 te
+    # genereren. We melden alleen dát het gaat gebeuren, niet hoe (anders
+    # leest de gebruiker een fix-recept dat hij niet hoeft uit te voeren).
     if ! locale 2>/dev/null | grep -q '^LANG=.*UTF-8'; then
-        warn "Locale is niet ingesteld (LANG=$(locale 2>/dev/null | awk -F= '/^LANG=/ {print $2}')).
-    Dit veroorzaakt geen fout, maar wel veel \"perl: warning\"-spam.
-    Fix vóór je install.sh opnieuw draait:
-      sed -i 's/^# *en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
-      apt-get install -y locales >/dev/null 2>&1 || true
-      locale-gen
-      update-locale LANG=en_US.UTF-8
-      exec bash   # nieuwe LANG actief"
+        info "Locale nog niet ingesteld -- wordt zo automatisch gegenereerd (en_US.UTF-8)"
     fi
 }
 
