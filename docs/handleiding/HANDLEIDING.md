@@ -398,7 +398,7 @@ Een nieuwe school in gebruik nemen vereist server- en cloud-werk. Hieronder een 
    - Een Entra-beveiligingsgroep met de gebruikers die toegang krijgen
 2. **Magister Medius-toegang:**
    - URL van Medius-webservice (poort 8800, SOAP/XML)
-   - Service-account met leestoegang op `ADFuncties.GetActiveStudents`
+   - Service-account met leestoegang op `Algemeen.Login` (voor het ophalen van een sessietoken) en `ADFuncties.GetActiveStudents` (voor de leerlinglijst)
    - ⚠️ **IP-whitelist:** SWP blokkeert poort 8800 standaard. Het **uitgaande (publieke) IP-adres van de kluisjes-server** moet door de Magister-/SWP-beheerder van de school op de whitelist worden gezet. Zonder dit loopt de sync vast op een TCP-timeout (DNS resolvet wél, maar de verbinding komt niet tot stand) — dit lijkt op een serverfout maar is een netwerkblokkade. Het uitgaande IP bepaal je vanaf de server zelf met `curl -s https://ifconfig.me`. Let op: dit IP verschilt per omgeving — bij verhuizing naar een andere server moet het nieuwe IP opnieuw aangevraagd worden.
 3. **Subdomein + DNS** richting de hosting (Proxmox host of cloud)
 4. **TLS-certificaat** voor het subdomein (Let's Encrypt via NGINX is standaard)
