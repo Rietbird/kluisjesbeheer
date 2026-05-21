@@ -180,19 +180,16 @@ bash install.sh
 cd /root/kluisjesbeheer && git pull && bash install.sh
 ```
 
-### Pad B — Tarball (geen GitHub-toegang nodig)
+### Pad B — Tarball (offline / lucht-gat / geen GitHub-toegang)
+
+Voor servers zonder GitHub-toegang. Genereer een bundel op een werkstation
+mét toegang en kopieer 'm over.
 
 🖥️ **Werkstation** — vanuit de kluisjesbeheer repo-root:
 
 ```bash
 cd /c/Projects/kluisjesbeheer            # of jouw pad naar de repo
 bash install/build-bundle.sh
-```
-
-Verwacht: `==> Klaar. .../install/dist/kluisjesbeheer-install.tgz`
-(~150 KB, met "kern-bestanden OK"-rijtje). Kopieer naar de server:
-
-```bash
 scp install/dist/kluisjesbeheer-install.tgz root@<server-ip>:/tmp/
 ```
 
@@ -205,6 +202,10 @@ tar xzf /tmp/kluisjesbeheer-install.tgz
 cd kluisjesbeheer-install
 bash install.sh
 ```
+
+> Het script bouwt zelf de frontend (`npm ci` + `npm run build`) op de
+> server — er hoeft niets vooraf gebouwd te worden. Alleen Python en
+> Node moeten via apt geïnstalleerd kunnen worden (regelt install.sh).
 
 ---
 
@@ -259,23 +260,28 @@ Verwacht: `active (running)` + `HTTP 200`.
 
 ---
 
-## Stap 5 — Reverse proxy of TLS regelen (door netwerkbeheer)
+## Stap 5 — TLS / reverse proxy
 
-⚠️ **Aandachtspunt:** Entra ID vereist HTTPS voor de RedirectUri
-(behalve `http://localhost`). Het installatiescript regelt **geen** TLS.
+`install.sh` zet zelf NGINX op (poort 80 → 443, met een self-signed
+cert in `/etc/nginx/ssl/`). De app is meteen bereikbaar op
+`https://<server-ip>/` — bij de eerste open vraagt de browser om de
+cert-waarschuwing te accepteren ("Geavanceerd → Doorgaan").
 
-De netwerkbeheerder van de school moet één van twee regelen voordat
-SSO werkt:
+Self-signed is genoeg om met Entra te werken (Entra eist HTTPS, niet
+een geldig CA-cert). Voor productie kun je het cert later vervangen:
 
-- **A.** Interne reverse-proxy (NGINX / IIS / F5) met intern CA-cert
-  die `https://kluisjes.intern.<school>.nl` proxied naar
-  `http://<server-ip>:5000`
-- **B.** Publiek bereikbaar subdomein met Let's Encrypt, eveneens via
-  reverse-proxy
+- **Eigen cert van school-CA:** overschrijf `/etc/nginx/ssl/self.crt`
+  en `/etc/nginx/ssl/self.key` met de echte bestanden (zelfde namen),
+  daarna `nginx -t && systemctl reload nginx`.
+- **Externe URL met Let's Encrypt:** plaats een reverse-proxy
+  (Cloudflare Tunnel, F5, externe NGINX) vóór deze server en laat die
+  het cert regelen. De ingebouwde NGINX hoeft dan niet uit — kan ook
+  als binnenste laag dienen.
 
 De `RedirectUri` in `config.json` (stap 4) moet **exact** matchen met
-wat in de Entra app-registration staat — dus eerst eens worden met de
-Entra-beheerder welke URL gebruikt wordt.
+wat in de Entra app-registration staat. Bij self-signed bv.
+`https://<server-ip>/auth/callback`, bij eigen cert / externe URL de
+publieke variant.
 
 ---
 
@@ -379,27 +385,36 @@ normaliseren" aan → wordt automatisch MO-0001 / MO-0100 / MO-1000.
 
 ## Updaten van een bestaande installatie
 
-Zelfde procedure als stap 2-3:
+### Pad A — git clone werd gebruikt (aanbevolen)
+
+🐧 **Server**:
+```bash
+cd /root/kluisjesbeheer
+git pull
+bash install.sh
+```
+
+### Pad B — tarball werd gebruikt
 
 🖥️ **Werkstation**:
 ```bash
 cd /c/Projects/kluisjesbeheer
-git pull                                 # nieuwste code
+git pull
 bash install/build-bundle.sh
 scp install/dist/kluisjesbeheer-install.tgz root@<server-ip>:/tmp/
 ```
 
 🐧 **Server**:
 ```bash
-sudo -i
 cd /root && rm -rf kluisjesbeheer-install
 tar xzf /tmp/kluisjesbeheer-install.tgz
 cd kluisjesbeheer-install
 bash install.sh
 ```
 
-`config.json` en database blijven onaangeroerd; code wordt vervangen,
-frontend opnieuw gebouwd, service herstart.
+In beide gevallen: `config.json` en de database blijven onaangeroerd;
+code wordt vervangen, frontend wordt opnieuw gebouwd op de server,
+service herstart automatisch.
 
 ---
 
@@ -423,8 +438,10 @@ Voor diepere problemen: `journalctl -u kluisjesbeheer -n 200 --no-pager`
 ## Voor school-IT (overhandig na uitrol)
 
 Geef hen:
-1. `install/dist/kluisjesbeheer-install.tgz` — voor toekomstige updates
-2. `docs/installatie-vmware.md` — uitgebreide handleiding (hun versie)
-3. De `RedirectUri` die je in `config.json` hebt gezet (moeten ze in
-   de Entra app-registration controleren)
-4. Het uitgaande server-IP — voor whitelisting bij SWP
+1. Link naar deze repo: <https://github.com/Rietbird/kluisjesbeheer>
+   — voor toekomstige updates (`git pull && bash install.sh` op de
+   server). Of, bij offline-omgeving, een verse
+   `install/dist/kluisjesbeheer-install.tgz`.
+2. De `RedirectUri` die je in `config.json` hebt gezet (moeten ze in
+   de Entra app-registration controleren).
+3. Het uitgaande server-IP — voor whitelisting bij SWP.
