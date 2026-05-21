@@ -11,13 +11,16 @@ set -euo pipefail
 # ============================================================
 # UI helpers
 # ============================================================
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-NC='\033[0m'
+# ANSI-C quoting ($'...') zodat de variabelen het ECHTE escape-char
+# bevatten -- niet de letterlijke "\033"-string. Hierdoor renderen
+# `cat <<EOF` met ${COLOR}-interpolatie ook netjes (geen `echo -e` nodig).
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[0;33m'
+BLUE=$'\033[0;34m'
+CYAN=$'\033[0;36m'
+BOLD=$'\033[1m'
+NC=$'\033[0m'
 
 banner() {
     echo -e "${CYAN}${BOLD}"
