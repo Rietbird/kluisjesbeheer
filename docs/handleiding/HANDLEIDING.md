@@ -364,9 +364,19 @@ Klik **Importeren**. De applicatie maakt vestigingen/clusters/kluisjes aan en ko
 
 - Klik een vestiging links → middenkolom toont clusters van die vestiging
 - Klik een cluster → rechterkolom toont kluisjes van dat cluster
-- Per niveau kun je toevoegen, hernoemen en verwijderen
 - Verwijderen is een **soft-delete** (`verwijderd=1`): geschiedenis blijft bewaard, kluisjes verschijnen niet meer in het overzicht
 - **Locaties koppelen aan vestigingen** doe je hier ook (zie sub-paneel onderaan vestiging). Dit bepaalt welke Magister-locaties als "binnen deze vestiging" tellen voor leerling-zoek. **Optioneel** — zonder koppeling zijn alle leerlingen gewoon doorzoekbaar, alleen zonder vestigingfilter.
+
+**Wie mag wat:**
+
+| Actie | Beheerder | Conciërge |
+|---|---|---|
+| Vestiging aanmaken / hernoemen / verwijderen | ✅ | — |
+| Cluster aanmaken / hernoemen / verwijderen | ✅ | ✅ eigen vestiging |
+| Kluisjes toevoegen / verwijderen | ✅ | ✅ eigen vestiging |
+| Kluisjes verplaatsen tussen clusters | ✅ | ✅ eigen vestiging |
+
+Conciërges zien het tandwiel-icoon (Beheer) en komen direct op de Vestigingen-tab. De tabs Instellingen, Import en Gebruikers zijn alleen zichtbaar voor beheerders.
 
 ### 12.4 Gebruikers
 
