@@ -2,7 +2,7 @@
 
 Webapplicatie voor het beheer van schoolkluisjes — uitleen, inname, defectmelding, reservesleutels, ruilen, rapportages. Geschreven als alternatief voor de betaalde kluismodule van Magister.
 
-**Status:** productie-stabiel. Twee scholen draaien er live op (samen ~5000 kluisjes, ~1700 actieve toewijzingen). Multi-school support sinds april 2026.
+**Status:** productie-stabiel. Multi-school / multi-vestiging support; geschikt voor scholen van enkele honderden tot enkele duizenden kluisjes.
 
 ---
 
