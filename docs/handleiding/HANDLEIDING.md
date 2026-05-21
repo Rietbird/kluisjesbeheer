@@ -101,7 +101,7 @@ Voor schermbreed werken of voor exports is de tabelweergave handig. Kolommen zij
 
 Klik op een statuschip om de selectie te beperken. Voorbeeld: alleen defecte kluisjes:
 
-![Defecte kluisjes in tabel](screenshots/11-tabel-defect-mhv.png)
+![Defecte kluisjes in tabel](screenshots/11-tabel-defect.png)
 
 Als er geen resultaten zijn voor de huidige filter, krijg je een lege staat:
 
@@ -203,7 +203,7 @@ Klik in een kluisje-modal op **Markeer als defect**. Het kluisje krijgt direct d
 
 In de tabelweergave krijgt een defect-uitgeleend kluisje twee pills (`uitgeleend` + `defect`):
 
-![Defect in tabel](screenshots/11-tabel-defect-mhv.png)
+![Defect in tabel](screenshots/11-tabel-defect.png)
 
 ---
 
@@ -307,8 +307,8 @@ Rechtsboven in de toolbar staat **Rapport**. Deze knop genereert een PDF van **w
 
 Voorbeeld-gebruik:
 
-- Klik op **MHV** → filter op **Sleutel** → klik **Rapport** = PDF met alle openstaande sleutels op MHV
-- Klik op **PrO** → filter op **Defect** → klik **Rapport** = onderhouds-lijst voor de conciërge
+- Klik op **Hoofdlocatie** → filter op **Sleutel** → klik **Rapport** = PDF met alle openstaande sleutels op Hoofdlocatie
+- Klik op **Dependance Noord** → filter op **Defect** → klik **Rapport** = onderhouds-lijst voor de conciërge
 
 Het PDF wordt direct gedownload (geen tussenscherm).
 

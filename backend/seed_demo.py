@@ -18,7 +18,8 @@ from datetime import date, timedelta
 
 from db import init_db
 
-# Neutrale dummy-leerlingen — bewust niet-ISK-achtig
+# Neutrale dummy-leerlingen — fictieve namen, bewust niet herleidbaar
+# tot een bestaande school of klassen-codering.
 LEERLINGEN = [
     ('100001', 'Anna B.',       'B1A'),
     ('100002', 'Bram C.',       'B1A'),
