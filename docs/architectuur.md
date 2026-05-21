@@ -114,15 +114,22 @@ Vrij  -->  Uitgeleend  -->  Sleutel ingeleverd  -->  Borg teruggestort  -->  Vri
 Browser  -->  /auth/login  -->  Entra ID  -->  /auth/callback
                                                      |
                                               1. Token ophalen (MSAL)
-                                              2. Groepscheck (Graph API)
-                                              3. Gebruiker opzoeken in DB
+                                              2. User info via Graph API
+                                                 (naam, e-mail)
+                                              3. Gebruiker opzoeken in DB;
+                                                 auto-create bij eerste login
                                               4. Rol + vestigingen in sessie
                                               5. Redirect naar /
 ```
 
+- **Toegangscontrole** loopt via Entra zelf (*Assignment required* op de
+  Enterprise App) — niet via een groep-check in onze code. Microsoft
+  bepaalt vóór onze app überhaupt iets ziet wie wel/niet binnen mag.
 - Sessies: server-side Flask session (8 uur lifetime)
 - CSRF: custom `X-Requested-With` header vereist op POST/PUT/DELETE
-- Eerste gebruiker bij lege database wordt automatisch beheerder
+- Eerste gebruiker bij lege database wordt automatisch beheerder; latere
+  logins worden automatisch aangemaakt als conciërge zonder vestiging
+  (beheerder koppelt rol + vestiging via *Beheer → Gebruikers*)
 
 ## Encryptie
 
@@ -162,21 +169,22 @@ App startup  -->  BackupScheduler (background thread)
 - API endpoints (alleen beheerder): `GET /api/backups`, `POST /api/backups/create`, `GET /api/backups/<naam>/download`
 - Blueprint `backup_bp` geregistreerd in `app.py`
 
-### Laag 2: Proxmox host cronjob
+### Laag 2: Proxmox host cronjob (optioneel, alleen bij LXC-deployment)
 
 ```
-Proxmox host (10.40.0.10)
+Proxmox host
   /usr/local/bin/backup-kluisjes.sh  (cron: dagelijks 02:00)
        |
-  pct exec 101 -- cat kluisjesbeheer.db  -->  /var/lib/vz/dump/kluisjes-db/ct101/
-  pct exec 102 -- cat kluisjesbeheer.db  -->  /var/lib/vz/dump/kluisjes-db/ct102/
+  pct exec <CTID> -- cat kluisjesbeheer.db  -->  /var/lib/vz/dump/kluisjes-db/
        |
-  Zondag: vzdump 101 102  -->  /var/lib/vz/dump/ (4 weken bewaard)
+  Zondag: vzdump <CTID>  -->  /var/lib/vz/dump/ (4 weken bewaard)
 ```
 
-- Dagelijks: database van CT101 en CT102 opgehaald via `pct exec` + `pct pull`
+- Dagelijks: database opgehaald uit elke kluisjes-container via `pct exec` + `pct pull`
 - 7 dagelijkse backups per container bewaard
-- Zondag: volledige `vzdump` snapshot van beide containers (4 weken retentie)
+- Zondag: volledige `vzdump` snapshot (4 weken retentie)
+
+Niet relevant bij Docker- of VM-deploys — daar is laag 1 (in-app backup) plus reguliere VM-snapshots voldoende.
 
 ### Laag 3: Deploy-bescherming
 

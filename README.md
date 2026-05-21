@@ -26,7 +26,7 @@ Webapplicatie voor het beheer van schoolkluisjes — uitleen, inname, defectmeld
 - **Frontend**: React 18 + Vite + Tailwind 3 (dark mode, dynamische branding)
 - **Auth**: Entra ID SSO (MSAL) — *"Assignment required: Yes"* op de Enterprise Application
 - **Reverse proxy**: NGINX (HTTPS 443 met self-signed cert, of eigen cert)
-- **Data**: Magister Medius SOAP/XML-webservice (read-only, alleen `User.Read` en `GetActiveStudents`)
+- **Data**: Magister Medius SOAP/XML-webservice (read-only, `Algemeen.Login` + `ADFuncties.GetActiveStudents`)
 
 ## Installatie
 

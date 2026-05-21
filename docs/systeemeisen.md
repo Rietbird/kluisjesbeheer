@@ -4,15 +4,15 @@
 
 | Component | Minimaal | Aanbevolen |
 |-----------|----------|------------|
-| OS | Debian 12 / Ubuntu 22.04+ | Debian 12 LTS |
-| RAM | 512 MB | 1 GB |
-| Opslag | 1 GB | 2 GB |
+| OS | Debian 12 / 13 | Debian 12 LTS |
+| RAM | 1 GB (run-time); 2 GB tijdens install (Vite-build) | 2 GB |
+| Opslag | 2 GB | 5 GB |
 | Python | 3.11+ | 3.12 |
 | Node.js | 18 LTS | 20 LTS |
-| Webserver | NGINX (reverse proxy) | NGINX |
-| HTTPS | Vereist | SSL-certificaat of Cloudflare tunnel |
+| Webserver | NGINX (door `install.sh` automatisch geïnstalleerd) | NGINX met eigen TLS-cert |
+| HTTPS | Vereist door Entra (self-signed is OK) | Eigen CA-cert of Let's Encrypt |
 
-De app draait als systemd service via Gunicorn (2 workers) op poort 5000. NGINX proxyt HTTPS-verkeer naar Gunicorn.
+De app draait als systemd service via Gunicorn (2 workers) op poort 5000. `install.sh` zet zelf NGINX op (poort 80 → 443) met een self-signed cert. Voor productie kun je het cert vervangen.
 
 ## Entra ID (Azure AD)
 
@@ -24,15 +24,14 @@ De app gebruikt Microsoft Entra ID voor single sign-on (SSO). Gebruikers loggen 
 |------------|--------|
 | Type | Web |
 | Redirect URI | `https://[domein]/auth/callback` of `https://[ip-adres server]/auth/callback` |
-| API permissions | `User.Read` (Delegated) |
-| | `GroupMember.Read.All` (Delegated) + Admin Consent |
+| API permissions | `User.Read` (Delegated) — leest naam en e-mail bij login |
 | Client Secret | 1 actief secret |
 
-### Security Group
+### Toegangscontrole — Assignment required
 
-Maak **1** security group aan (bijv. `Concierges-Kluisbeheer`). Alle medewerkers die de app mogen gebruiken moeten lid zijn van deze groep.
+Wij gebruiken Entra's **"Assignment required"**-mechanisme. Microsoft regelt vóór onze app überhaupt iets ziet wie wel/niet binnen mag. Geen aparte groep-check in onze code; je wijst users en/of groepen toe aan de Enterprise Application.
 
-Er is maar 1 groep nodig. De rolverdeling (beheerder vs. concierge) en vestigingskoppelingen worden in de app zelf geregeld via Beheer > Gebruikers.
+De **eerste persoon die inlogt wordt automatisch beheerder**. Volgende collega's die inloggen worden automatisch als conciërge aangemaakt; de beheerder koppelt rol en vestiging(en) in de app via *Beheer → Gebruikers*.
 
 ### Stappen voor Entra ID configuratie
 
@@ -44,13 +43,9 @@ Er is maar 1 groep nodig. De rolverdeling (beheerder vs. concierge) en vestiging
    - Kopieer de **Value** (deze is maar eenmalig zichtbaar!)
 6. Ga naar **API permissions** > **Add a permission** > **Microsoft Graph**:
    - `User.Read` (Delegated) — leest naam en e-mail bij login
-   - `GroupMember.Read.All` (Delegated) — checkt groepslidmaatschap
    - Klik **Grant admin consent for [tenant]**
-7. Ga naar **Entra ID** > **Groups** > **New group**
-   - Type: Security
-   - Naam: bijv. `Concierges-Kluisbeheer`
-8. Voeg medewerkers toe die toegang moeten hebben
-9. Noteer de **Object ID** van deze groep
+7. Ga naar **Enterprise applications** > [jouw app] > **Properties**: zet *"Assignment required"* op **Yes**
+8. Ga naar **Enterprise applications** > [jouw app] > **Users and groups**: voeg de medewerkers (of een security-groep) toe die toegang moeten hebben
 
 ### Benodigde gegevens voor config.json
 
@@ -125,5 +120,6 @@ De server moet de volgende uitgaande verbindingen kunnen maken:
 | Bestemming | Poort | Doel |
 |------------|-------|------|
 | `login.microsoftonline.com` | 443 | Entra ID SSO |
-| `graph.microsoft.com` | 443 | Microsoft Graph API (user info, groepscheck) |
+| `graph.microsoft.com` | 443 | Microsoft Graph API (user info) |
+| `github.com` | 443 | Voor `git pull` updates (alleen bij git-clone install) |
 | Magister SOAP endpoint | 8800 (of 443) | Leerlingensynchronisatie |

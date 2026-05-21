@@ -238,8 +238,8 @@ Vervang de `VUL_IN_*`-velden:
 | `TenantId` | Entra Tenant-GUID |
 | `ClientId` | Entra App Registration GUID |
 | `ClientSecret` | Entra Client Secret |
-| `RedirectUri` | bv. `https://kluisjes.intern.<school>.nl/auth/callback` |
-| `AllowedOrigins` | lijst: `["https://kluisjes.intern.<school>.nl"]` |
+| `RedirectUri` | bv. `https://kluisjes.intern.<school>.nl/auth/callback` of `https://<server-ip>/auth/callback` |
+| `AllowedOrigins` | lijst, bv. `["https://kluisjes.intern.<school>.nl"]` of `["https://<server-ip>"]` |
 | `SchoolNaam` | naam van de school (zichtbaar in UI) |
 | `SchoolSubtitel` | optioneel |
 | `SchoolLogo` | `/img/logo.png` (vervang via Beheer later) |
@@ -291,8 +291,9 @@ Open `https://kluisjes.intern.<school>.nl` (of de URL die in
 `RedirectUri` staat) in een browser. Log in met een beheerderaccount.
 
 > 🔑 De **eerste gebruiker die inlogt wordt automatisch beheerder**.
-> Daarna kun je via *Beheer → Gebruikers* extra beheerders en
-> conciërges toevoegen.
+> Volgende collega's loggen ook gewoon zelf in via Entra (mits ze op
+> de Enterprise App zijn *Assigned*) en verschijnen automatisch in
+> *Beheer → Gebruikers* — daar koppel je hun rol + vestiging(en).
 
 Ga naar **Beheer → Import → Magister-koppeling**:
 - URL: `https://<jouwschool>.swp.nl:8800/doc`

@@ -23,22 +23,19 @@ Deze handleiding beschrijft het dagelijks gebruik en het functioneel beheer van 
 
 ## 1. Inloggen
 
-Open `https://kluisjes.<jouwschool>.nl` in een moderne browser (Edge, Chrome, Firefox, Safari). Je wordt doorgestuurd naar Microsoft om in te loggen met je schoolaccount.
+Open `https://kluisjes.<jouwschool>.nl` (of `https://<server-ip>/`) in een moderne browser (Edge, Chrome, Firefox, Safari). Je wordt doorgestuurd naar Microsoft om in te loggen met je schoolaccount.
 
-Toegang vereist twee dingen:
+Toegang loopt via Entra zelf: je account moet zijn toegewezen aan de Enterprise Application (*Users and groups*), eventueel via een Security-groep. Microsoft regelt dat vóór onze app überhaupt iets ziet.
 
-- Je account is toegewezen aan de Enterprise Application in Entra (*"Users and groups"*) — eventueel via een Security-groep.
-- Je account staat als gebruiker geregistreerd in Kluisjesbeheer (rol `beheerder` of `medewerker`).
-
-De allereerste persoon die ooit inlogt op een nieuwe installatie wordt automatisch beheerder. Daarna voegt de beheerder anderen toe via **Beheer → Gebruikers**.
+De **allereerste persoon** die ooit inlogt op een nieuwe installatie wordt automatisch beheerder. Volgende collega's worden automatisch aangemaakt als conciërge zonder vestiging — de beheerder koppelt dan rol + vestiging(en) via *Beheer → Gebruikers*.
 
 Foutmeldingen op het loginscherm:
 
 | Melding | Oorzaak | Oplossing |
 |---|---|---|
-| *"Je bent geen lid van de juiste groep"* | Account niet in Entra-groep | Beheerder toevoegen aan groep |
-| *"Je account is niet bekend in het systeem"* | Niet in `gebruikers`-tabel | Beheerder voegt je toe |
-| *"Er zijn nog geen vestigingen aan je account gekoppeld"* | Medewerker zonder vestiging | Beheerder koppelt vestiging(en) |
+| Microsoft: *"You can't access this app"* | Account niet *Assigned* op de Enterprise App | Entra → Enterprise applications → [app] → Users and groups → Add |
+| *"Er zijn nog geen vestigingen aan je account gekoppeld"* | Nieuwe conciërge zonder vestiging | Beheerder koppelt vestiging(en) via Beheer → Gebruikers |
+| *"Configuratie nog niet voltooid"* (503) | `config.json` heeft nog `VUL_IN_*`-placeholders | Beheerder vult Entra-velden in en herstart de service |
 
 ---
 
@@ -67,7 +64,7 @@ Linksboven staat het schoollogo en de schoolnaam. Rechtsboven:
 
 Het hart van de applicatie. Hier zie je alle kluisjes van de gekozen vestiging als kleurgecodeerde tegels.
 
-![Hoofdoverzicht ISK](screenshots/02-hoofdoverzicht.png)
+![Hoofdoverzicht vestiging](screenshots/02-hoofdoverzicht.png)
 
 **Kleurcodering:**
 
@@ -83,7 +80,7 @@ Het hart van de applicatie. Hier zie je alle kluisjes van de gekozen vestiging a
 
 **Filterbalk:**
 
-- **Alle clusters** — dropdown om binnen een vestiging op cluster te filteren (bijv. ISK-1, ISK-2)
+- **Alle clusters** — dropdown om binnen een vestiging op cluster te filteren (bijv. Vleugel A, Vleugel B)
 - **Zoekveld** — zoekt live op kluisnummer, naam huurder, of stamnummer
 - **Status-chips**: `Alles / Vrij / Uitgeleend / Defect / Sleutel / Borg` — klik om te filteren
 - **Tabel/grid-toggle** (twee icoontjes naast de chips) — wissel tussen tegelweergave en tabelweergave
@@ -98,7 +95,7 @@ Het hart van de applicatie. Hier zie je alle kluisjes van de gekozen vestiging a
 
 Voor schermbreed werken of voor exports is de tabelweergave handig. Kolommen zijn sorteerbaar via de pijltjes:
 
-![Tabelweergave Zuid](screenshots/09-tabel-weergave.png)
+![Tabelweergave](screenshots/09-tabel-weergave.png)
 
 ### Filteren op status
 
@@ -342,7 +339,7 @@ Twee-staps import voor kluisjes-spreadsheets:
 
 **Stap 1 — Upload & Preview:** kies een `.xlsx`-bestand. Het systeem scant het en toont:
 
-- Gevonden prefixen (bijv. `O`, `Z`, `ISK`)
+- Gevonden prefixen (bijv. `HL`, `DN`, `DZ`)
 - Gevonden locaties (uit de Locatie-kolom)
 - Gevonden clusters (uit de Cluster-kolom)
 - Aantal regels met een toewijzing (huurder)
@@ -351,9 +348,9 @@ Twee-staps import voor kluisjes-spreadsheets:
 
 | Prefix in xlsx | Vestiging |
 |---|---|
-| `O` | MHV (Bataafs Lyceum) |
-| `Z` | Zuid |
-| `ISK` | ISK |
+| `HL` | Hoofdlocatie |
+| `DN` | Dependance Noord |
+| `DZ` | Dependance Zuid |
 
 Klik **Importeren**. De applicatie maakt vestigingen/clusters/kluisjes aan en koppelt huurders aan leerlingen via `stamnummer` (uit Magister).
 
@@ -375,13 +372,15 @@ Klik **Importeren**. De applicatie maakt vestigingen/clusters/kluisjes aan en ko
 
 Lijst van alle accounts. Per gebruiker:
 
-- E-mail (moet exact overeenkomen met UPN in Entra)
+- E-mail (auto-gevuld bij eerste login via Entra)
 - Naam (auto-gevuld bij eerste login)
-- Rol: `beheerder` of `medewerker`
-- Vestiging-koppelingen (alleen voor medewerkers — beheerders zien altijd alles)
+- Rol: `beheerder` of `conciërge`
+- Vestiging-koppelingen (alleen voor conciërges — beheerders zien altijd alles)
 - **Actief**-vlag (uitvinken = blokkeren zonder verwijderen)
 
-Nieuwe gebruikers toevoegen: knop **+ Gebruiker**. Vul minimaal e-mail in. De gebruiker moet ook lid zijn van de Entra-toegangsgroep, anders krijgt hij geen toegang.
+**Nieuwe gebruikers verschijnen automatisch** zodra ze voor het eerst inloggen via Entra. Je hoeft niemand handmatig toe te voegen. Een nieuwe conciërge komt binnen zonder vestiging — pen-icoon achter de naam → vink vestiging(en) aan → Opslaan, en hij kan aan de slag.
+
+Toegang regel je in Entra zelf via *Enterprise applications → [jouw app] → Users and groups* (Assignment required staat op Yes). Wie daar niet bij staat, komt er ook niet in.
 
 ---
 
@@ -392,38 +391,34 @@ Een nieuwe school in gebruik nemen vereist server- en cloud-werk. Hieronder een 
 **Vooraf nodig:**
 
 1. **Entra app-registratie** in de Microsoft-tenant van de school:
-   - Redirect URI: `https://kluisjes.<school>.nl/auth/callback`
+   - Redirect URI: `https://kluisjes.<school>.nl/auth/callback` of `https://<server-ip>/auth/callback`
    - API permissions: `User.Read` (Delegated)
    - Client secret aanmaken (noteer waarde)
-   - Een Entra-beveiligingsgroep met de gebruikers die toegang krijgen
+   - *Enterprise applications → [app] → Properties*: **Assignment required = Yes**
+   - *Enterprise applications → [app] → Users and groups*: voeg de medewerkers (of een security-groep) toe die toegang krijgen
 2. **Magister Medius-toegang:**
    - URL van Medius-webservice (poort 8800, SOAP/XML)
    - Service-account met leestoegang op `Algemeen.Login` (voor het ophalen van een sessietoken) en `ADFuncties.GetActiveStudents` (voor de leerlinglijst)
    - ⚠️ **IP-whitelist:** SWP blokkeert poort 8800 standaard. Het **uitgaande (publieke) IP-adres van de kluisjes-server** moet door de Magister-/SWP-beheerder van de school op de whitelist worden gezet. Zonder dit loopt de sync vast op een TCP-timeout (DNS resolvet wél, maar de verbinding komt niet tot stand) — dit lijkt op een serverfout maar is een netwerkblokkade. Het uitgaande IP bepaal je vanaf de server zelf met `curl -s https://ifconfig.me`. Let op: dit IP verschilt per omgeving — bij verhuizing naar een andere server moet het nieuwe IP opnieuw aangevraagd worden.
-3. **Subdomein + DNS** richting de hosting (Proxmox host of cloud)
-4. **TLS-certificaat** voor het subdomein (Let's Encrypt via NGINX is standaard)
+3. **Subdomein + DNS** richting de hosting (optioneel — IP-only via self-signed cert werkt ook)
+4. **TLS-certificaat** voor het subdomein (`install.sh` regelt een self-signed cert; eigen cert kan je daar overheen plaatsen)
 
-**Server-installatie** (LXC op Proxmox, of een VPS):
+**Server-installatie:**
 
-1. Volg [docs/installatie.md](../installatie.md): Debian 12, Python 3.11, Gunicorn, NGINX, systemd
-2. Kopieer `backend/config.example.json` naar `backend/config.json` en vul in:
-   - `TenantId`, `ClientId`, `ClientSecret` (Entra)
-   - `RedirectUri` (productie-URL)
-   - `SecretKey` (random string, ≥ 32 tekens — wordt gebruikt om het Magister-wachtwoord in de DB te versleutelen; **niet wijzigen na eerste gebruik** of je verliest opgeslagen credentials)
-   - `SchoolNaam`, `SchoolKleur`, `SchoolLogo`
-   - `AllowedOrigins` (alleen frontend-URL)
+1. Volg [docs/installatie-vmware.md](../installatie-vmware.md) — `install.sh` regelt Debian-packages, Python venv, Vite-build, systemd-service, NGINX + self-signed TLS, cron-job en genereert `config.json` met een willekeurige `SecretKey`.
+2. Vul de Entra-velden in `/opt/kluisjesbeheer/backend/config.json`: `TenantId`, `ClientId`, `ClientSecret`, `RedirectUri`, `AllowedOrigins`. **Niet wijzigen:** `SecretKey` (versleutelt Magister-wachtwoord in de DB).
+3. `systemctl restart kluisjesbeheer`
 
-> ℹ️ **Magister-credentials (URL/account/wachtwoord) staan niet in `config.json`**. Die voer je later via **Beheer → Import** in de app in; ze worden versleuteld (AES-128-CBC + HMAC, key afgeleid van `SecretKey`) in de database opgeslagen. De velden `MagisterUrl`/`MagisterUser`/`MagisterPass` in `config.json` zijn alleen een legacy-fallback voor oudere installaties.
+> ℹ️ **Magister-credentials (URL/account/wachtwoord) staan niet in `config.json`**. Die voer je later via **Beheer → Import** in de app in; ze worden versleuteld (AES-128-CBC + HMAC, key afgeleid van `SecretKey`) in de database opgeslagen.
 
 **Eerste login en setup:**
 
 1. Open de site → log in met je beheerderaccount → je wordt automatisch beheerder gemaakt
-2. Ga naar **Beheer → Vestigingen** en maak vestigingen + clusters aan, óf
-3. Ga naar **Beheer → Import** en upload de eerste xlsx — vestigingen worden dan automatisch aangemaakt
-4. Vul op datzelfde tabblad de **Magister-koppeling** in (URL/account/wachtwoord — versleuteld opgeslagen)
-5. Koppel Magister-locaties aan vestigingen (anders matcht leerling-zoek niet)
-6. Voeg via **Beheer → Gebruikers** de conciërges toe (medewerker-rol + koppel hun vestiging)
-7. Pas branding aan in **Beheer → Instellingen**
+2. Ga naar **Beheer → Import** en upload de eerste xlsx — vestigingen en clusters worden automatisch aangemaakt
+3. Vul op datzelfde tabblad de **Magister-koppeling** in (URL/account/wachtwoord — versleuteld opgeslagen)
+4. Koppel Magister-locaties aan vestigingen via **Beheer → Vestigingen** (anders matcht leerling-zoek niet)
+5. Laat de conciërges éénmaal inloggen — ze verschijnen automatisch in **Beheer → Gebruikers**; koppel daar hun vestiging(en)
+6. Pas branding aan in **Beheer → Instellingen** (naam, subtitel, kleur, logo)
 
 **Cron / dagelijkse sync:**
 

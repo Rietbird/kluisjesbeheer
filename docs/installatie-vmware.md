@@ -50,7 +50,9 @@ de Microsoft-tenantbeheerder van de school):
 - **ClientId** — GUID van de Entra app-registratie
 - **ClientSecret** — geheim bij de app-registratie
 - **RedirectUri** — de URL waarop de app draait, eindigend op
-  `/auth/callback` (bijv. `https://kluisjes.intern.school.nl/auth/callback`of `https://[ipadres]/auth/callback`)
+  `/auth/callback`. Bijvoorbeeld:
+  - `https://kluisjes.intern.school.nl/auth/callback` (met interne DNS-naam), of
+  - `https://[ip-adres server]/auth/callback` (zonder DNS, IP-only)
 
 **Toegangscontrole** loopt via Entra zelf:
 - Op de Enterprise Application (de andere kant van de App-Registration)
@@ -99,10 +101,10 @@ géén bestaande database of `config.json`.
 
 ### 2.1 Wat het script doet
 
-1. **Pre-flight checks** — controleert Debian-versie, of de bundel
-   compleet is, en internet-toegang
+1. **Pre-flight checks** — controleert Debian-versie, dat `backend/` +
+   `frontend/` naast `install.sh` staan, en internet-toegang
 2. **Systeem-packages** — installeert `python3`, `nodejs`, `npm`, `cron`,
-   `sqlite3` via apt
+   `sqlite3`, `nginx` via apt
 3. **App-gebruiker `kluisjes`** — wordt aangemaakt als die nog niet
    bestaat (systeem-account zonder shell)
 4. **Code uitrollen** naar `/opt/kluisjesbeheer/` (overschrijft géén
@@ -117,11 +119,16 @@ géén bestaande database of `config.json`.
    (alleen `kluisjes` mag het lezen)
 9. **systemd-service** — `kluisjesbeheer.service` op poort 5000,
    automatisch starten bij boot
-10. **Cron-job** — dagelijkse leerling-sync om 06:00 via
+10. **NGINX reverse-proxy + self-signed TLS-cert** — poort 80 (redirect
+    naar HTTPS) en poort 443 (HTTPS) → 127.0.0.1:5000. Self-signed cert
+    in `/etc/nginx/ssl/self.{crt,key}` (geldigheid 10 jaar). Vervangbaar
+    door echte cert met dezelfde bestandsnamen.
+11. **Cron-job** — dagelijkse leerling-sync om 06:00 via
     `/etc/cron.d/kluisjesbeheer-sync`, log naar
     `/var/log/kluisjes-sync.log` (rechten 640 — niet wereld-leesbaar)
-11. **Service starten** + **smoketest** (curl localhost:5000)
-12. **Eindrapport** met server-IP en vervolgstappen
+12. **Service starten** + **smoketest** (curl localhost:5000 + via NGINX)
+13. **Eindrapport** met LAN-IP, uitgaand publiek IP (SWP-whitelist) en
+    vervolgstappen
 
 ### 2.2 De automatische SecretKey
 
@@ -151,8 +158,8 @@ Vervang de `VUL_IN_*`-velden:
 | `TenantId` | Entra Tenant-GUID |
 | `ClientId` | Entra App Registration GUID |
 | `ClientSecret` | Entra Client Secret |
-| `RedirectUri` | Volledige URL incl. `/auth/callback` |
-| `AllowedOrigins` | Lijst met frontend-URLs, bv. `["https://kluisjes.intern.school.nl"]` |
+| `RedirectUri` | Volledige URL incl. `/auth/callback`, bv. `https://[ip-adres server]/auth/callback` |
+| `AllowedOrigins` | Lijst met frontend-URLs, bv. `["https://[ip-adres server]"]` |
 | `SchoolNaam` | Naam van de school (zichtbaar in UI) |
 | `SchoolSubtitel` | Optioneel subtitel onder de naam |
 | `SchoolLogo` | Pad naar logo (default `/img/logo.png`) |

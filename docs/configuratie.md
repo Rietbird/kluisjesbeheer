@@ -4,7 +4,9 @@ Na de [installatie](installatie.md) wordt de app volledig via de webinterface ge
 
 ## Eerste login
 
-Ga naar `https://kluisjes.jouwschool.nl` en log in met je Microsoft-account. De **eerste gebruiker** die inlogt wordt automatisch beheerder. Alle volgende gebruikers moeten handmatig worden toegevoegd.
+Ga naar `https://kluisjes.jouwschool.nl` (of `https://[ip-adres server]/`) en log in met je Microsoft-account. De **eerste gebruiker** die inlogt wordt automatisch beheerder.
+
+Latere collega's loggen ook gewoon zelf in via Entra (mits ze op de Enterprise App zijn *Assigned*). Zij worden automatisch aangemaakt als conciërge zonder vestiging. De beheerder koppelt ze daarna in *Beheer → Gebruikers* aan een rol + vestiging(en).
 
 ## Stap 1: Instellingen
 
@@ -107,11 +109,11 @@ Voorbeeld:
 
 | Vestiging | Magister-locatie |
 |-----------|-----------------|
-| ISK | "Vestiging ISK" |
-| Hoofdgebouw | "Vestiging HAVO/VWO boven/onderbouw" |
-| Locatie Zuid | "Vestiging Zuid" |
+| Hoofdlocatie | "Vestiging Hoofdgebouw" |
+| Dependance Noord | "Vestiging Noord" |
+| Dependance Zuid | "Vestiging Zuid" |
 
-## Stap 4: Gebruikers toevoegen
+## Stap 4: Gebruikers koppelen
 
 Ga naar **Beheer** > **Gebruikers**.
 
@@ -120,19 +122,24 @@ Ga naar **Beheer** > **Gebruikers**.
 | Rol | Ziet | Mag | Beheer-menu |
 |-----|------|-----|-------------|
 | **Beheerder** | Alle vestigingen | Alles | Ja |
-| **Concierge** | Eigen vestiging(en) | Toewijzen, beeindigen, rapportages | Nee |
+| **Conciërge** | Eigen vestiging(en) | Toewijzen, beëindigen, rapportages | Nee |
 
-### Gebruiker toevoegen
+### Hoe gebruikers verschijnen
 
-1. Vul het e-mailadres in (moet overeenkomen met het Microsoft-account)
-2. Optioneel: vul een naam in
-3. Kies de rol: Beheerder of Concierge
-4. Bij concierge: vink de vestiging(en) aan
-5. Klik "Gebruiker toevoegen"
+Nieuwe gebruikers worden **automatisch aangemaakt** zodra ze voor het eerst inloggen via Entra (mits ze op de Enterprise App zijn toegewezen via *Assignment*). Daar hoef je niets handmatig voor te doen. De gebruiker verschijnt in de lijst zodra Microsoft ze toegelaten heeft.
 
-De gebruiker moet ook lid zijn van de Entra security group (zie [Systeemeisen](systeemeisen.md)).
+### Rol en vestiging(en) toewijzen
 
-### Wat de concierge ziet
+Een nieuwe conciërge ziet bij eerste login een melding *"Er zijn nog geen vestigingen aan je account gekoppeld"*. Jij koppelt 'm dan zo:
+
+1. Klik op het pen-icoon achter de naam
+2. Kies de rol (Beheerder of Conciërge)
+3. Bij conciërge: vink de vestiging(en) aan
+4. Klik **Opslaan**
+
+De conciërge kan daarna direct inloggen.
+
+### Wat de conciërge ziet
 
 - Bij 1 vestiging: gaat direct naar het kluisjesoverzicht (geen vestigingkeuze)
 - Bij meerdere vestigingen: ziet de vestigingpicker met alleen eigen vestigingen

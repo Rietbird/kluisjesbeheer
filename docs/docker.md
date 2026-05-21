@@ -38,8 +38,8 @@ mkdir -p /opt/kluisjesbeheer && cd /opt/kluisjesbeheer
 curl -fsSL https://raw.githubusercontent.com/Rietbird/kluisjesbeheer/master/docker-compose.yml -o docker-compose.yml
 mkdir -p docker
 curl -fsSL https://raw.githubusercontent.com/Rietbird/kluisjesbeheer/master/docker/nginx.conf -o docker/nginx.conf
-curl -fsSL https://raw.githubusercontent.com/Rietbird/kluisjesbeheer/master/docker/nginx-entrypoint.sh -o docker/nginx-entrypoint.sh
-chmod +x docker/nginx-entrypoint.sh
+curl -fsSL https://raw.githubusercontent.com/Rietbird/kluisjesbeheer/master/docker/init-config.sh -o docker/init-config.sh
+chmod +x docker/init-config.sh
 ```
 
 > 💡 Privé repo? Vervang de URL's door je eigen mirror, of `git clone`
