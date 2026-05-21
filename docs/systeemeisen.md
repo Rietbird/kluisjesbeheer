@@ -23,7 +23,7 @@ De app gebruikt Microsoft Entra ID voor single sign-on (SSO). Gebruikers loggen 
 | Instelling | Waarde |
 |------------|--------|
 | Type | Web |
-| Redirect URI | `https://[domein]/auth/callback` |
+| Redirect URI | `https://[domein]/auth/callback` of `https://[ip-adres server]/auth/callback` |
 | API permissions | `User.Read` (Delegated) |
 | | `GroupMember.Read.All` (Delegated) + Admin Consent |
 | Client Secret | 1 actief secret |
@@ -38,7 +38,7 @@ Er is maar 1 groep nodig. De rolverdeling (beheerder vs. concierge) en vestiging
 
 1. Ga naar [Azure Portal](https://portal.azure.com) > **App registrations** > **New registration**
 2. Naam: `Kluisjesbeheer`
-3. Redirect URI: `https://[domein]/auth/callback` (type: **Web**)
+3. Redirect URI: `https://[domein]/auth/callback` of `https://[ip-adres server]/auth/callback` (type: **Web**)
 4. Noteer: **Application (client) ID** en **Directory (tenant) ID**
 5. Ga naar **Certificates & secrets** > **New client secret**
    - Kopieer de **Value** (deze is maar eenmalig zichtbaar!)

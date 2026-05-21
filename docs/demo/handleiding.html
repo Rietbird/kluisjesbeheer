@@ -393,7 +393,7 @@
     <h2 id="it-entra">Entra ID (Azure AD)</h2>
     <p>De app gebruikt Microsoft Entra ID voor single sign-on. Eén app-registratie en één beveiligingsgroep volstaan; de rolverdeling (beheerder vs. conciërge) en vestigingskoppeling regelt u verder in de app zelf.</p>
     <ol class="steps">
-      <li><strong>App registration aanmaken</strong> — Azure Portal → App registrations → New registration. Type: Web, Redirect URI <code>https://[domein]/auth/callback</code>.</li>
+      <li><strong>App registration aanmaken</strong> — Azure Portal → App registrations → New registration. Type: Web, Redirect URI <code>https://[domein]/auth/callback</code> of <code>https://[ip-adres server]/auth/callback</code>.</li>
       <li><strong>Noteer</strong> Application (client) ID en Directory (tenant) ID.</li>
       <li><strong>Client secret</strong> aanmaken onder Certificates &amp; secrets. Kopieer de Value direct — die is maar één keer zichtbaar.</li>
       <li><strong>API-permissions</strong> toevoegen (Microsoft Graph, Delegated): <code>User.Read</code> en <code>GroupMember.Read.All</code>. Klik daarna op <em>Grant admin consent</em>.</li>
