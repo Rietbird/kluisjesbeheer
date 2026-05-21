@@ -9,3 +9,4 @@ De volledige documentatie staat in de [docs/](docs/) map:
 - [Configuratie](docs/configuratie.md) — Eerste gebruik via de app
 - [Architectuur](docs/architectuur.md) — Technisch overzicht
 - [Onderhoud](docs/onderhoud.md) — Logs, backup, troubleshooting
+- [Conciërge-handleiding](docs/handleiding/HANDLEIDING.md) — Functioneel gebruik in de browser
