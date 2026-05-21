@@ -9,6 +9,9 @@ venv/
 # Config with secrets
 backend/config.json
 
+# Database backups (kunnen leerlinggegevens bevatten)
+backend/backups/
+
 # Node
 node_modules/
 frontend/dist/
