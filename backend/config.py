@@ -10,6 +10,11 @@ _CONFIG_CANDIDATES = [
 ]
 
 def _config_path():
+    # Override mogelijk via KLUISJES_CONFIG env-var (handig voor dev /
+    # screenshot-generatie met aparte demo-config).
+    override = os.environ.get('KLUISJES_CONFIG')
+    if override:
+        return override
     for p in _CONFIG_CANDIDATES:
         if os.path.exists(p):
             return p

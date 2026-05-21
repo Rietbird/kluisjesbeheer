@@ -18,9 +18,15 @@ def default_db_path():
     """Bepaal het standaard DB-pad. Voorkeur: backend/data/ (Docker-volume-
     aanpak); fallback: backend/ zelf (klassieke install.sh).
 
+    Override mogelijk via KLUISJES_DB env-var (handig voor dev / screenshot-
+    generatie met een aparte demo-DB).
+
     FAIL-HARD bij ambiguïteit: als beide paden een DB met DATA bevatten
     (>4KB) raise een RuntimeError. Reden: stilzwijgend kiezen kan
     legacy-data onzichtbaar maken na een verkeerde migratie."""
+    override = os.environ.get('KLUISJES_DB')
+    if override:
+        return override
     backend_dir = os.path.dirname(__file__)
     data_path = os.path.join(backend_dir, 'data', 'kluisjesbeheer.db')
     legacy_path = os.path.join(backend_dir, 'kluisjesbeheer.db')

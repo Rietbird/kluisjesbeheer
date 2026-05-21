@@ -19,10 +19,12 @@ def create_app(test_config=None):
     app.secret_key = secret_key
 
     app.permanent_session_lifetime = timedelta(hours=8)
+    # In dev draait alles over HTTP — Secure cookies blokkeren dan de sessie.
+    is_dev_env = os.environ.get('FLASK_ENV') == 'development' or (test_config or {}).get('TESTING')
     app.config.update(
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE='Lax',
-        SESSION_COOKIE_SECURE=True,
+        SESSION_COOKIE_SECURE=not is_dev_env,
         MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max upload
     )
 
@@ -30,8 +32,7 @@ def create_app(test_config=None):
     # localhost:5173 (Vite dev) wordt alleen toegevoegd als FLASK_ENV=development
     # of als de app expliciet in TESTING mode draait -- niet in productie.
     allowed_origins = list(config.get('AllowedOrigins', []))
-    is_dev = os.environ.get('FLASK_ENV') == 'development' or (test_config or {}).get('TESTING')
-    if is_dev and 'http://localhost:5173' not in allowed_origins:
+    if is_dev_env and 'http://localhost:5173' not in allowed_origins:
         allowed_origins.append('http://localhost:5173')
     CORS(app, origins=allowed_origins)
 

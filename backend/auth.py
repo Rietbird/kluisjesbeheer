@@ -1,4 +1,5 @@
 import html
+import os
 import msal
 from functools import wraps
 from flask import Blueprint, redirect, request, session, jsonify, url_for, g, Response
@@ -113,8 +114,28 @@ def assert_vestiging_access(vestiging_id):
         return jsonify({'error': 'Geen toegang tot deze vestiging'}), 403
     return None
 
+def _config_complete():
+    """Check of de Entra-velden in config.json daadwerkelijk zijn ingevuld
+    (niet leeg, niet de VUL_IN_*-placeholders uit install.sh)."""
+    for veld in ('TenantId', 'ClientId', 'ClientSecret', 'RedirectUri'):
+        waarde = config.get(veld, '').strip()
+        if not waarde or waarde.startswith('VUL_IN'):
+            return False, veld
+    return True, None
+
+
 @auth_bp.route('/login')
 def login():
+    ok, missend = _config_complete()
+    if not ok:
+        return _error_page(
+            'Configuratie nog niet voltooid',
+            f'De Entra ID koppeling is nog niet ingesteld (veld "{missend}" '
+            f'ontbreekt of staat nog op de standaard-placeholder). '
+            f'Vraag de beheerder om backend/config.json in te vullen en '
+            f'de service te herstarten — zie install/README.md stap 4.',
+            status=503,
+        )
     msal_app = _get_msal_app()
     flow = msal_app.initiate_auth_code_flow(
         scopes=['User.Read'],
@@ -200,6 +221,26 @@ def callback():
     session['access_token'] = token
 
     return redirect('/')
+
+@auth_bp.route('/dev-login')
+def dev_login():
+    """Bypass MSAL/Entra voor lokale ontwikkeling en screenshot-generatie.
+    Alleen actief als FLASK_ENV=development of app.testing — anders 404."""
+    from flask import current_app
+    if not (os.environ.get('FLASK_ENV') == 'development' or current_app.config.get('TESTING')):
+        return jsonify({'error': 'Not found'}), 404
+    email = request.args.get('email', 'demo@kluisjesbeheer.local')
+    naam = request.args.get('naam', 'Demo Beheerder')
+    session.permanent = True
+    session['user'] = {
+        'displayName': naam,
+        'email': email,
+        'givenName': naam.split(' ')[0],
+        'is_beheerder': True,
+        'allowed_vestiging_ids': [],
+    }
+    return redirect('/')
+
 
 @auth_bp.route('/me')
 def me():
