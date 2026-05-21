@@ -1,126 +1,48 @@
 # Installatie
 
-## Vooraf
+Drie installatiepaden — kies wat past:
 
-Zorg dat je de volgende gegevens bij de hand hebt (zie [Systeemeisen](systeemeisen.md)):
+- **Proxmox helper-script** (snelste, all-in-one) — zie de [README](../README.md#1-proxmox-helper-script-snelste-all-in-one) of [docs/proxmox.md](proxmox.md).
+- **Klassieke install op verse Debian-VM** (`git clone` + `bash install.sh`) — zie het uitgebreide stappenplan in [install/README.md](../install/README.md). Voor een uitgebreidere VMware-specifieke uitleg met Entra/SWP-context: [installatie-vmware.md](installatie-vmware.md).
+- **Docker compose** — zie [docs/docker.md](docker.md).
 
-- Entra ID: TenantId, ClientId, ClientSecret (+ *"Assignment required: Yes"* op de Enterprise App, met gebruikers/groepen toegewezen)
-- Een HTTPS-domein (bijv. `kluisjes.jouwschool.nl`)
-- Servertoegang (SSH als root)
+## Wat `install.sh` voor je doet
 
-De Magister API-koppeling is optioneel en kan later via de app worden ingesteld.
+- Installeert systeem-packages (Python, Node, NGINX, cron, sqlite3)
+- Maakt app-gebruiker `kluisjes` aan
+- Rolt code uit naar `/opt/kluisjesbeheer/`
+- Zet Python venv op + installeert dependencies
+- Bouwt de frontend (Vite)
+- Genereert `config.json` met willekeurige SecretKey (alleen bij eerste run)
+- Zet systemd-service op (poort 5000, autostart)
+- Zet NGINX op met self-signed TLS-cert (poort 80→443 redirect)
+- Plant cron voor dagelijkse Magister leerling-sync (06:00)
+- Voert smoketest uit + toont uitgaand IP voor SWP-whitelist
 
-## Stap 1: Bestanden op de server zetten
+Het script is **idempotent** — opnieuw draaien is veilig en overschrijft géén database of `config.json`.
 
-```bash
-scp -r kluisjesbeheer/ root@[server-ip]:/opt/
-```
+## Na de install
 
-## Stap 2: Deploy script draaien
+1. `nano /opt/kluisjesbeheer/backend/config.json` — vul Entra-velden in (TenantId/ClientId/ClientSecret/RedirectUri/AllowedOrigins)
+2. `systemctl restart kluisjesbeheer`
+3. Open `https://<server-ip>/` in browser — **eerste login wordt automatisch beheerder**
+4. Magister-koppeling instellen via Beheer → Import (URL + service-account + wachtwoord wordt versleuteld opgeslagen)
+5. SWP-whitelist aanvragen voor het server-IP (voor poort 8800 naar Medius)
 
-```bash
-cd /opt/kluisjesbeheer
-bash deploy.sh
-```
+## Updaten van een bestaande installatie
 
-Dit doet het volgende:
-- Installeert Python- en Node.js-dependencies
-- Bouwt de frontend (React/Vite)
-- Maakt een systemd service aan (`kluisjesbeheer.service`)
-- Maakt een `kluisjes` gebruiker en groep aan
-- Start de app
-
-## Stap 3: config.json invullen
-
-```bash
-cp /opt/kluisjesbeheer/backend/config.example.json /opt/kluisjesbeheer/backend/config.json
-nano /opt/kluisjesbeheer/backend/config.json
-```
-
-**Minimale configuratie — alleen deze velden zijn vereist:**
-
-```json
-{
-  "TenantId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "ClientId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "ClientSecret": "je-client-secret",
-  "RedirectUri": "https://kluisjes.jouwschool.nl/auth/callback",
-  "SecretKey": "willekeurige-lange-string",
-  "AllowedOrigins": ["https://kluisjes.jouwschool.nl"]
-}
-```
-
-Genereer een veilige SecretKey:
+Als je via `git clone` hebt geïnstalleerd:
 
 ```bash
-python3 -c "import secrets; print(secrets.token_hex(32))"
+cd /root/kluisjesbeheer
+git pull
+bash install.sh
 ```
 
-Alle overige instellingen (schoolnaam, logo, kleur, Magister API) worden via de app geconfigureerd.
+`config.json` en de database blijven onaangeroerd; alleen code wordt vervangen, frontend wordt opnieuw gebouwd, service herstart automatisch.
 
-## Stap 4: NGINX configureren
-
-Maak `/etc/nginx/sites-enabled/kluisjesbeheer`:
-
-```nginx
-server {
-    listen 80;
-    server_name kluisjes.jouwschool.nl;
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    server_name kluisjes.jouwschool.nl;
-
-    ssl_certificate /etc/nginx/ssl/cert.crt;
-    ssl_certificate_key /etc/nginx/ssl/cert.key;
-
-    client_max_body_size 16M;
-
-    location /img/ {
-        root /opt/kluisjesbeheer/frontend/dist;
-        expires 1h;
-        add_header Cache-Control "public";
-    }
-
-    location / {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-Test en herlaad:
-
-```bash
-nginx -t && systemctl reload nginx
-```
-
-> **Alternatief:** gebruik een [Cloudflare tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/) naar `http://127.0.0.1:5000` in plaats van een eigen SSL-certificaat.
-
-## Stap 5: Service starten
-
-```bash
-systemctl restart kluisjesbeheer
-systemctl status kluisjesbeheer
-```
-
-De app is nu bereikbaar op `https://kluisjes.jouwschool.nl`.
-
-## Stap 6: Backups configureren
-
-De app maakt automatisch dagelijkse backups van de database (opgeslagen in `backend/backups/`). Dit werkt direct na de eerste start zonder extra configuratie.
-
-Voor extra bescherming wordt aanbevolen om op de **Proxmox host** het backup-script `/usr/local/bin/backup-kluisjes.sh` in te richten:
-- Dagelijks om 02:00 de database ophalen via `pct exec` + `pct pull`
-- Wekelijks op zondag een volledige `vzdump` snapshot maken
-
-Zie [Onderhoud > Backup](onderhoud.md#backup) voor details over de drie backuplagen en restore-procedures.
+Voor de tarball-flow en troubleshooting tijdens uitrol: zie [install/README.md](../install/README.md).
 
 ## Volgende stap
 
-Ga naar [Configuratie](configuratie.md) voor de eerste inrichting via de app.
+Eerste inrichting via de app: [Configuratie](configuratie.md).

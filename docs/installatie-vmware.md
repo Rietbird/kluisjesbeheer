@@ -24,17 +24,22 @@ draait, en wat je daarna nog handmatig moet doen.
 
 ### 1.2 De bestanden
 
-Je krijgt van ons een **bundel** met daarin:
+Twee opties — kies wat past:
 
-```
-kluisjesbeheer-install/
-├── install.sh
-├── backend/
-├── frontend/
-└── docs/
+**Optie A — Git clone (aanbevolen):**
+
+```bash
+apt-get update && apt-get install -y git
+git clone https://github.com/Rietbird/kluisjesbeheer.git /root/kluisjesbeheer
 ```
 
-Pak die uit op een werkmap op de server, bijvoorbeeld `/root/kb-install/`.
+Updates later doe je met `cd /root/kluisjesbeheer && git pull && bash install.sh`.
+
+**Optie B — Tarball (voor offline / lucht-gat servers):**
+
+Genereer op een werkstation mét GitHub-toegang een bundel:
+`bash install/build-bundle.sh` → `install/dist/kluisjesbeheer-install.tgz`.
+Kopieer die naar de server en pak uit in `/root/kluisjesbeheer-install/`.
 
 ### 1.3 Microsoft Entra ID (voor inloggen)
 
@@ -82,12 +87,10 @@ de Microsoft-tenantbeheerder van de school):
 
 ## 2. Het installatiescript draaien
 
-```bash
-# 1. Pak de bundel uit
-tar xzf kluisjesbeheer-install.tgz
-cd kluisjesbeheer-install
+Na `git clone` (optie A) of na het uitpakken van de tarball (optie B):
 
-# 2. Draai het script als root
+```bash
+cd /root/kluisjesbeheer            # of /root/kluisjesbeheer-install bij optie B
 sudo bash install.sh
 ```
 
@@ -167,8 +170,12 @@ sudo systemctl restart kluisjesbeheer
 
 Open de app in de browser via de URL die je in `RedirectUri` hebt opgegeven
 (zonder het `/auth/callback`-deel). De **eerste gebruiker die inlogt
-wordt automatisch beheerder**. Daarna kun je via *Beheer → Gebruikers*
-extra beheerders en conciërges toevoegen.
+wordt automatisch beheerder**.
+
+Volgende collega's loggen ook gewoon zelf in via Entra (mits hen toegang
+is gegeven op de Enterprise App via *Assignment*). Zij worden automatisch
+aangemaakt als conciërge zonder vestiging. Jij koppelt ze daarna in
+*Beheer → Gebruikers* aan een rol + vestiging(en).
 
 ### 3.3 Magister-koppeling invullen
 
@@ -256,7 +263,8 @@ Komen **eenmalig** binnen via een Excel-export uit Magister:
 | Herstarten | `systemctl restart kluisjesbeheer` |
 | Backups | in `/opt/kluisjesbeheer/backend/backups/` (7 daily + 4 weekly) |
 | Handmatige backup | via de app: *Beheer → Backup → Maak backup* |
-| Update (nieuwe versie) | nieuwe bundel uitpakken, `sudo bash install.sh` opnieuw |
+| Update (git clone) | `cd /root/kluisjesbeheer && git pull && bash install.sh` |
+| Update (tarball) | nieuwe bundel uitpakken, `sudo bash install.sh` opnieuw |
 
 > 🔒 Het cron-logbestand `/var/log/kluisjes-sync.log` heeft standaard
 > rechten `640 root:root`. Wijzig dit niet — de app saneert wachtwoorden
