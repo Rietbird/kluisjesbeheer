@@ -167,7 +167,48 @@ stap 2. Werkt het niet? Niet verder gaan — eerst dit oplossen.
 
 ---
 
-## Stap 2 — Tarball bouwen en kopiëren (werkstation)
+## Stap 2 — Code op de server krijgen
+
+Twee paden — kies wat past:
+
+### Pad A — Git clone (aanbevolen, makkelijkste updates)
+
+Vereist toegang tot de privé GitHub-repo via een **Deploy Key**.
+
+🐧 **Server** — log in en genereer een SSH-key:
+
+```bash
+ssh -p "$SSH_PORT" "$SSH_USER@$SERVER_IP"
+sudo -i                                          # word root
+apt-get update && apt-get install -y git
+ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519 -C "kluisjes-deploy-$(hostname)"
+cat /root/.ssh/id_ed25519.pub                    # ← kopieer deze regel
+```
+
+🌐 **In GitHub** (eenmalig per server):
+- Ga naar `https://github.com/Rietbird/kluisjesbeheer/settings/keys`
+- Klik *"Add deploy key"*
+- Title: bv. `kluisjesbeheer-<schoolnaam>`
+- Key: plak de regel uit `id_ed25519.pub`
+- "Allow write access" UIT laten (read-only is genoeg)
+- Klik *"Add key"*
+
+🐧 **Server** — clone + installeer:
+
+```bash
+ssh-keyscan -t ed25519 github.com >> /root/.ssh/known_hosts
+git clone git@github.com:Rietbird/kluisjesbeheer.git /root/kluisjesbeheer
+cd /root/kluisjesbeheer
+bash install.sh
+```
+
+**Update later** is dan triviaal:
+
+```bash
+cd /root/kluisjesbeheer && git pull && bash install.sh
+```
+
+### Pad B — Tarball (geen GitHub-toegang nodig)
 
 🖥️ **Werkstation** — vanuit de kluisjesbeheer repo-root:
 
@@ -177,9 +218,7 @@ bash install/build-bundle.sh
 ```
 
 Verwacht: `==> Klaar. .../install/dist/kluisjesbeheer-install.tgz`
-(~150 KB, met "kern-bestanden OK"-rijtje).
-
-Kopieer naar de server:
+(~150 KB, met "kern-bestanden OK"-rijtje). Kopieer naar de server:
 
 ```bash
 scp -P "$SSH_PORT" \
@@ -187,25 +226,20 @@ scp -P "$SSH_PORT" \
     "$SSH_USER@$SERVER_IP:/tmp/"
 ```
 
----
-
-## Stap 3 — Installatiescript draaien (doelserver)
-
-🐧 **Server** — log in via SSH:
+🐧 **Server** — log in, uitpakken, installeren:
 
 ```bash
 ssh -p "$SSH_PORT" "$SSH_USER@$SERVER_IP"
-```
-
-Eenmaal binnen — naar root + uitpakken + installeren:
-
-```bash
 sudo -i                                  # word root
 cd /root
 tar xzf /tmp/kluisjesbeheer-install.tgz
 cd kluisjesbeheer-install
 bash install.sh
 ```
+
+---
+
+## Stap 3 — Wat install.sh doet
 
 Het script draait nu ~3-5 minuten. Aan het eind toont het:
 - Pad naar `config.json`
