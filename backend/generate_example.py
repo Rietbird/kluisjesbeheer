@@ -21,15 +21,15 @@ for cell in ws[1]:
 # Example rows - mix of uitgeleend and vrij
 rows = [
     ['Kluisjes 25/26', 'P001', 'Jan de Vries', '21001', '3A', 'van 1-1-2026 tot en met 31-7-2026', 'Uitgeleend',
-     '€ 10,00', '€ 0,00', 'SCHOOL vestiging PrO', '2040D', '', 'PRO 3', 'Leerlingkluisje'],
+     '€ 10,00', '€ 0,00', 'Hoofdgebouw - PrO', '2040D', '', 'PRO 3', 'Leerlingkluisje'],
     ['Kluisjes 25/26', 'P002', 'Emma Bakker', '22002', '2B', 'van 1-1-2026 tot en met 31-7-2026', 'Uitgeleend',
-     '€ 10,00', '€ 0,00', 'SCHOOL vestiging PrO', '2656D', '', 'PRO 2', 'Leerlingkluisje'],
+     '€ 10,00', '€ 0,00', 'Hoofdgebouw - PrO', '2656D', '', 'PRO 2', 'Leerlingkluisje'],
     ['Kluisjes 25/26', 'P003', '', '', '', 'van - tot en met -', 'Vrij',
-     '€ 10,00', '€ 0,00', 'SCHOOL vestiging PrO', '2723D', '', '', 'Leerlingkluisje'],
+     '€ 10,00', '€ 0,00', 'Hoofdgebouw - PrO', '2723D', '', '', 'Leerlingkluisje'],
     ['Zonder cluster', 'X100', 'Sophie Jansen', '20100', 'M4A', 'van 1-8-2025 tot en met 31-7-2026', 'Uitgeleend',
-     '€ 10,00', '€ 0,00', 'SCHOOL  -  MAVO/HAVO/VWO', 'X100', '', 'MAVO 4', 'Leerlingkluisje'],
+     '€ 10,00', '€ 0,00', 'Hoofdgebouw - MAVO/HAVO/VWO', 'X100', '', 'MAVO 4', 'Leerlingkluisje'],
     ['Zonder cluster', 'X101', '', '', '', 'van - tot en met -', 'Vrij',
-     '€ 10,00', '€ 0,00', 'SCHOOL  -  MAVO/HAVO/VWO', 'X101', '', '', 'Leerlingkluisje'],
+     '€ 10,00', '€ 0,00', 'Hoofdgebouw - MAVO/HAVO/VWO', 'X101', '', '', 'Leerlingkluisje'],
 ]
 
 for row in rows:
