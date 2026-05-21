@@ -1336,10 +1336,6 @@ function BackupPanel() {
 function GebruikersTab() {
   const [gebruikers, setGebruikers] = useState([])
   const [vestigingen, setVestigingen] = useState([])
-  const [email, setEmail] = useState('')
-  const [naam, setNaam] = useState('')
-  const [rol, setRol] = useState('concierge')
-  const [selVestigingen, setSelVestigingen] = useState([])
   const [editId, setEditId] = useState(null)
   const [editNaam, setEditNaam] = useState('')
   const [editRol, setEditRol] = useState('concierge')
@@ -1352,16 +1348,6 @@ function GebruikersTab() {
     api.get('/api/vestigingen').then(setVestigingen).catch(() => {})
   }
   useEffect(() => { load() }, [])
-
-  async function handleAdd(e) {
-    e.preventDefault(); setError(''); setSuccess('')
-    try {
-      await api.post('/api/gebruikers', { email, naam, rol, vestiging_ids: rol === 'concierge' ? selVestigingen : [] })
-      setEmail(''); setNaam(''); setRol('concierge'); setSelVestigingen([])
-      setSuccess(`${email} is toegevoegd`)
-      load()
-    } catch (err) { setError(err.message) }
-  }
 
   async function handleUpdate(id) {
     setError(''); setSuccess('')
@@ -1470,46 +1456,8 @@ function GebruikersTab() {
             )}
           </div>
         ))}
-        {gebruikers.length === 0 && <p className="text-sm text-slate-400">Nog geen gebruikers. Voeg jezelf eerst toe als beheerder.</p>}
+        {gebruikers.length === 0 && <p className="text-sm text-slate-400">Nog geen gebruikers. Laat een collega via Entra inloggen — daarna verschijnt hij hier en kun je rol en vestiging(en) toewijzen.</p>}
       </div>
-
-      {/* Nieuwe gebruiker */}
-      <form onSubmit={handleAdd} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 space-y-3">
-        <div className="text-sm font-bold text-navy dark:text-white">Gebruiker toevoegen</div>
-        <input className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white"
-          type="email" placeholder="E-mailadres" value={email} onChange={e => setEmail(e.target.value)} required />
-        <input className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white"
-          placeholder="Naam (optioneel)" value={naam} onChange={e => setNaam(e.target.value)} />
-        <div className="flex gap-3">
-          <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-            <input type="radio" name="rol" value="beheerder" checked={rol === 'beheerder'} onChange={() => setRol('beheerder')} />
-            Beheerder
-          </label>
-          <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-            <input type="radio" name="rol" value="concierge" checked={rol === 'concierge'} onChange={() => setRol('concierge')} />
-            Conciërge
-          </label>
-        </div>
-        {rol === 'concierge' && (
-          <div>
-            <div className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Vestigingen</div>
-            <div className="flex flex-wrap gap-2">
-              {vestigingen.map(v => (
-                <label key={v.id} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                  <input type="checkbox" checked={selVestigingen.includes(v.id)}
-                    onChange={() => setSelVestigingen(prev => prev.includes(v.id) ? prev.filter(x => x !== v.id) : [...prev, v.id])}
-                    className="rounded border-slate-300" />
-                  {v.naam}
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-        <button type="submit"
-          className="w-full bg-primary text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-primary-600 transition-colors">
-          + Gebruiker toevoegen
-        </button>
-      </form>
     </div>
   )
 }
