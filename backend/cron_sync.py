@@ -6,7 +6,7 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(__file__))
 from magister_client import MagisterClient, safe_error
-from db import get_db
+from db import get_db, default_db_path
 
 
 def _magister_from_db(db):
@@ -41,7 +41,7 @@ def _magister_from_db(db):
 
 def main():
     print('=== CRON MAGISTER LEERLINGEN SYNC ===')
-    db_path = os.path.join(os.path.dirname(__file__), 'kluisjesbeheer.db')
+    db_path = default_db_path()
     db = get_db(db_path)
 
     db_creds = _magister_from_db(db)

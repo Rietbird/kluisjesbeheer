@@ -3,11 +3,12 @@ from datetime import timedelta
 from flask import Flask, g, send_from_directory, request
 from flask_cors import CORS
 from config import config
-from db import init_db, get_db, close_db
+from db import init_db, get_db, close_db, default_db_path
 
 FRONTEND_DIST = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'kluisjesbeheer.db')
+# Backward-compat alias; daadwerkelijke resolver staat in db.py
+DB_PATH = default_db_path()
 
 def create_app(test_config=None):
     app = Flask(__name__)

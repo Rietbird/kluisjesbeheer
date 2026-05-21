@@ -4,10 +4,11 @@ from datetime import datetime
 from flask import Blueprint, jsonify, g, send_from_directory, session
 from auth import login_required
 from backup import BACKUP_DIR, create_backup, cleanup_backups
+from db import default_db_path
 
 backup_bp = Blueprint('backup', __name__, url_prefix='/api')
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'kluisjesbeheer.db')
+DB_PATH = default_db_path()
 
 
 def _beheerder_required():

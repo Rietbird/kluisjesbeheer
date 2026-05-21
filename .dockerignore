@@ -1,0 +1,44 @@
+# Alles wat niet in de Docker build-context hoeft
+.git
+.gitignore
+.github
+.claude
+.superpowers
+.vscode
+.idea
+
+# Python
+**/__pycache__
+**/.pytest_cache
+**/*.pyc
+**/*.pyo
+backend/venv
+backend/.venv
+.venv
+
+# Node
+**/node_modules
+frontend/dist
+
+# Lokale data
+**/*.db
+**/*.db-journal
+backend/config.json
+backend/backups
+backend/data
+backend/nonexistent.db
+*.xlsx
+
+# Docs (niet nodig in image)
+docs
+TheVault
+
+# Install-output
+install/dist
+*.tgz
+
+# OS-rommel
+.DS_Store
+Thumbs.db
+
+# README/LICENSE wel meenemen — die staan op repo-root, geen probleem

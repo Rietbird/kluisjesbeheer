@@ -1,0 +1,63 @@
+# Kluisjesbeheer Docker Compose
+# Start: docker compose up -d
+# Stop:  docker compose down
+# Logs:  docker compose logs -f
+#
+# Eerste keer: zorg dat ./data/config.json bestaat met je Entra-credentials
+# (kopieer van backend/config.example.json en vul VUL_IN_*-velden).
+
+services:
+  # Init-container: bij eerste start, schrijf een config.json-template met
+  # random SecretKey naar het data-volume. Bestaande config.json blijft.
+  init:
+    image: ghcr.io/rietbird/kluisjesbeheer:latest
+    # build: .
+    container_name: kluisjesbeheer-init
+    restart: "no"
+    entrypoint: ["/bin/sh", "/usr/local/bin/kluisjes-init.sh"]
+    volumes:
+      - app-data:/opt/kluisjesbeheer/backend/data
+
+  app:
+    image: ghcr.io/rietbird/kluisjesbeheer:latest
+    # Lokaal bouwen i.p.v. pullen? Comment image: en uncomment build:
+    # build: .
+    container_name: kluisjesbeheer-app
+    restart: unless-stopped
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    expose:
+      - "5000"
+    volumes:
+      # Persistente data: config.json + kluisjesbeheer.db + backups
+      - app-data:/opt/kluisjesbeheer/backend/data
+    networks:
+      - kluisjes
+    # Healthcheck staat al in de image (Dockerfile)
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: kluisjesbeheer-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx-entrypoint.sh:/docker-entrypoint.d/99-genkey.sh:ro
+      - nginx-ssl:/etc/nginx/ssl
+    networks:
+      - kluisjes
+
+volumes:
+  app-data:
+    driver: local
+  nginx-ssl:
+    driver: local
+
+networks:
+  kluisjes:
+    driver: bridge

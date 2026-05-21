@@ -53,7 +53,9 @@ bash install.sh
 
 Daarna `config.json` invullen (Entra-credentials), service herstarten, inloggen en de eerste user wordt automatisch beheerder. **Updaten later** is `git pull && bash install.sh` — `config.json` en de database blijven intact.
 
-> 💡 Geen GitHub-toegang beschikbaar? Zie [install/README.md](install/README.md) voor de tarball-route als alternatief.
+> 💡 Alternatieven:
+> - **Docker**: zie [docs/docker.md](docs/docker.md) — `docker compose up -d` en klaar (geschikt voor servers waar Docker al draait, eigen VM, VPS, NAS).
+> - **Tarball** (geen GitHub-toegang): zie [install/README.md](install/README.md) Pad B.
 
 ## Ontwikkelen
 

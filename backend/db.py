@@ -3,6 +3,32 @@ import sqlite3
 
 _SCHEMA_PATH = os.path.join(os.path.dirname(__file__), 'schema.sql')
 
+
+def default_db_path():
+    """Bepaal het standaard DB-pad. Voorkeur: backend/data/ (Docker-volume-
+    aanpak); fallback: backend/ zelf (klassieke install.sh). Bestaat geen
+    van beide: kies data/ als die dir bestaat, anders legacy."""
+    backend_dir = os.path.dirname(__file__)
+    data_path = os.path.join(backend_dir, 'data', 'kluisjesbeheer.db')
+    legacy_path = os.path.join(backend_dir, 'kluisjesbeheer.db')
+    if os.path.exists(data_path):
+        return data_path
+    if os.path.exists(legacy_path):
+        return legacy_path
+    if os.path.isdir(os.path.join(backend_dir, 'data')):
+        return data_path
+    return legacy_path
+
+
+def default_backups_dir():
+    """Idem voor backups: data/backups/ heeft voorkeur."""
+    backend_dir = os.path.dirname(__file__)
+    data_backups = os.path.join(backend_dir, 'data', 'backups')
+    legacy_backups = os.path.join(backend_dir, 'backups')
+    if os.path.isdir(os.path.join(backend_dir, 'data')):
+        return data_backups
+    return legacy_backups
+
 def init_db(db_path):
     conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA journal_mode=WAL")

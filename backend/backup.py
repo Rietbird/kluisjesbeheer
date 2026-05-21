@@ -15,7 +15,8 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-BACKUP_DIR = os.path.join(os.path.dirname(__file__), 'backups')
+from db import default_backups_dir
+BACKUP_DIR = default_backups_dir()
 DAILY_KEEP = 7
 WEEKLY_KEEP = 4
 INTERVAL_HOURS = 6  # check every 6 hours, backup once per day
