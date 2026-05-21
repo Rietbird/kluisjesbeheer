@@ -1,11 +1,30 @@
 from flask import Blueprint, request, jsonify, g, session
-from auth import login_required
+from auth import login_required, assert_vestiging_access, user_vestiging_ids
 
 toewijzingen_bp = Blueprint('toewijzingen', __name__, url_prefix='/api')
+
+
+def _kluisje_access(kid):
+    row = g.db.execute('SELECT vestiging_id FROM kluisjes WHERE id = ?', (int(kid),)).fetchone()
+    if not row:
+        return jsonify({'error': 'Kluisje niet gevonden'}), 404
+    return assert_vestiging_access(row['vestiging_id'])
+
+
+def _toewijzing_access(tid):
+    row = g.db.execute(
+        'SELECT k.vestiging_id FROM toewijzingen t JOIN kluisjes k ON t.kluisje_id = k.id WHERE t.id = ?',
+        (int(tid),)
+    ).fetchone()
+    if not row:
+        return jsonify({'error': 'Toewijzing niet gevonden'}), 404
+    return assert_vestiging_access(row['vestiging_id'])
 
 @toewijzingen_bp.route('/kluisjes/<int:kid>/toewijzen', methods=['POST'])
 @login_required
 def toewijzen(kid):
+    err = _kluisje_access(kid)
+    if err: return err
     kluisje = g.db.execute('SELECT * FROM kluisjes WHERE id = ? AND verwijderd = 0', (kid,)).fetchone()
     if not kluisje:
         return jsonify({'error': 'Kluisje niet gevonden'}), 404
@@ -60,6 +79,8 @@ def toewijzen(kid):
 @toewijzingen_bp.route('/toewijzingen/<int:tid>/beeindigen', methods=['POST'])
 @login_required
 def beeindigen(tid):
+    err = _toewijzing_access(tid)
+    if err: return err
     toewijzing = g.db.execute('SELECT * FROM toewijzingen WHERE id = ? AND actief = 1', (tid,)).fetchone()
     if not toewijzing:
         return jsonify({'error': 'Toewijzing niet gevonden of al beëindigd'}), 404
@@ -89,6 +110,21 @@ def bulk_beeindigen():
     ids = data.get('toewijzing_ids', [])
     if not ids or len(ids) > 5000:
         return jsonify({'error': 'Maximaal 5000 toewijzingen per keer'}), 400
+    # Vestiging-scope: filter IDs naar wat de user mag (beheerder mag alles)
+    allowed = user_vestiging_ids()
+    if allowed is not None:
+        if not allowed:
+            return jsonify({'error': 'Geen vestiging-toegang'}), 403
+        placeholders = ','.join('?' * len(ids))
+        v_placeholders = ','.join('?' * len(allowed))
+        rows = g.db.execute(
+            f'SELECT t.id FROM toewijzingen t JOIN kluisjes k ON t.kluisje_id = k.id '
+            f'WHERE t.id IN ({placeholders}) AND k.vestiging_id IN ({v_placeholders})',
+            list(ids) + list(allowed)
+        ).fetchall()
+        scoped_ids = {r['id'] for r in rows}
+        if len(scoped_ids) < len(ids):
+            return jsonify({'error': 'Een of meer toewijzingen vallen buiten je vestiging-toegang'}), 403
     borg_terug = 1 if data.get('borg_teruggestort') else 0
     einddatum = data.get('einddatum', '')
     opmerking = data.get('opmerking', '')
@@ -116,12 +152,19 @@ def bulk_beeindigen():
 @toewijzingen_bp.route('/toewijzingen/<int:tid>/sleutel-ingeleverd', methods=['POST'])
 @login_required
 def sleutel_ingeleverd(tid):
-    """Mark key as returned on a (finished) assignment."""
-    row = g.db.execute('SELECT id FROM toewijzingen WHERE id = ?', (tid,)).fetchone()
+    """Mark key as returned on a finished assignment.
+    Audit-integriteit: alleen op afgesloten toewijzingen (actief=0).
+    Een actieve toewijzing zonder einddatum mag geen sleutel-ingeleverd-
+    vlag krijgen — dat zou de audit-trail verwarren."""
+    err = _toewijzing_access(tid)
+    if err: return err
+    row = g.db.execute('SELECT actief FROM toewijzingen WHERE id = ?', (tid,)).fetchone()
     if not row:
         return jsonify({'error': 'Toewijzing niet gevonden'}), 404
+    if row['actief']:
+        return jsonify({'error': 'Toewijzing is nog actief — beëindig eerst de toewijzing'}), 409
     g.db.execute(
-        "UPDATE toewijzingen SET sleutel_ingeleverd=1, updated_at=datetime('now') WHERE id=?",
+        "UPDATE toewijzingen SET sleutel_ingeleverd=1, updated_at=datetime('now') WHERE id=? AND actief=0",
         (tid,)
     )
     g.db.commit()
@@ -130,6 +173,8 @@ def sleutel_ingeleverd(tid):
 @toewijzingen_bp.route('/toewijzingen/<int:tid>', methods=['PATCH'])
 @login_required
 def patch_toewijzing(tid):
+    err = _toewijzing_access(tid)
+    if err: return err
     """Update specific fields on an active assignment (currently: reservesleutel)."""
     row = g.db.execute('SELECT * FROM toewijzingen WHERE id = ? AND actief = 1', (tid,)).fetchone()
     if not row:
@@ -209,12 +254,15 @@ def ruilen():
 @toewijzingen_bp.route('/toewijzingen/<int:tid>/borg-teruggestort', methods=['POST'])
 @login_required
 def borg_teruggestort(tid):
-    """Mark deposit as refunded on a (finished) assignment."""
-    row = g.db.execute('SELECT id FROM toewijzingen WHERE id = ?', (tid,)).fetchone()
+    """Mark deposit as refunded on a finished assignment.
+    Audit-integriteit: alleen op afgesloten toewijzingen (actief=0)."""
+    row = g.db.execute('SELECT actief FROM toewijzingen WHERE id = ?', (tid,)).fetchone()
     if not row:
         return jsonify({'error': 'Toewijzing niet gevonden'}), 404
+    if row['actief']:
+        return jsonify({'error': 'Toewijzing is nog actief — beëindig eerst de toewijzing'}), 409
     g.db.execute(
-        "UPDATE toewijzingen SET borg_teruggestort=1, updated_at=datetime('now') WHERE id=?",
+        "UPDATE toewijzingen SET borg_teruggestort=1, updated_at=datetime('now') WHERE id=? AND actief=0",
         (tid,)
     )
     g.db.commit()

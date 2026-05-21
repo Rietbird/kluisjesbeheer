@@ -118,8 +118,10 @@ preflight() {
 
     # Internet (apt + npm + pip). curl is hier nog niet per se geïnstalleerd
     # op een verse Debian-base — we doen alleen een check als het bestaat.
+    # Check tegen een echte pad (de root van deb.debian.org/ geeft 404,
+    # gebruik /debian/dists/ die altijd 200 geeft).
     if command -v curl >/dev/null 2>&1; then
-        if ! curl -sf -m 5 -o /dev/null https://deb.debian.org/; then
+        if ! curl -sf -m 5 -o /dev/null https://deb.debian.org/debian/dists/; then
             warn "Geen verbinding met deb.debian.org — apt installs kunnen falen."
         fi
     else
@@ -262,7 +264,12 @@ ensure_config() {
     local secret
     secret=$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')
 
-    cat > "$cfg" <<EOF
+    # umask 077 vóór de heredoc voorkomt race: file wordt direct 600 gecreëerd
+    # i.p.v. eerst 644 en daarna chmod (klein, maar er kan in dat venster een
+    # andere user de file openen).
+    (
+        umask 077
+        cat > "$cfg" <<EOF
 {
   "TenantId": "VUL_IN_TENANT_ID",
   "ClientId": "VUL_IN_CLIENT_ID",
@@ -276,7 +283,8 @@ ensure_config() {
   "AllowedOrigins": []
 }
 EOF
-    chmod 600 "$cfg"
+    )
+    chmod 600 "$cfg"   # defensief — umask zou 'm al op 600 gezet hebben
     info "Nieuwe config.json aangemaakt met willekeurige SecretKey"
     warn "Vul de VUL_IN_*-velden zo nog in (Entra-credentials + RedirectUri)."
 }
@@ -334,13 +342,16 @@ ensure_tls_cert() {
         return
     fi
 
+    # umask 077 voorkomt race: zonder umask creëert openssl de key tijdelijk
+    # met 644 (world-readable) tussen creatie en de chmod hieronder. Met
+    # umask 077 is de file vanaf moment 0 600.
     run_with_spinner "self-signed TLS-cert genereren (10 jaar)" \
-        openssl req -x509 -nodes -newkey rsa:2048 \
+        bash -c "umask 077 && openssl req -x509 -nodes -newkey rsa:2048 \
             -days 3650 \
-            -subj "/CN=kluisjesbeheer.local" \
-            -keyout "$key" -out "$cert"
-    chmod 644 "$cert"
-    chmod 600 "$key"
+            -subj '/CN=kluisjesbeheer.local' \
+            -keyout '$key' -out '$cert'"
+    chmod 644 "$cert"   # public cert mag wel readable zijn
+    chmod 600 "$key"    # private key blijft 600
     info "Self-signed cert: $cert"
     info "(Vervang door officieel cert+key wanneer beschikbaar -- zelfde bestandsnamen.)"
 }

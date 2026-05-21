@@ -1,16 +1,18 @@
 from flask import Blueprint, request, jsonify, g
-from auth import login_required
+from auth import login_required, beheerder_required, assert_vestiging_access
 
 clusters_bp = Blueprint('clusters', __name__, url_prefix='/api')
 
 @clusters_bp.route('/vestigingen/<int:vid>/clusters', methods=['GET'])
 @login_required
 def list_clusters(vid):
+    err = assert_vestiging_access(vid)
+    if err: return err
     rows = g.db.execute('SELECT * FROM clusters WHERE vestiging_id = ? ORDER BY naam', (vid,)).fetchall()
     return jsonify([dict(r) for r in rows])
 
 @clusters_bp.route('/clusters', methods=['POST'])
-@login_required
+@beheerder_required
 def create_cluster():
     data = request.get_json()
     vestiging_id = data.get('vestiging_id')
@@ -27,7 +29,7 @@ def create_cluster():
     return jsonify(dict(row)), 201
 
 @clusters_bp.route('/clusters/<int:cid>', methods=['PUT'])
-@login_required
+@beheerder_required
 def update_cluster(cid):
     row = g.db.execute('SELECT * FROM clusters WHERE id = ?', (cid,)).fetchone()
     if not row:
@@ -46,7 +48,7 @@ def update_cluster(cid):
     return jsonify(dict(row))
 
 @clusters_bp.route('/clusters/<int:cid>', methods=['DELETE'])
-@login_required
+@beheerder_required
 def delete_cluster(cid):
     row = g.db.execute('SELECT id FROM clusters WHERE id = ?', (cid,)).fetchone()
     if not row:
@@ -70,10 +72,13 @@ def verplaats_reeks(cid):
     """Verplaats bestaande kluisjes (op numeriek bereik) naar dit cluster.
 
     Body: { prefix, van, tot }. Alleen binnen dezelfde vestiging.
+    Conciërges mogen dit voor hun eigen vestiging(en); beheerders overal.
     """
     doel = g.db.execute('SELECT id, vestiging_id FROM clusters WHERE id = ?', (cid,)).fetchone()
     if not doel:
         return jsonify({'error': 'Doelcluster niet gevonden'}), 404
+    err = assert_vestiging_access(doel['vestiging_id'])
+    if err: return err
     data = request.get_json() or {}
     prefix = str(data.get('prefix', ''))
     try:
@@ -114,10 +119,13 @@ def verplaats_reeks(cid):
 @clusters_bp.route('/clusters/<int:cid>/verplaats-selectie', methods=['POST'])
 @login_required
 def verplaats_selectie(cid):
-    """Verplaats geselecteerde kluisjes naar dit cluster (zelfde vestiging)."""
+    """Verplaats geselecteerde kluisjes naar dit cluster (zelfde vestiging).
+    Conciërges mogen dit voor hun eigen vestiging(en); beheerders overal."""
     doel = g.db.execute('SELECT id, vestiging_id FROM clusters WHERE id = ?', (cid,)).fetchone()
     if not doel:
         return jsonify({'error': 'Doelcluster niet gevonden'}), 404
+    err = assert_vestiging_access(doel['vestiging_id'])
+    if err: return err
     data = request.get_json() or {}
     ids = data.get('kluisje_ids', [])
     if not ids:
@@ -142,6 +150,8 @@ def verplaats_selectie(cid):
 @login_required
 def vestiging_prefixes(vid):
     """Distinct kluisnummer-prefixes binnen een vestiging (bv. 'BL-', 'MO-')."""
+    err = assert_vestiging_access(vid)
+    if err: return err
     import re
     rows = g.db.execute(
         'SELECT kluisnummer FROM kluisjes WHERE vestiging_id = ? AND verwijderd = 0',

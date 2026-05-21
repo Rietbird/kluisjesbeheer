@@ -73,21 +73,28 @@ docker compose build
 docker compose up -d
 ```
 
-Dit doet drie dingen:
-1. **`init`-container** draait eenmalig: maakt `config.json` met random
-   `SecretKey` in het data-volume (als die nog niet bestaat).
-2. **`app`-container** start: gunicorn op 5000 + cron via supervisord.
-   Eerste run faalt met HTTP 500 op `/auth/login` — verwacht, want
+Dit doet vier dingen:
+1. **`init-config`-container** draait eenmalig: maakt `config.json` met
+   random `SecretKey` in het data-volume (als die nog niet bestaat).
+2. **`init-cert`-container** draait eenmalig: genereert self-signed cert
+   (10 jaar) in nginx-ssl-volume (als die nog niet bestaat).
+3. **`app`-container** start: gunicorn op 5000 + cron via supervisord.
+   Eerste run geeft HTTP 500 op `/auth/login` — verwacht, want
    Entra-credentials staan nog op `VUL_IN_*`.
-3. **`nginx`-container** start: genereert self-signed cert op eerste
-   start (geldig 10 jaar), proxiet 80→443→app.
+4. **`nginx`-container** start: HTTP→HTTPS redirect + proxy 443 naar app.
 
-Check:
+> ⚠️ **Default: alleen op 127.0.0.1 bereikbaar.** Voor toegang vanaf het
+> schoolnetwerk: open `docker-compose.yml` en verwijder de `127.0.0.1:`
+> prefix uit de `ports:`-sectie van de nginx-service. Daarna:
+> `docker compose up -d nginx`. Of plaats een eigen reverse proxy
+> (Cloudflare Tunnel, Traefik) ervoor en laat het op localhost.
+
+Check (vanaf de host zelf):
 
 ```bash
-docker compose ps                    # alle services up?
-docker compose logs -f app           # gunicorn-output
-curl -k https://localhost/api/health # verwacht: {"status":"ok"}
+docker compose ps                          # alle services up?
+docker compose logs -f app                 # gunicorn-output
+curl -k https://127.0.0.1/api/health       # verwacht: {"status":"ok"}
 ```
 
 ---

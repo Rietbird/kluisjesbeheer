@@ -2,7 +2,7 @@ import os
 import re
 import time
 from flask import Blueprint, request, jsonify, g, send_from_directory
-from auth import login_required
+from auth import login_required, beheerder_required
 
 instellingen_bp = Blueprint('instellingen', __name__, url_prefix='/api')
 
@@ -30,11 +30,17 @@ def _sanitize_svg(data):
 @instellingen_bp.route('/instellingen', methods=['GET'])
 @login_required
 def get_instellingen():
-    rows = g.db.execute('SELECT key, value FROM instellingen').fetchall()
+    # Magister-keys (url, user, encrypted pass) NIET in deze generieke
+    # response -- die zijn beheerder-only via /api/magister/config.
+    # Anders kan elke ingelogde gebruiker (conciërge) de Magister-server-
+    # URL, service-account-username en encrypted password lezen.
+    rows = g.db.execute(
+        "SELECT key, value FROM instellingen WHERE key NOT LIKE 'magister_%'"
+    ).fetchall()
     return jsonify({r['key']: r['value'] for r in rows})
 
 @instellingen_bp.route('/instellingen', methods=['PUT'])
-@login_required
+@beheerder_required
 def update_instellingen():
     data = request.get_json()
     if not data or not isinstance(data, dict):
@@ -51,7 +57,7 @@ def update_instellingen():
     return jsonify({'ok': True})
 
 @instellingen_bp.route('/instellingen/logo', methods=['POST'])
-@login_required
+@beheerder_required
 def upload_logo():
     file = request.files.get('file')
     if not file:

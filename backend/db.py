@@ -4,13 +4,40 @@ import sqlite3
 _SCHEMA_PATH = os.path.join(os.path.dirname(__file__), 'schema.sql')
 
 
+def _db_is_non_empty(path):
+    """True als de DB-file bestaat én niet een lege placeholder is.
+    Een verse sqlite-DB met alleen schema is ~24-48KB; een mount-gemaakte
+    lege file is 0 bytes; een echte DB met data is groter."""
+    try:
+        return os.path.getsize(path) > 4096
+    except OSError:
+        return False
+
+
 def default_db_path():
     """Bepaal het standaard DB-pad. Voorkeur: backend/data/ (Docker-volume-
-    aanpak); fallback: backend/ zelf (klassieke install.sh). Bestaat geen
-    van beide: kies data/ als die dir bestaat, anders legacy."""
+    aanpak); fallback: backend/ zelf (klassieke install.sh).
+
+    FAIL-HARD bij ambiguïteit: als beide paden een DB met DATA bevatten
+    (>4KB) raise een RuntimeError. Reden: stilzwijgend kiezen kan
+    legacy-data onzichtbaar maken na een verkeerde migratie."""
     backend_dir = os.path.dirname(__file__)
     data_path = os.path.join(backend_dir, 'data', 'kluisjesbeheer.db')
     legacy_path = os.path.join(backend_dir, 'kluisjesbeheer.db')
+
+    data_has_content = _db_is_non_empty(data_path)
+    legacy_has_content = _db_is_non_empty(legacy_path)
+
+    if data_has_content and legacy_has_content:
+        raise RuntimeError(
+            "FOUT: er bestaan TWEE databases met inhoud:\n"
+            f"  - {data_path} ({os.path.getsize(data_path)} bytes)\n"
+            f"  - {legacy_path} ({os.path.getsize(legacy_path)} bytes)\n"
+            "Dit betekent een halve migratie tussen klassieke install en "
+            "Docker. Kies bewust welke je wilt behouden en verwijder de "
+            "ander (na backup!). Zie docs/onderhoud.md."
+        )
+
     if os.path.exists(data_path):
         return data_path
     if os.path.exists(legacy_path):

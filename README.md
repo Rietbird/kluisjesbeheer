@@ -42,7 +42,8 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/Rietbird/kluisjesbeheer/
 
 Maakt automatisch een Debian 12 LXC container aan, installeert
 kluisjesbeheer erin (klassiek of via Docker), en geeft je IP + URL.
-Klaar in 5-7 minuten. Zie [docs/proxmox.md](docs/proxmox.md).
+Klaar in 5-7 minuten. Zie [docs/proxmox.md](docs/proxmox.md) — die
+beschrijft ook hoe je het script eerst leest vóór je 'm draait.
 
 ### 2. Klassieke install op een verse VM (Debian 12/13)
 

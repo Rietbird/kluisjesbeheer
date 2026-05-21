@@ -59,6 +59,13 @@ RUN chmod 755 /usr/local/bin/kluisjes-init.sh
 RUN useradd -r -u 1001 -d /opt/kluisjesbeheer -s /usr/sbin/nologin kluisjes && \
     chown -R kluisjes:kluisjes /opt/kluisjesbeheer
 
+# Cron-log: cron-job in /etc/cron.d/kluisjesbeheer schrijft hier als
+# kluisjes-user; bestand moet bestaan met juiste eigenaar vóór eerste
+# cron-run. Niet world-readable (kan magister-context bevatten).
+RUN touch /var/log/kluisjes-sync.log && \
+    chown kluisjes:kluisjes /var/log/kluisjes-sync.log && \
+    chmod 640 /var/log/kluisjes-sync.log
+
 # Data-dir voor config.json + database + backups (zie docker-compose.yml)
 # Alles persistent in één volume.
 RUN mkdir -p /opt/kluisjesbeheer/backend/data/backups && \

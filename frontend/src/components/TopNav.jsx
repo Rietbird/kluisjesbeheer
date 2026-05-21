@@ -84,10 +84,15 @@ export default function TopNav({ onOpenBeheer, onOpenHandleiding, onGoHome }) {
             <UserPhoto user={user} />
             <div>
               <div className="text-sm font-semibold text-navy dark:text-white leading-tight">{user?.displayName}</div>
-              <a href="/auth/logout" className="text-[11px] text-primary-700 dark:text-primary hover:text-primary transition-colors">Uitloggen</a>
+              {/* POST i.p.v. <a> — voorkomt forced-logout via <img src=... > van derde site */}
+              <form method="POST" action="/auth/logout" className="inline">
+                <button type="submit" className="text-[11px] text-primary-700 dark:text-primary hover:text-primary transition-colors bg-transparent border-none p-0 cursor-pointer">Uitloggen</button>
+              </form>
             </div>
           </div>
-          <a href="/auth/logout" className="sm:hidden text-xs text-primary-700 dark:text-primary hover:text-primary">Uitloggen</a>
+          <form method="POST" action="/auth/logout" className="sm:hidden inline">
+            <button type="submit" className="text-xs text-primary-700 dark:text-primary hover:text-primary bg-transparent border-none p-0 cursor-pointer">Uitloggen</button>
+          </form>
         </div>
       </div>
     </header>

@@ -3,6 +3,8 @@
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-# Draait elke ochtend om 06:00 als app-user (kluisjes), output naar
-# container-stdout zodat het in `docker logs` zichtbaar is.
-0 6 * * * kluisjes cd /opt/kluisjesbeheer/backend && /usr/local/bin/python cron_sync.py > /proc/1/fd/1 2>/proc/1/fd/2
+# Draait elke ochtend om 06:00 als app-user (kluisjes). Output naar
+# /var/log/kluisjes-sync.log (in de container -- world-readable in
+# docker logs via een tail-sidecar of `docker exec ... cat`). Direct
+# naar /proc/1/fd/1 schrijven werkt niet als non-root.
+0 6 * * * kluisjes cd /opt/kluisjesbeheer/backend && /usr/local/bin/python cron_sync.py >> /var/log/kluisjes-sync.log 2>&1

@@ -12,6 +12,14 @@ Op de **Proxmox host** als root:
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Rietbird/kluisjesbeheer/master/proxmox/install-ct.sh)"
 ```
 
+> 🔍 **Liever eerst het script lezen vóór je 'm draait?**
+> ```bash
+> curl -o /tmp/install-ct.sh https://raw.githubusercontent.com/Rietbird/kluisjesbeheer/master/proxmox/install-ct.sh
+> less /tmp/install-ct.sh    # of: cat /tmp/install-ct.sh
+> bash /tmp/install-ct.sh
+> ```
+> Aanbevolen voor wie `curl | bash` van een onbekende repo wantrouwt.
+
 Daarna kun je interactief kiezen:
 
 1. **Installatie-modus** — klassiek (`install.sh` op de CT) of Docker (`docker compose` in de CT)

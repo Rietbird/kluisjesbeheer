@@ -1,13 +1,60 @@
 import csv
 import io
+import zipfile
 from flask import Blueprint, request, jsonify, g
-from auth import login_required
+from auth import login_required, beheerder_required, assert_vestiging_access, user_vestiging_ids
 
 kluisjes_bp = Blueprint('kluisjes', __name__, url_prefix='/api')
+
+# Maximale gedecomprimeerde grootte van een XLSX-bestand (in bytes).
+# XLSX is een zip, dus een 16MB-upload (MAX_CONTENT_LENGTH) kan tot
+# GB's uitpakken (zip-bomb). 200MB is ruim voor een normaal kluis-
+# bestand (3000 rijen ~3MB), klein genoeg om geheugen-DOS te voorkomen.
+_MAX_XLSX_UNCOMPRESSED = 200 * 1024 * 1024
+
+
+def _assert_kluisje_access(kid):
+    """Kluisje-id -> vestiging -> access-check. None bij OK, Response bij fail."""
+    row = g.db.execute('SELECT vestiging_id FROM kluisjes WHERE id = ?', (int(kid),)).fetchone()
+    if not row:
+        return jsonify({'error': 'Kluisje niet gevonden'}), 404
+    return assert_vestiging_access(row['vestiging_id'])
+
+
+def _assert_cluster_access(cid):
+    """Cluster-id -> vestiging -> access-check. None bij OK, Response bij fail."""
+    row = g.db.execute('SELECT vestiging_id FROM clusters WHERE id = ?', (int(cid),)).fetchone()
+    if not row:
+        return jsonify({'error': 'Cluster niet gevonden'}), 404
+    return assert_vestiging_access(row['vestiging_id'])
+
+
+def _safe_load_xlsx(file):
+    """Open een XLSX met zip-bom-bescherming.
+    Raised ValueError bij verdachte compressie-ratio's of total size.
+    Caller moet file.seek(0) doen na deze check (file-pointer staat aan eind)."""
+    import openpyxl
+    # Stap 1: zip-content-check zonder uitpakken
+    file.seek(0)
+    try:
+        with zipfile.ZipFile(file) as zf:
+            total = sum(zi.file_size for zi in zf.infolist())
+            if total > _MAX_XLSX_UNCOMPRESSED:
+                raise ValueError(
+                    f'XLSX zou na uitpakken {total // (1024*1024)}MB worden — '
+                    f'maximum is {_MAX_XLSX_UNCOMPRESSED // (1024*1024)}MB '
+                    f'(mogelijke zip-bomb).'
+                )
+    except zipfile.BadZipFile:
+        raise ValueError('Bestand is geen geldige XLSX (zip-fout).')
+    file.seek(0)
+    return openpyxl.load_workbook(file, read_only=True)
 
 @kluisjes_bp.route('/clusters/<int:cid>/kluisjes', methods=['GET'])
 @login_required
 def list_kluisjes(cid):
+    err = _assert_cluster_access(cid)
+    if err: return err
     rows = g.db.execute(
         'SELECT * FROM kluisjes WHERE cluster_id = ? AND verwijderd = 0 ORDER BY kluisnummer',
         (cid,)
@@ -52,8 +99,20 @@ def search_kluisjes():
     params = []
 
     if vestiging_id:
+        err = assert_vestiging_access(vestiging_id)
+        if err: return err
         query += ' AND k.vestiging_id = ?'
         params.append(int(vestiging_id))
+    else:
+        # Geen specifieke vestiging: filter op de user's allowed vestigingen
+        # (beheerders zien alles, conciërges alleen hun eigen).
+        allowed = user_vestiging_ids()
+        if allowed is not None:
+            if not allowed:
+                return jsonify([])  # conciërge zonder vestigingen ziet niets
+            placeholders = ','.join('?' * len(allowed))
+            query += f' AND k.vestiging_id IN ({placeholders})'
+            params.extend(allowed)
     if status == 'sleutel':
         # Lockers where key was not returned after ending assignment
         query += ''' AND EXISTS (
@@ -93,6 +152,8 @@ def search_kluisjes():
 @kluisjes_bp.route('/kluisjes/<int:kid>', methods=['GET'])
 @login_required
 def get_kluisje(kid):
+    err = _assert_kluisje_access(kid)
+    if err: return err
     row = g.db.execute('SELECT * FROM kluisjes WHERE id = ? AND verwijderd = 0', (kid,)).fetchone()
     if not row:
         return jsonify({'error': 'Niet gevonden'}), 404
@@ -101,6 +162,8 @@ def get_kluisje(kid):
 @kluisjes_bp.route('/clusters/<int:cid>/kluisjes', methods=['POST'])
 @login_required
 def create_kluisje(cid):
+    err = _assert_cluster_access(cid)
+    if err: return err
     data = request.get_json()
     kluisnummer = data.get('kluisnummer', '').strip()
     if not kluisnummer:
@@ -131,6 +194,8 @@ def create_kluisje(cid):
 @kluisjes_bp.route('/kluisjes/<int:kid>', methods=['PUT'])
 @login_required
 def update_kluisje(kid):
+    err = _assert_kluisje_access(kid)
+    if err: return err
     data = request.get_json()
     row = g.db.execute('SELECT * FROM kluisjes WHERE id = ? AND verwijderd = 0', (kid,)).fetchone()
     if not row:
@@ -173,6 +238,8 @@ def update_kluisje(kid):
 @kluisjes_bp.route('/kluisjes/<int:kid>', methods=['DELETE'])
 @login_required
 def delete_kluisje(kid):
+    err = _assert_kluisje_access(kid)
+    if err: return err
     row = g.db.execute('SELECT id FROM kluisjes WHERE id = ? AND verwijderd = 0', (kid,)).fetchone()
     if not row:
         return jsonify({'error': 'Niet gevonden'}), 404
@@ -186,8 +253,10 @@ def delete_kluisje(kid):
     return jsonify({'ok': True})
 
 @kluisjes_bp.route('/clusters/<int:cid>/kluisjes/bulk', methods=['POST'])
-@login_required
+@beheerder_required
 def bulk_create_kluisjes(cid):
+    err = _assert_cluster_access(cid)
+    if err: return err
     """Bulk aanmaken van kluisjes. Body: { kluisjes: [{kluisnummer, sleutelnummer, locatie}, ...] }"""
     cluster = g.db.execute('SELECT vestiging_id FROM clusters WHERE id = ?', (cid,)).fetchone()
     if not cluster:
@@ -225,7 +294,7 @@ def bulk_create_kluisjes(cid):
 
 
 @kluisjes_bp.route('/kluisjes/bulk-verwijderen', methods=['POST'])
-@login_required
+@beheerder_required
 def bulk_delete_kluisjes():
     """Bulk verwijderen van kluisjes. Body: { kluisje_ids: [...] }"""
     data = request.get_json() or {}
@@ -401,7 +470,7 @@ def _analyseer_nummering(nummers):
 
 
 @kluisjes_bp.route('/kluisjes/import/preview', methods=['POST'])
-@login_required
+@beheerder_required
 def import_preview():
     """Scan an XLSX file and return a summary of prefixes, clusters, and locaties found."""
     file = request.files.get('file')
@@ -412,9 +481,8 @@ def import_preview():
     if not filename.lower().endswith('.xlsx'):
         return jsonify({'error': 'Alleen .xlsx bestanden worden geaccepteerd'}), 400
 
-    import openpyxl
     try:
-        wb = openpyxl.load_workbook(file, read_only=True)
+        wb = _safe_load_xlsx(file)
         ws = wb.active
         headers = None
         fmt = None
@@ -500,7 +568,7 @@ def _get_or_create_cluster(vestiging_id, cluster_naam):
 
 
 @kluisjes_bp.route('/kluisjes/import', methods=['POST'])
-@login_required
+@beheerder_required
 def import_kluisjes():
     import json as json_mod
     cluster_id = request.form.get('cluster_id') or None
@@ -541,7 +609,6 @@ def import_kluisjes():
     if not filename.lower().endswith('.xlsx'):
         return jsonify({'error': 'Alleen .xlsx bestanden worden geaccepteerd'}), 400
 
-    import openpyxl
     import re
     from datetime import date
 
@@ -561,8 +628,7 @@ def import_kluisjes():
     breedte_per_prefix = {}
     if normaliseer:
         try:
-            file.seek(0)
-            wb_scan = openpyxl.load_workbook(file, read_only=True)
+            wb_scan = _safe_load_xlsx(file)
             ws_scan = wb_scan.active
             scan_headers = None
             scan_fmt = None
@@ -586,7 +652,7 @@ def import_kluisjes():
         file.seek(0)
 
     try:
-        wb = openpyxl.load_workbook(file, read_only=True)
+        wb = _safe_load_xlsx(file)
         ws = wb.active
         headers = None
         fmt = None

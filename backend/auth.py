@@ -1,3 +1,4 @@
+import html
 import msal
 from functools import wraps
 from flask import Blueprint, redirect, request, session, jsonify, url_for, g, Response
@@ -7,10 +8,14 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 
 def _error_page(title, message, status=403):
-    """Render a styled error page consistent with the application design."""
+    """Render a styled error page consistent with the application design.
+    Alle user-input wordt HTML-escaped (defensief — message kan in theorie
+    error_description van Entra bevatten)."""
     session.clear()
-    kleur = config.get('SchoolKleur', '#FF8200')
-    school = config.get('SchoolNaam', 'Kluisjesbeheer')
+    kleur = html.escape(config.get('SchoolKleur', '#FF8200'))
+    school = html.escape(config.get('SchoolNaam', 'Kluisjesbeheer'))
+    title = html.escape(title)
+    message = html.escape(message)
     html = f'''<!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -68,6 +73,46 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+
+def beheerder_required(f):
+    """Decorator: alleen beheerders. Voor config-routes (vestigingen,
+    clusters, gebruikers, instellingen, backups, magister-config, sync).
+    Gebruik na @login_required (of in plaats van — beheerder is ook ingelogd)."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user' not in session:
+            return jsonify({'error': 'Niet ingelogd'}), 401
+        if not session.get('user', {}).get('is_beheerder'):
+            return jsonify({'error': 'Alleen beheerders'}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
+def user_vestiging_ids():
+    """Geef de set van vestiging-IDs die de huidige user mag zien.
+    Beheerders zien alle vestigingen (returnt None — niet filteren).
+    Conciërges zien alleen toegewezen vestigingen."""
+    user = session.get('user', {})
+    if user.get('is_beheerder'):
+        return None  # geen filter
+    return set(user.get('allowed_vestiging_ids', []))
+
+
+def assert_vestiging_access(vestiging_id):
+    """Raise 403 als de huidige user geen toegang heeft tot deze vestiging.
+    Beheerders mogen alles. Conciërges alleen hun toegewezen vestiging(en).
+    Return: None (OK) of Flask Response (403)."""
+    allowed = user_vestiging_ids()
+    if allowed is None:
+        return None  # beheerder
+    try:
+        vid = int(vestiging_id)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Ongeldige vestiging'}), 400
+    if vid not in allowed:
+        return jsonify({'error': 'Geen toegang tot deze vestiging'}), 403
+    return None
+
 @auth_bp.route('/login')
 def login():
     msal_app = _get_msal_app()
@@ -116,14 +161,22 @@ def callback():
         # De foutpagina "Geen vestigingen" hieronder dwingt af dat een
         # bestaande beheerder de nieuwe user nog aan een vestiging koppelt
         # voor hij iets kan doen.
-        has_any = g.db.execute('SELECT COUNT(*) as cnt FROM gebruikers').fetchone()['cnt']
-        nieuwe_rol = 'beheerder' if has_any == 0 else 'concierge'
+        #
+        # Race-veilig: BEGIN IMMEDIATE pakt write-lock op de DB zodat twee
+        # parallelle eerste-logins niet beide tot beheerder promoveren.
         display = user_data.get('displayName', '')
-        cur = g.db.execute(
-            'INSERT INTO gebruikers (email, naam, rol) VALUES (?, ?, ?)',
-            (email, display, nieuwe_rol)
-        )
-        g.db.commit()
+        g.db.execute('BEGIN IMMEDIATE')
+        try:
+            has_any = g.db.execute('SELECT COUNT(*) as cnt FROM gebruikers').fetchone()['cnt']
+            nieuwe_rol = 'beheerder' if has_any == 0 else 'concierge'
+            cur = g.db.execute(
+                'INSERT INTO gebruikers (email, naam, rol) VALUES (?, ?, ?)',
+                (email, display, nieuwe_rol)
+            )
+            g.db.commit()
+        except Exception:
+            g.db.rollback()
+            raise
         geb = g.db.execute('SELECT id, rol FROM gebruikers WHERE id = ?', (cur.lastrowid,)).fetchone()
 
     is_beheerder = geb['rol'] == 'beheerder'
@@ -176,12 +229,20 @@ def photo():
     # Return a 1x1 transparent PNG as fallback
     return '', 204
 
-@auth_bp.route('/logout')
+@auth_bp.route('/logout', methods=['GET', 'POST'])
 def logout():
+    """Log de gebruiker uit. POST (frontend-knop) is voorkeur — voorkomt
+    forced-logout via `<img src="/auth/logout">` van een derde site.
+    GET-variant is voor backward-compat (bookmarks, oude tabs); doet ook
+    session.clear() maar Microsoft-redirect alleen bij POST."""
     session.clear()
-    tenant_id = config.get('TenantId', '')
-    # Microsoft requires an absolute URI for post_logout_redirect_uri
-    from urllib.parse import urlparse
-    parsed = urlparse(config.get('RedirectUri', ''))
-    base_url = f'{parsed.scheme}://{parsed.netloc}'
-    return redirect(f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/logout?post_logout_redirect_uri={base_url}/')
+    if request.method == 'POST':
+        tenant_id = config.get('TenantId', '')
+        # Microsoft requires an absolute URI for post_logout_redirect_uri
+        from urllib.parse import urlparse
+        parsed = urlparse(config.get('RedirectUri', ''))
+        base_url = f'{parsed.scheme}://{parsed.netloc}'
+        return redirect(f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/logout?post_logout_redirect_uri={base_url}/')
+    # GET: alleen sessie wissen, terug naar app-root (geen Microsoft-redirect
+    # om CSRF-forced-logout te beperken tot lokale flow).
+    return redirect('/')

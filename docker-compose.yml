@@ -3,54 +3,115 @@
 # Stop:  docker compose down
 # Logs:  docker compose logs -f
 #
-# Eerste keer: zorg dat ./data/config.json bestaat met je Entra-credentials
-# (kopieer van backend/config.example.json en vul VUL_IN_*-velden).
+# Eerste keer: na 'up -d' wordt config.json met random SecretKey
+# aangemaakt in het data-volume. Bewerk hem dan, vul Entra-credentials
+# in, en doe 'docker compose restart app'.
+#
+# ----------------------------------------------------------------------
+# BELANGRIJK: standaard luistert NGINX alleen op 127.0.0.1
+# Voor toegang vanaf het LAN (de meeste school-uitrollen) vervang in de
+# 'ports:'-sectie hieronder:
+#     - "127.0.0.1:80:80"  ->  - "80:80"
+#     - "127.0.0.1:443:443"  ->  - "443:443"
+# Of plaats een reverse proxy ervoor (Cloudflare Tunnel, Traefik, etc).
+# ----------------------------------------------------------------------
 
 services:
-  # Init-container: bij eerste start, schrijf een config.json-template met
-  # random SecretKey naar het data-volume. Bestaande config.json blijft.
-  init:
-    image: ghcr.io/rietbird/kluisjesbeheer:latest
-    # build: .
-    container_name: kluisjesbeheer-init
+  # 1. Init-container voor config.json (eenmalig bij eerste start).
+  #    Schrijft config.json met random SecretKey naar app-data volume.
+  #    Bestaande config.json blijft ongemoeid.
+  init-config:
+    build: .
+    image: kluisjesbeheer:local
+    # Als er ooit een GHCR-publish komt, vervang de twee regels boven door:
+    #   image: ghcr.io/rietbird/kluisjesbeheer:latest
+    container_name: kluisjesbeheer-init-config
     restart: "no"
     entrypoint: ["/bin/sh", "/usr/local/bin/kluisjes-init.sh"]
     volumes:
       - app-data:/opt/kluisjesbeheer/backend/data
 
+  # 2. Init-container voor TLS-cert (eenmalig).
+  #    Genereert self-signed cert in nginx-ssl volume. Bestaande cert blijft.
+  init-cert:
+    image: alpine:3.20
+    container_name: kluisjesbeheer-init-cert
+    restart: "no"
+    command: >
+      sh -c "
+        if [ ! -f /ssl/self.crt ] || [ ! -f /ssl/self.key ]; then
+          echo '==> Self-signed cert genereren (10 jaar geldig)...' &&
+          apk add --no-cache openssl >/dev/null 2>&1 &&
+          umask 077 &&
+          openssl req -x509 -nodes -newkey rsa:2048 -days 3650
+            -subj '/CN=kluisjesbeheer.local'
+            -keyout /ssl/self.key -out /ssl/self.crt 2>&1 | tail -1 &&
+          chmod 644 /ssl/self.crt &&
+          chmod 600 /ssl/self.key &&
+          echo '==> Cert klaar in volume nginx-ssl';
+        else
+          echo '==> TLS-cert bestaat al, laat staan';
+        fi
+      "
+    volumes:
+      - nginx-ssl:/ssl
+
+  # 3. App-container: Gunicorn + cron via supervisord
   app:
-    image: ghcr.io/rietbird/kluisjesbeheer:latest
-    # Lokaal bouwen i.p.v. pullen? Comment image: en uncomment build:
-    # build: .
+    build: .
+    image: kluisjesbeheer:local
     container_name: kluisjesbeheer-app
     restart: unless-stopped
     depends_on:
-      init:
+      init-config:
         condition: service_completed_successfully
     expose:
       - "5000"
     volumes:
-      # Persistente data: config.json + kluisjesbeheer.db + backups
       - app-data:/opt/kluisjesbeheer/backend/data
     networks:
       - kluisjes
+    # Security-hardening: containers krijgen alleen wat ze écht nodig hebben.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN          # cron + supervisord moeten log-perms zetten
+      - DAC_OVERRIDE   # cron-daemon leest /etc/crontab als root
+      - SETUID         # supervisord switcht naar 'kluisjes' user
+      - SETGID
     # Healthcheck staat al in de image (Dockerfile)
 
+  # 4. NGINX sidecar: HTTP->HTTPS redirect + TLS-proxy naar app
   nginx:
     image: nginx:1.27-alpine
     container_name: kluisjesbeheer-nginx
     restart: unless-stopped
     depends_on:
-      - app
+      init-cert:
+        condition: service_completed_successfully
+      app:
+        condition: service_started
     ports:
-      - "80:80"
-      - "443:443"
+      # Default: alleen lokaal bereikbaar (veilig). Voor LAN-toegang
+      # verwijder de "127.0.0.1:" prefix (zie kop van dit bestand).
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
     volumes:
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./docker/nginx-entrypoint.sh:/docker-entrypoint.d/99-genkey.sh:ro
-      - nginx-ssl:/etc/nginx/ssl
+      - nginx-ssl:/etc/nginx/ssl:ro
     networks:
       - kluisjes
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - NET_BIND_SERVICE   # nginx mag :80 en :443 binden
 
 volumes:
   app-data:

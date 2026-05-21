@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, g
-from auth import login_required
+from auth import login_required, beheerder_required, assert_vestiging_access
 from magister_client import magister, safe_error as _safe_error
 
 magister_bp = Blueprint('magister', __name__, url_prefix='/api')
@@ -65,6 +65,9 @@ def _vertrokken_filter():
 def search_leerlingen():
     """Search students from database. ?klas= for exact match, ?q= for substring search, ?vestiging_id= to filter."""
     vestiging_id = request.args.get('vestiging_id', '').strip()
+    if vestiging_id:
+        err = assert_vestiging_access(vestiging_id)
+        if err: return err
     vestiging_locaties = _get_vestiging_locaties(vestiging_id) if vestiging_id else None
     vf = _vertrokken_filter()
 
@@ -111,6 +114,8 @@ def get_klassen():
     """Get unique class list from database. ?vestiging_id= to filter by vestiging locaties."""
     vestiging_id = request.args.get('vestiging_id', '').strip()
     if vestiging_id:
+        err = assert_vestiging_access(vestiging_id)
+        if err: return err
         vestiging_locaties = _get_vestiging_locaties(vestiging_id)
         if vestiging_locaties:
             placeholders = ','.join('?' * len(vestiging_locaties))
@@ -129,6 +134,8 @@ def get_klassen():
 @magister_bp.route('/vestigingen/<int:vid>/klassen', methods=['GET'])
 @login_required
 def get_vestiging_klassen(vid):
+    err = assert_vestiging_access(vid)
+    if err: return err
     rows = g.db.execute(
         'SELECT klas FROM vestigingen_klassen WHERE vestiging_id = ? ORDER BY klas', (vid,)
     ).fetchall()
@@ -136,7 +143,7 @@ def get_vestiging_klassen(vid):
 
 
 @magister_bp.route('/vestigingen/<int:vid>/klassen', methods=['PUT'])
-@login_required
+@beheerder_required
 def set_vestiging_klassen(vid):
     """Stel in welke klassen bij een vestiging horen. Body: { klassen: ['1A', '1B', ...] }"""
     data = request.get_json() or {}
@@ -156,7 +163,7 @@ def set_vestiging_klassen(vid):
 
 
 @magister_bp.route('/magister/flush-cache', methods=['POST'])
-@login_required
+@beheerder_required
 def flush_cache():
     """Clear Magister API cache, forcing fresh data on next request."""
     magister.flush_cache()
@@ -164,7 +171,7 @@ def flush_cache():
 
 
 @magister_bp.route('/magister/sync-leerlingen', methods=['POST'])
-@login_required
+@beheerder_required
 def sync_leerlingen():
     """Fetch students from Magister SOAP API and store in database."""
     try:

@@ -26,9 +26,12 @@ def create_app(test_config=None):
         MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max upload
     )
 
-    # CORS: configurable origins from config.json, always allow localhost dev server
-    allowed_origins = config.get('AllowedOrigins', [])
-    if 'http://localhost:5173' not in allowed_origins:
+    # CORS: configurable origins from config.json.
+    # localhost:5173 (Vite dev) wordt alleen toegevoegd als FLASK_ENV=development
+    # of als de app expliciet in TESTING mode draait -- niet in productie.
+    allowed_origins = list(config.get('AllowedOrigins', []))
+    is_dev = os.environ.get('FLASK_ENV') == 'development' or (test_config or {}).get('TESTING')
+    if is_dev and 'http://localhost:5173' not in allowed_origins:
         allowed_origins.append('http://localhost:5173')
     CORS(app, origins=allowed_origins)
 

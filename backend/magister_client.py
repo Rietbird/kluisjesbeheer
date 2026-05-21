@@ -29,9 +29,16 @@ def safe_error(e, password=None):
         msg = msg.replace(password, '***')
     return msg
 
-# Magister/SWP servers often have self-signed or outdated certificates.
-# Set MAGISTER_VERIFY_SSL=1 to enable verification, or provide a CA bundle path.
-_verify_ssl = os.environ.get('MAGISTER_VERIFY_SSL', '')
+import sys
+
+# Magister/SWP servers hebben vaak self-signed of verouderde certs --
+# SSL-verify staat default UIT voor backward-compat met bestaande
+# installs. Opt-in opties:
+#   MAGISTER_VERIFY_SSL=1   -> verify met system-CA bundle
+#   MAGISTER_VERIFY_SSL=/path/to/ca.pem -> verify met custom CA-bundle
+# Anders wordt een waarschuwing naar stderr geschreven bij elke import
+# (zichtbaar in journalctl / docker logs / cron-mail).
+_verify_ssl = os.environ.get('MAGISTER_VERIFY_SSL', '').strip()
 if _verify_ssl == '1' or _verify_ssl.lower() == 'true':
     MAGISTER_SSL_VERIFY = True
 elif _verify_ssl and os.path.isfile(_verify_ssl):
@@ -39,6 +46,14 @@ elif _verify_ssl and os.path.isfile(_verify_ssl):
 else:
     MAGISTER_SSL_VERIFY = False
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    print(
+        'WAARSCHUWING: Magister SSL-verificatie staat UIT (default). Een '
+        'MITM-aanvaller op het netwerk-pad naar de SWP-server kan het '
+        'service-account-wachtwoord onderscheppen. Voor productie: zet '
+        'MAGISTER_VERIFY_SSL=1 (als SWP een publiek CA-cert heeft) of '
+        'MAGISTER_VERIFY_SSL=/pad/naar/ca-bundle.pem.',
+        file=sys.stderr,
+    )
 
 
 class MagisterClient:

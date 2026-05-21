@@ -4,10 +4,16 @@
 # volume bij eerste start. Bestaande config.json blijft ongemoeid.
 set -e
 
+# umask 077 vóór file-creation: voorkomt race waarbij heredoc het
+# bestand kort als 644 aanmaakt voor de chmod 600. Met umask 077
+# wordt de file direct als 600 gecreëerd.
+umask 077
+
 DATA_DIR="/opt/kluisjesbeheer/backend/data"
 CFG="$DATA_DIR/config.json"
 
 mkdir -p "$DATA_DIR/backups"
+chmod 755 "$DATA_DIR" "$DATA_DIR/backups"   # dirs mogen wel readable zijn
 
 if [ -f "$CFG" ]; then
     echo "==> config.json bestaat al -- laten staan"
@@ -33,7 +39,7 @@ cat > "$CFG" <<EOF
 }
 EOF
 
-# Niet wereld-leesbaar (bevat SecretKey)
+# Defensief: expliciet chmod + chown (umask is al 077, dit is dubbelop)
 chmod 600 "$CFG"
 chown 1001:1001 "$CFG"   # = kluisjes-user uit Dockerfile
 

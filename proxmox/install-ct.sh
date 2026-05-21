@@ -108,10 +108,19 @@ detect_storage() {
 # Detect default bridge
 # ============================================================
 detect_bridge() {
+    # vmbr0 heeft sterke voorkeur (management-bridge by convention).
     if ip link show vmbr0 >/dev/null 2>&1; then
         echo "vmbr0"
+        return
+    fi
+    # Anders: deterministisch alfabetisch sorteren (eerste vmbrN).
+    # NIET willekeurig "head -1" want awk-output volgorde is kernel-afhankelijk.
+    local first
+    first=$(ip -br link | awk '$1 ~ /^vmbr/ {print $1}' | sort | head -1)
+    if [[ -n "$first" ]]; then
+        echo "$first"
     else
-        ip -br link | awk '$1 ~ /^vmbr/ {print $1; exit}' | head -1 || echo "vmbr0"
+        echo "vmbr0"   # laatste fallback, script faalt zo bij CT-create
     fi
 }
 
@@ -214,7 +223,10 @@ create_ct() {
     ok "Container aangemaakt + gestart"
     info "Wachten tot netwerk up is..."
     local i=0
-    while ! pct exec "$CTID" -- ping -c1 -W1 8.8.8.8 >/dev/null 2>&1; do
+    # TCP-check ipv ping (veel enterprise/school-firewalls blokkeren ICMP egress).
+    # deb.debian.org:443 is een gegarandeerde dependency voor apt straks; als die
+    # niet reachable is heeft de hele install geen zin.
+    while ! pct exec "$CTID" -- bash -c "timeout 2 bash -c '</dev/tcp/deb.debian.org/443' 2>/dev/null"; do
         i=$((i+1))
         [[ $i -gt 30 ]] && die "Netwerk komt niet up binnen 30s — check bridge/VLAN."
         sleep 1

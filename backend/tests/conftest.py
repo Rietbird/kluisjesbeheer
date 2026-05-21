@@ -32,5 +32,10 @@ def client(db_path):
     app.config['TESTING'] = True
     with app.test_client() as c:
         with c.session_transaction() as sess:
-            sess['user'] = {'displayName': 'Test', 'email': 'test@school.nl'}
+            sess['user'] = {
+                'displayName': 'Test',
+                'email': 'test@school.nl',
+                'is_beheerder': True,
+                'allowed_vestiging_ids': [],
+            }
         yield c

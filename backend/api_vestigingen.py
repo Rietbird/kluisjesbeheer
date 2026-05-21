@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, g
-from auth import login_required
+from auth import login_required, beheerder_required, assert_vestiging_access
 
 vestigingen_bp = Blueprint('vestigingen', __name__, url_prefix='/api')
 
@@ -19,7 +19,7 @@ def list_vestigingen():
     return jsonify([dict(r) for r in rows])
 
 @vestigingen_bp.route('/vestigingen', methods=['POST'])
-@login_required
+@beheerder_required
 def create_vestiging():
     data = request.get_json()
     naam = data.get('naam', '').strip()
@@ -32,7 +32,7 @@ def create_vestiging():
     return jsonify(dict(row)), 201
 
 @vestigingen_bp.route('/vestigingen/<int:vid>', methods=['PUT'])
-@login_required
+@beheerder_required
 def update_vestiging(vid):
     row = g.db.execute('SELECT * FROM vestigingen WHERE id = ?', (vid,)).fetchone()
     if not row:
@@ -48,7 +48,7 @@ def update_vestiging(vid):
     return jsonify(dict(row))
 
 @vestigingen_bp.route('/vestigingen/<int:vid>/borg', methods=['PUT'])
-@login_required
+@beheerder_required
 def update_borg(vid):
     data = request.get_json()
     borg_actief = 1 if data.get('borg_actief') else 0
@@ -57,7 +57,7 @@ def update_borg(vid):
     return jsonify({'ok': True, 'borg_actief': bool(borg_actief)})
 
 @vestigingen_bp.route('/vestigingen/<int:vid>/kleur', methods=['PUT'])
-@login_required
+@beheerder_required
 def update_kleur(vid):
     data = request.get_json()
     kleur = (data.get('kleur') or '').strip()
@@ -72,13 +72,15 @@ def update_kleur(vid):
 @vestigingen_bp.route('/vestigingen/<int:vid>/locaties', methods=['GET'])
 @login_required
 def get_vestiging_locaties(vid):
+    err = assert_vestiging_access(vid)
+    if err: return err
     rows = g.db.execute(
         'SELECT locatie FROM vestigingen_locaties WHERE vestiging_id = ? ORDER BY locatie', (vid,)
     ).fetchall()
     return jsonify([r['locatie'] for r in rows])
 
 @vestigingen_bp.route('/vestigingen/<int:vid>/locaties', methods=['PUT'])
-@login_required
+@beheerder_required
 def set_vestiging_locaties(vid):
     """Stel in welke Magister-locaties bij een vestiging horen. Body: { locaties: [...] }"""
     data = request.get_json() or {}
@@ -95,13 +97,9 @@ def set_vestiging_locaties(vid):
     return jsonify({'vestiging_id': vid, 'locaties': locaties})
 
 @vestigingen_bp.route('/vestigingen/<int:vid>/reset', methods=['POST'])
-@login_required
+@beheerder_required
 def reset_vestiging(vid):
     """Delete all kluisjes + toewijzingen for a vestiging, keep vestiging + clusters."""
-    from flask import session
-    user = session.get('user', {})
-    if not user.get('is_beheerder'):
-        return jsonify({'error': 'Alleen beheerders'}), 403
     row = g.db.execute('SELECT id, naam FROM vestigingen WHERE id = ?', (vid,)).fetchone()
     if not row:
         return jsonify({'error': 'Niet gevonden'}), 404
@@ -124,7 +122,7 @@ def reset_vestiging(vid):
 
 
 @vestigingen_bp.route('/vestigingen/<int:vid>', methods=['DELETE'])
-@login_required
+@beheerder_required
 def delete_vestiging(vid):
     row = g.db.execute('SELECT id FROM vestigingen WHERE id = ?', (vid,)).fetchone()
     if not row:
