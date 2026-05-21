@@ -164,30 +164,12 @@ Twee paden — kies wat past:
 
 ### Pad A — Git clone (aanbevolen, makkelijkste updates)
 
-Vereist toegang tot de privé GitHub-repo via een **Deploy Key**.
-
-🐧 **Server** — log in en genereer een SSH-key:
+🐧 **Server** — log in en clone direct (repo is publiek, geen auth nodig):
 
 ```bash
 ssh root@<server-ip>
 apt-get update && apt-get install -y git
-ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519 -C "kluisjes-deploy-$(hostname)"
-cat /root/.ssh/id_ed25519.pub                    # ← kopieer deze regel
-```
-
-🌐 **In GitHub** (eenmalig per server):
-- Ga naar `https://github.com/Rietbird/kluisjesbeheer/settings/keys`
-- Klik *"Add deploy key"*
-- Title: bv. `kluisjesbeheer-<schoolnaam>`
-- Key: plak de regel uit `id_ed25519.pub`
-- "Allow write access" UIT laten (read-only is genoeg)
-- Klik *"Add key"*
-
-🐧 **Server** — clone + installeer:
-
-```bash
-ssh-keyscan -t ed25519 github.com >> /root/.ssh/known_hosts
-git clone git@github.com:Rietbird/kluisjesbeheer.git /root/kluisjesbeheer
+git clone https://github.com/Rietbird/kluisjesbeheer.git /root/kluisjesbeheer
 cd /root/kluisjesbeheer
 bash install.sh
 ```

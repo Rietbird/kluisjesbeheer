@@ -30,32 +30,51 @@ Webapplicatie voor het beheer van schoolkluisjes — uitleen, inname, defectmeld
 
 ## Installatie
 
-Volledige stappenplan vanaf een verse Debian 12 of 13 VM staat in **[install/README.md](install/README.md)** — copy-paste-vriendelijke instructies, idempotent installatiescript, automatische generatie van self-signed cert + NGINX-config + cron-job + Fernet-encryptiekey.
+Drie installatiepaden — kies wat past:
 
-Korte versie:
+### 1. Proxmox helper-script (snelste, all-in-one)
 
-Op de doelserver, als root:
+Op de **Proxmox host** als root:
 
 ```bash
-# 1. Git + SSH-key (eenmalig)
-apt-get update && apt-get install -y git
-ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519 -C "kluisjes-deploy-$(hostname)"
-cat /root/.ssh/id_ed25519.pub
-# ↑ kopieer deze regel → plak in GitHub:
-#   https://github.com/Rietbird/kluisjesbeheer/settings/keys (read-only)
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Rietbird/kluisjesbeheer/master/proxmox/install-ct.sh)"
+```
 
-# 2. Clone + installeer
-ssh-keyscan -t ed25519 github.com >> /root/.ssh/known_hosts
-git clone git@github.com:Rietbird/kluisjesbeheer.git /root/kluisjesbeheer
+Maakt automatisch een Debian 12 LXC container aan, installeert
+kluisjesbeheer erin (klassiek of via Docker), en geeft je IP + URL.
+Klaar in 5-7 minuten. Zie [docs/proxmox.md](docs/proxmox.md).
+
+### 2. Klassieke install op een verse VM (Debian 12/13)
+
+Op de **doelserver** als root:
+
+```bash
+apt-get update && apt-get install -y git
+git clone https://github.com/Rietbird/kluisjesbeheer.git /root/kluisjesbeheer
 cd /root/kluisjesbeheer
 bash install.sh
 ```
 
-Daarna `config.json` invullen (Entra-credentials), service herstarten, inloggen en de eerste user wordt automatisch beheerder. **Updaten later** is `git pull && bash install.sh` — `config.json` en de database blijven intact.
+Volledig stappenplan met TLS, NGINX, cron, Entra-checklist en
+troubleshooting: [install/README.md](install/README.md). **Updaten
+later:** `cd /root/kluisjesbeheer && git pull && bash install.sh`.
 
-> 💡 Alternatieven:
-> - **Docker**: zie [docs/docker.md](docs/docker.md) — `docker compose up -d` en klaar (geschikt voor servers waar Docker al draait, eigen VM, VPS, NAS).
-> - **Tarball** (geen GitHub-toegang): zie [install/README.md](install/README.md) Pad B.
+### 3. Docker compose
+
+Server met Docker (eigen VM, VPS, NAS, Raspberry Pi):
+
+```bash
+git clone https://github.com/Rietbird/kluisjesbeheer.git
+cd kluisjesbeheer
+docker compose up -d --build
+```
+
+Zie [docs/docker.md](docs/docker.md) voor de complete handleiding.
+
+---
+
+Daarna `config.json` invullen (Entra-credentials), service herstarten,
+inloggen — de eerste user wordt automatisch beheerder.
 
 ## Ontwikkelen
 
