@@ -11,11 +11,8 @@ tot een draaiende app.
 
 > 🔒 Dit stappenplan kiest voor `root` + wachtwoord op SSH — snel en
 > prima voor een server op een intern beheernet. Productie-veilig
-> (admin-account + SSH-key)? Zie de tip onderaan stap 1.5.
->
-> In de commando's hieronder vervang je `<server-ip>` door het interne
-> IP van je doelserver, en gebruik je `-p 2222` bij `ssh`/`scp` als de
-> standaardpoort 22 geblokkeerd is.
+> (admin-account + SSH-key)? Zie de tip onderaan stap 1.5. Gebruik
+> `-p 2222` bij `ssh`/`scp` als de standaardpoort 22 geblokkeerd is.
 
 ---
 
