@@ -34,21 +34,26 @@ Volledige stappenplan vanaf een verse Debian 12 of 13 VM staat in **[install/REA
 
 Korte versie:
 
+Op de doelserver, als root:
+
 ```bash
-# 1. Bouw de install-tarball
-bash install/build-bundle.sh
+# 1. Git + SSH-key (eenmalig)
+apt-get update && apt-get install -y git
+ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519 -C "kluisjes-deploy-$(hostname)"
+cat /root/.ssh/id_ed25519.pub
+# ↑ kopieer deze regel → plak in GitHub:
+#   https://github.com/Rietbird/kluisjesbeheer/settings/keys (read-only)
 
-# 2. Kopieer naar de doelserver
-scp install/dist/kluisjesbeheer-install.tgz root@<server-ip>:/tmp/
-
-# 3. Op de doelserver
-ssh root@<server-ip>
-cd /root && tar xzf /tmp/kluisjesbeheer-install.tgz
-cd kluisjesbeheer-install
+# 2. Clone + installeer
+ssh-keyscan -t ed25519 github.com >> /root/.ssh/known_hosts
+git clone git@github.com:Rietbird/kluisjesbeheer.git /root/kluisjesbeheer
+cd /root/kluisjesbeheer
 bash install.sh
 ```
 
-Daarna `config.json` invullen (Entra-credentials), service herstarten, inloggen en de eerste user wordt automatisch beheerder.
+Daarna `config.json` invullen (Entra-credentials), service herstarten, inloggen en de eerste user wordt automatisch beheerder. **Updaten later** is `git pull && bash install.sh` — `config.json` en de database blijven intact.
+
+> 💡 Geen GitHub-toegang beschikbaar? Zie [install/README.md](install/README.md) voor de tarball-route als alternatief.
 
 ## Ontwikkelen
 
