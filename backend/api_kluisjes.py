@@ -253,14 +253,14 @@ def delete_kluisje(kid):
     return jsonify({'ok': True})
 
 @kluisjes_bp.route('/clusters/<int:cid>/kluisjes/bulk', methods=['POST'])
-@beheerder_required
+@login_required
 def bulk_create_kluisjes(cid):
-    err = _assert_cluster_access(cid)
-    if err: return err
     """Bulk aanmaken van kluisjes. Body: { kluisjes: [{kluisnummer, sleutelnummer, locatie}, ...] }"""
     cluster = g.db.execute('SELECT vestiging_id FROM clusters WHERE id = ?', (cid,)).fetchone()
     if not cluster:
         return jsonify({'error': 'Cluster niet gevonden'}), 404
+    err = assert_vestiging_access(cluster['vestiging_id'])
+    if err: return err
 
     vestiging_id = cluster['vestiging_id']
     data = request.get_json() or {}
@@ -294,7 +294,7 @@ def bulk_create_kluisjes(cid):
 
 
 @kluisjes_bp.route('/kluisjes/bulk-verwijderen', methods=['POST'])
-@beheerder_required
+@login_required
 def bulk_delete_kluisjes():
     """Bulk verwijderen van kluisjes. Body: { kluisje_ids: [...] }"""
     data = request.get_json() or {}
@@ -305,9 +305,13 @@ def bulk_delete_kluisjes():
     deleted = 0
     skipped = []
     for kid in ids:
-        row = g.db.execute('SELECT id FROM kluisjes WHERE id = ? AND verwijderd = 0', (kid,)).fetchone()
+        row = g.db.execute('SELECT id, vestiging_id FROM kluisjes WHERE id = ? AND verwijderd = 0', (kid,)).fetchone()
         if not row:
             skipped.append({'kluisje_id': kid, 'reden': 'Niet gevonden'})
+            continue
+        err = assert_vestiging_access(row['vestiging_id'])
+        if err:
+            skipped.append({'kluisje_id': kid, 'reden': 'Geen toegang'})
             continue
         active = g.db.execute(
             'SELECT COUNT(*) as cnt FROM toewijzingen WHERE kluisje_id = ? AND actief = 1', (kid,)

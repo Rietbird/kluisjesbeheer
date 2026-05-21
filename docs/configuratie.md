@@ -103,6 +103,8 @@ Schakel borg in/uit per vestiging. Als borg actief is, stel per cluster het stan
 
 ### Magister-locaties
 
+> **Optioneel.** Zonder koppeling werkt de app gewoon — alle leerlingen zijn doorzoekbaar bij uitleen, maar zonder filter per vestiging. Alleen relevant als je meerdere vestigingen hebt én wilt dat conciërges alleen leerlingen van hun eigen vestiging zien.
+
 Koppel Magister-locaties aan vestigingen. Hierdoor worden bij het zoeken van een leerling alleen leerlingen van de gekoppelde locatie(s) getoond.
 
 Voorbeeld:

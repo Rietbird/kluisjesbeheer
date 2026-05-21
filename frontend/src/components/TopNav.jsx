@@ -67,8 +67,8 @@ export default function TopNav({ onOpenBeheer, onOpenHandleiding, onGoHome }) {
             ?
           </button>
 
-          {/* Beheer tandwiel — alleen voor beheerders */}
-          {user?.is_beheerder && (
+          {/* Beheer tandwiel — beheerders én conciërges */}
+          {(user?.is_beheerder || user?.rol === 'concierge') && (
             <button onClick={onOpenBeheer}
               className="p-2 rounded-lg hover:bg-primary-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors"
               title="Beheer">

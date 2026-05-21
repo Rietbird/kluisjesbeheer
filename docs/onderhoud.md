@@ -160,4 +160,4 @@ pct exec <CTID> -- bash -c '
 | 413 bij upload | NGINX upload limiet | Voeg `client_max_body_size 16M;` toe aan NGINX config |
 | Concierge ziet geen vestigingen | Geen vestigingen gekoppeld | Beheerder wijst toe via Beheer > Gebruikers |
 | 500 bij logo upload | Schrijfrechten uploads/ map | `chown -R kluisjes:kluisjes /opt/kluisjesbeheer/backend/uploads` |
-| Leerlingen niet gefilterd per vestiging | Locaties niet gekoppeld | Beheer > Vestigingen > klik vestiging > Locaties |
+| Leerlingen niet gefilterd per vestiging | Locaties niet gekoppeld (optioneel) | Beheer > Vestigingen > klik vestiging > Locaties |

@@ -366,7 +366,7 @@ Klik **Importeren**. De applicatie maakt vestigingen/clusters/kluisjes aan en ko
 - Klik een cluster → rechterkolom toont kluisjes van dat cluster
 - Per niveau kun je toevoegen, hernoemen en verwijderen
 - Verwijderen is een **soft-delete** (`verwijderd=1`): geschiedenis blijft bewaard, kluisjes verschijnen niet meer in het overzicht
-- **Locaties koppelen aan vestigingen** doe je hier ook (zie sub-paneel onderaan vestiging). Dit bepaalt welke Magister-locaties als "binnen deze vestiging" tellen voor leerling-zoek.
+- **Locaties koppelen aan vestigingen** doe je hier ook (zie sub-paneel onderaan vestiging). Dit bepaalt welke Magister-locaties als "binnen deze vestiging" tellen voor leerling-zoek. **Optioneel** — zonder koppeling zijn alle leerlingen gewoon doorzoekbaar, alleen zonder vestigingfilter.
 
 ### 12.4 Gebruikers
 

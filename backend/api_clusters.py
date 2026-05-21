@@ -12,13 +12,15 @@ def list_clusters(vid):
     return jsonify([dict(r) for r in rows])
 
 @clusters_bp.route('/clusters', methods=['POST'])
-@beheerder_required
+@login_required
 def create_cluster():
     data = request.get_json()
     vestiging_id = data.get('vestiging_id')
     naam = data.get('naam', '').strip()
     if not naam or not vestiging_id:
         return jsonify({'error': 'vestiging_id en naam zijn verplicht'}), 400
+    err = assert_vestiging_access(vestiging_id)
+    if err: return err
     standaard_borg = data.get('standaard_borg', 0.0)
     cur = g.db.execute(
         'INSERT INTO clusters (vestiging_id, naam, standaard_borg) VALUES (?, ?, ?)',
@@ -29,11 +31,13 @@ def create_cluster():
     return jsonify(dict(row)), 201
 
 @clusters_bp.route('/clusters/<int:cid>', methods=['PUT'])
-@beheerder_required
+@login_required
 def update_cluster(cid):
     row = g.db.execute('SELECT * FROM clusters WHERE id = ?', (cid,)).fetchone()
     if not row:
         return jsonify({'error': 'Niet gevonden'}), 404
+    err = assert_vestiging_access(row['vestiging_id'])
+    if err: return err
     data = request.get_json()
     naam = data.get('naam', '').strip() if 'naam' in data else row['naam']
     if not naam:
@@ -48,11 +52,13 @@ def update_cluster(cid):
     return jsonify(dict(row))
 
 @clusters_bp.route('/clusters/<int:cid>', methods=['DELETE'])
-@beheerder_required
+@login_required
 def delete_cluster(cid):
-    row = g.db.execute('SELECT id FROM clusters WHERE id = ?', (cid,)).fetchone()
+    row = g.db.execute('SELECT id, vestiging_id FROM clusters WHERE id = ?', (cid,)).fetchone()
     if not row:
         return jsonify({'error': 'Niet gevonden'}), 404
+    err = assert_vestiging_access(row['vestiging_id'])
+    if err: return err
     has_toewijzingen = g.db.execute('''
         SELECT COUNT(*) as cnt FROM toewijzingen t
         JOIN kluisjes k ON t.kluisje_id = k.id

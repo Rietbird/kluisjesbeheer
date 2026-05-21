@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { api } from '../api'
 import { useInstellingen } from '../context/InstellingenContext'
+import { useAuth } from '../hooks/useAuth'
 
 function ConfirmButton({ onConfirm, children, className }) {
   const [confirming, setConfirming] = useState(false)
@@ -20,6 +21,8 @@ function ConfirmButton({ onConfirm, children, className }) {
 // ── Vestigingen ──────────────────────────────────────────────────────────────
 
 function VestigingenPanel({ onSelect, selectedId }) {
+  const user = useAuth()
+  const isBeheerder = user?.is_beheerder
   const [vestigingen, setVestigingen] = useState([])
   const [naam, setNaam] = useState('')
   const [adres, setAdres] = useState('')
@@ -77,16 +80,18 @@ function VestigingenPanel({ onSelect, selectedId }) {
                     <div className="font-semibold text-base">{v.naam}</div>
                     {v.adres && <div className="text-sm text-slate-500">{v.adres}</div>}
                   </div>
-                  <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                    <button onClick={() => { setEditId(v.id); setEditNaam(v.naam); setEditAdres(v.adres || '') }}
-                      className="text-slate-400 hover:text-primary p-1 rounded hover:bg-slate-100 transition-colors">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                    </button>
-                    <ConfirmButton onConfirm={() => handleDelete(v.id)}
-                      className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-slate-100 transition-colors">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </ConfirmButton>
-                  </div>
+                  {isBeheerder && (
+                    <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                      <button onClick={() => { setEditId(v.id); setEditNaam(v.naam); setEditAdres(v.adres || '') }}
+                        className="text-slate-400 hover:text-primary p-1 rounded hover:bg-slate-100 transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </button>
+                      <ConfirmButton onConfirm={() => handleDelete(v.id)}
+                        className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-slate-100 transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </ConfirmButton>
+                    </div>
+                  )}
                 </div>
                 {selectedId === v.id && (
                   <VestigingDetailPanel vestiging={v} index={vestigingen.indexOf(v)} />
@@ -97,17 +102,19 @@ function VestigingenPanel({ onSelect, selectedId }) {
         ))}
         {vestigingen.length === 0 && <p className="text-sm text-slate-400">Nog geen vestigingen.</p>}
       </div>
-      <form onSubmit={handleAdd} className="space-y-2 border-t border-slate-200 pt-4">
-        <div className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-1">Nieuwe vestiging</div>
-        <input className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white" placeholder="Naam" value={naam}
-          onChange={e => setNaam(e.target.value)} required />
-        <input className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white" placeholder="Adres (optioneel)" value={adres}
-          onChange={e => setAdres(e.target.value)} />
-        <button type="submit"
-          className="w-full bg-primary text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-primary-600 transition-colors">
-          + Toevoegen
-        </button>
-      </form>
+      {isBeheerder && (
+        <form onSubmit={handleAdd} className="space-y-2 border-t border-slate-200 pt-4">
+          <div className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-1">Nieuwe vestiging</div>
+          <input className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white" placeholder="Naam" value={naam}
+            onChange={e => setNaam(e.target.value)} required />
+          <input className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white" placeholder="Adres (optioneel)" value={adres}
+            onChange={e => setAdres(e.target.value)} />
+          <button type="submit"
+            className="w-full bg-primary text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-primary-600 transition-colors">
+            + Toevoegen
+          </button>
+        </form>
+      )}
     </div>
   )
 }
@@ -1462,12 +1469,32 @@ function GebruikersTab() {
   )
 }
 
-const TABS = ['Instellingen', 'Import', 'Vestigingen', 'Gebruikers']
+const BEHEERDER_TABS = ['Instellingen', 'Import', 'Vestigingen', 'Gebruikers']
+const CONCIERGE_TABS = ['Vestigingen']
 
 export default function Beheer({ onClose }) {
-  const [activeTab, setActiveTab] = useState(0)
+  const user = useAuth()
+  const isBeheerder = user?.is_beheerder
+  const TABS = isBeheerder ? BEHEERDER_TABS : CONCIERGE_TABS
+  // Beheerder: Vestigingen = index 2; conciërge: Vestigingen = index 0
+  const vestigingenIndex = isBeheerder ? 2 : 0
+  const [activeTab, setActiveTab] = useState(isBeheerder ? 0 : 0)
   const [selectedVestiging, setSelectedVestiging] = useState(null)
   const [selectedCluster, setSelectedCluster] = useState(null)
+
+  const vestigingenPanel = (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
+        <VestigingenPanel onSelect={id => { setSelectedVestiging(id); setSelectedCluster(null) }} selectedId={selectedVestiging} />
+      </div>
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
+        <ClustersPanel vestigingId={selectedVestiging} onSelect={setSelectedCluster} selectedId={selectedCluster} />
+      </div>
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
+        <KluisjesPanel clusterId={selectedCluster} vestigingId={selectedVestiging} />
+      </div>
+    </div>
+  )
 
   return (
     <div className="p-6 sm:p-8 max-w-6xl mx-auto">
@@ -1497,22 +1524,16 @@ export default function Beheer({ onClose }) {
       </div>
 
       {/* Tab content */}
-      {activeTab === 0 && <BeheerInstellingenTab />}
-      {activeTab === 1 && <ImportTab />}
-      {activeTab === 2 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
-            <VestigingenPanel onSelect={id => { setSelectedVestiging(id); setSelectedCluster(null) }} selectedId={selectedVestiging} />
-          </div>
-          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
-            <ClustersPanel vestigingId={selectedVestiging} onSelect={setSelectedCluster} selectedId={selectedCluster} />
-          </div>
-          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
-            <KluisjesPanel clusterId={selectedCluster} vestigingId={selectedVestiging} />
-          </div>
-        </div>
+      {isBeheerder ? (
+        <>
+          {activeTab === 0 && <BeheerInstellingenTab />}
+          {activeTab === 1 && <ImportTab />}
+          {activeTab === 2 && vestigingenPanel}
+          {activeTab === 3 && <GebruikersTab />}
+        </>
+      ) : (
+        vestigingenPanel
       )}
-      {activeTab === 3 && <GebruikersTab />}
     </div>
   )
 }
