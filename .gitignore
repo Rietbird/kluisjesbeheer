@@ -35,3 +35,10 @@ Thumbs.db
 
 # Install-bundle output (per-release rebuild via install/build-bundle.sh)
 install/dist/*.tgz
+
+# Persoonlijke todo / werk-aantekeningen (niet versiebeheren)
+todo.md
+
+# Demo-DB voor lokale screenshot-generatie (zie backend/seed_demo.py)
+demo.db
+*.demo.db
