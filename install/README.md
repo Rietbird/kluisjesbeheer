@@ -3,33 +3,23 @@
 Stap-voor-stap copy-paste vanaf een **kale Debian 12/13 installatie**
 tot een draaiende app.
 
-> 📋 **Werkwijze:** vul stap 0 één keer in (variabelen), daarna kun je de
-> commando's letterlijk plakken in de juiste shell. Markering:
+> 📋 **Werkwijze:** vervang in de commando's `<server-ip>` door het
+> interne IP van je doelserver. Markering:
 > 🖥️ = jouw werkstation · 🐧 = doelserver (via console of SSH).
 
 ---
 
-## Stap 0 — variabelen invullen (eenmalig)
-
-Bepaal vooraf en houd bij de hand. Pas de waarden ná `export` aan voor
-jouw situatie en plak deze export-blokken in de juiste shell **voor je
-verder gaat**.
-
-🖥️ **Werkstation** (Git Bash / WSL):
-
-```bash
-export SERVER_IP="10.x.x.x"             # intern IP van de doelserver
-export SSH_PORT="22"                    # of 2222 als poort 22 geblokkeerd is
-export SSH_USER="root"                  # of de standaard sudo-user op de VM
-```
-
-> 🔒 Dit stappenplan kiest voor `root` + wachtwoord — snel en prima
-> voor een server op een intern beheernet. Wil je productie-veilig
+> 🔒 Dit stappenplan kiest voor `root` + wachtwoord op SSH — snel en
+> prima voor een server op een intern beheernet. Productie-veilig
 > (admin-account + SSH-key)? Zie de tip onderaan stap 1.5.
+>
+> In de commando's hieronder vervang je `<server-ip>` door het interne
+> IP van je doelserver, en gebruik je `-p 2222` bij `ssh`/`scp` als de
+> standaardpoort 22 geblokkeerd is.
 
 ---
 
-## Stap 0.5 — Entra ID voorbereiden (vóór de uitrol)
+## Stap 0 — Entra ID voorbereiden (vóór de uitrol)
 
 Dit hoeft niet op de server, maar wil je vóór stap 1 geregeld hebben.
 Toegang tot de app loopt 100% via Microsoft Entra ID (single sign-on).
@@ -145,14 +135,15 @@ grep -E '^PermitRootLogin' /etc/ssh/sshd_config       # controle: yes
 
 > 💡 Als poort 22 geblokkeerd is en je 2222 wilt: bewerk
 > `/etc/ssh/sshd_config`, regel `#Port 22` → `Port 2222`, dan
-> `systemctl restart ssh`. Update dan ook `SSH_PORT` in stap 0.
+> `systemctl restart ssh`. Gebruik daarna `ssh -p 2222 ...` en
+> `scp -P 2222 ...` in de stappen hieronder.
 
 ### 1.5 SSH-verbinding testen vanaf je werkstation
 
 🖥️ **Werkstation**:
 
 ```bash
-ssh -p "$SSH_PORT" "$SSH_USER@$SERVER_IP" "echo 'SSH werkt'; cat /etc/debian_version"
+ssh root@<server-ip> "echo 'SSH werkt'; cat /etc/debian_version"
 ```
 
 Eerste keer: SSH vraagt om host-key bevestiging (`yes`) + het root-
@@ -178,8 +169,7 @@ Vereist toegang tot de privé GitHub-repo via een **Deploy Key**.
 🐧 **Server** — log in en genereer een SSH-key:
 
 ```bash
-ssh -p "$SSH_PORT" "$SSH_USER@$SERVER_IP"
-sudo -i                                          # word root
+ssh root@<server-ip>
 apt-get update && apt-get install -y git
 ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519 -C "kluisjes-deploy-$(hostname)"
 cat /root/.ssh/id_ed25519.pub                    # ← kopieer deze regel
@@ -221,16 +211,13 @@ Verwacht: `==> Klaar. .../install/dist/kluisjesbeheer-install.tgz`
 (~150 KB, met "kern-bestanden OK"-rijtje). Kopieer naar de server:
 
 ```bash
-scp -P "$SSH_PORT" \
-    install/dist/kluisjesbeheer-install.tgz \
-    "$SSH_USER@$SERVER_IP:/tmp/"
+scp install/dist/kluisjesbeheer-install.tgz root@<server-ip>:/tmp/
 ```
 
 🐧 **Server** — log in, uitpakken, installeren:
 
 ```bash
-ssh -p "$SSH_PORT" "$SSH_USER@$SERVER_IP"
-sudo -i                                  # word root
+ssh root@<server-ip>
 cd /root
 tar xzf /tmp/kluisjesbeheer-install.tgz
 cd kluisjesbeheer-install
@@ -417,7 +404,7 @@ Zelfde procedure als stap 2-3:
 cd /c/Projects/kluisjesbeheer
 git pull                                 # nieuwste code
 bash install/build-bundle.sh
-scp -P "$SSH_PORT" install/dist/kluisjesbeheer-install.tgz "$SSH_USER@$SERVER_IP:/tmp/"
+scp install/dist/kluisjesbeheer-install.tgz root@<server-ip>:/tmp/
 ```
 
 🐧 **Server**:
@@ -438,7 +425,7 @@ frontend opnieuw gebouwd, service herstart.
 
 | Symptoom | Oplossing |
 |---|---|
-| `scp`: "Connection refused" | Check `SSH_PORT` (22 vs 2222) en `systemctl status ssh` op de server |
+| `scp`: "Connection refused" | Check SSH-poort (22 of 2222 — gebruik `-P 2222` resp. `-p 2222`) en `systemctl status ssh` op de server |
 | `scp`: "Permission denied" | Wachtwoord-auth uit / wrong user / `PermitRootLogin` niet op `yes` (stap 1.4) |
 | `bash install.sh`: crasht direct | Vergeten `cd kluisjesbeheer-install`? Pwd moet eindigen op `/kluisjesbeheer-install` |
 | `npm ci` faalt | Geen internet naar `registry.npmjs.org` — proxy/firewall check |
