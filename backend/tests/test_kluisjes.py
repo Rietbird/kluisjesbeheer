@@ -152,7 +152,7 @@ def test_import_normaliseert_niet_zonder_vlag(client):
     nummers = sorted(k['kluisnummer'] for k in kl)
     assert nummers == ['MO-1', 'MO-10']
 
-def test_import_normaliseert_twee_prefixes_hengelo(client):
+def test_import_normaliseert_twee_prefixes_gemixt(client):
     rows = [['MO-1'], ['MO-10'], ['MO-100'], ['BL-001'], ['BL-002'], ['BL-050']]
     xlsx = _maak_xlsx(rows, ['omschrijving kluisje'])
     rv = client.post('/api/kluisjes/import', data={

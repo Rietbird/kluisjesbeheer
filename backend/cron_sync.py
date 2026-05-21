@@ -54,7 +54,7 @@ def main():
         print(f'Magister-config uit database: {url}')
         magister = MagisterClient(url, user, password)
     else:
-        # Fallback: config.json (legacy installs zoals School)
+        # Fallback: config.json (legacy installs zonder DB-credentials)
         print('Geen Magister-config in database, val terug op config.json')
         magister = MagisterClient()
         password = magister.password  # for safe_error literal-strip below

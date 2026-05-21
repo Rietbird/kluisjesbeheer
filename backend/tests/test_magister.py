@@ -18,7 +18,7 @@ MOCK_STUDENTS_XML = '''<?xml version="1.0"?>
                 <Tussenv></Tussenv>
                 <Achternaam>Botter</Achternaam>
                 <Volledige_naam>Botter, Emma</Volledige_naam>
-                <Email>emma.botter@leerling.School.nl</Email>
+                <Email>emma.botter@leerling.school.nl</Email>
                 <Loginaccount.Naam>ebotter</Loginaccount.Naam>
                 <Klas>2A</Klas>
                 <Leerfase.Leerjaar>2</Leerfase.Leerjaar>
@@ -31,7 +31,7 @@ MOCK_STUDENTS_XML = '''<?xml version="1.0"?>
                 <Tussenv>de</Tussenv>
                 <Achternaam>Vries</Achternaam>
                 <Volledige_naam>Vries, Lucas de</Volledige_naam>
-                <Email>lucas.devries@leerling.School.nl</Email>
+                <Email>lucas.devries@leerling.school.nl</Email>
                 <Loginaccount.Naam>ldevries</Loginaccount.Naam>
                 <Klas>1C</Klas>
                 <Leerfase.Leerjaar>1</Leerfase.Leerjaar>

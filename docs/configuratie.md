@@ -103,13 +103,13 @@ Schakel borg in/uit per vestiging. Als borg actief is, stel per cluster het stan
 
 Koppel Magister-locaties aan vestigingen. Hierdoor worden bij het zoeken van een leerling alleen leerlingen van de gekoppelde locatie(s) getoond.
 
-Voorbeeld voor School:
+Voorbeeld:
 
 | Vestiging | Magister-locatie |
 |-----------|-----------------|
-| ISK | "SCHOOL vestiging ISK/PrO" |
-| MHV | "Vestiging HAVO/VWO boven/onderbouw" |
-| Zuid | "Vestiging kanaalschool Zuid" |
+| ISK | "Vestiging ISK" |
+| Hoofdgebouw | "Vestiging HAVO/VWO boven/onderbouw" |
+| Locatie Zuid | "Vestiging Zuid" |
 
 ## Stap 4: Gebruikers toevoegen
 

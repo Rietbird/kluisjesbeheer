@@ -79,7 +79,7 @@ Het hart van de applicatie. Hier zie je alle kluisjes van de gekozen vestiging a
 | Geel + blauw randje | Defect én uitgeleend (huurder zit er nog) |
 | Rood randje | Sleutel niet ingeleverd na einde huur |
 
-**Bovenste tabs:** schakelen tussen vestigingen (ISK / MHV / PrO / Zuid in School-voorbeeld) of terug naar het Overzicht.
+**Bovenste tabs:** schakelen tussen vestigingen (bijvoorbeeld een onderbouw-, bovenbouw- of locatie-tab) of terug naar het Overzicht.
 
 **Filterbalk:**
 
@@ -485,4 +485,4 @@ tail -f /var/log/kluisjesbeheer/sync.log # Magister-sync log
 
 ---
 
-*Versie 1 — geschreven 2026-05-12, screenshots van productie (School).*
+*Versie 1 — geschreven 2026-05-12.*
