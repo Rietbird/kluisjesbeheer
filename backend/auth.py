@@ -18,7 +18,7 @@ def _error_page(title, message, status=403):
     school = html.escape(config.get('SchoolNaam', 'Kluisjesbeheer'))
     title = html.escape(title)
     message = html.escape(message)
-    html = f'''<!DOCTYPE html>
+    body = f'''<!DOCTYPE html>
 <html lang="nl">
 <head>
 <meta charset="utf-8">
@@ -53,7 +53,7 @@ def _error_page(title, message, status=403):
   </div>
 </body>
 </html>'''
-    return Response(html, status=status, mimetype='text/html')
+    return Response(body, status=status, mimetype='text/html')
 
 _msal_app = None
 
@@ -246,7 +246,12 @@ def setup():
 
     # Herlaad config in geheugen en reset MSAL
     import config as config_module
-    config_module.config = config_module.load_config()
+    new_cfg = config_module.load_config()
+    config_module.config.clear()
+    config_module.config.update(new_cfg)
+    # Ook de lokale referentie in dit module bijwerken
+    config.clear()
+    config.update(new_cfg)
     global _msal_app
     _msal_app = None
 
