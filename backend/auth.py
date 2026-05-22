@@ -1,9 +1,10 @@
 import html
+import json
 import os
 import msal
 from functools import wraps
 from flask import Blueprint, redirect, request, session, jsonify, url_for, g, Response
-from config import config
+from config import config, _config_path
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -124,18 +125,139 @@ def _config_complete():
     return True, None
 
 
+def _setup_page(error=None):
+    """Render de setup-wizard pagina (server-side HTML, geen Entra nodig)."""
+    kleur = '#FF8200'
+    err_html = f'<div class="error">{html.escape(error)}</div>' if error else ''
+    # Vul bestaande waarden in als die er al zijn (VUL_IN_* tonen we leeg)
+    def _val(k):
+        v = config.get(k, '')
+        return '' if (not v or str(v).startswith('VUL_IN')) else html.escape(str(v))
+    page = f'''<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eerste instelling — Kluisjesbeheer</title>
+<style>
+  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #f1f5f9; color: #1e293b; min-height: 100vh;
+         display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }}
+  .card {{ background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.08);
+           max-width: 520px; width: 100%; padding: 40px 36px; }}
+  .logo {{ font-size: 28px; margin-bottom: 6px; }}
+  h1 {{ font-size: 22px; color: #1e3a5f; margin-bottom: 6px; }}
+  .sub {{ font-size: 14px; color: #64748b; margin-bottom: 28px; line-height: 1.5; }}
+  .field {{ margin-bottom: 18px; }}
+  label {{ display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 5px; }}
+  .hint {{ font-size: 12px; color: #94a3b8; margin-bottom: 5px; }}
+  input {{ width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px;
+           padding: 10px 14px; font-size: 14px; color: #1e293b; outline: none;
+           transition: border-color .15s; }}
+  input:focus {{ border-color: {kleur}; }}
+  .btn {{ width: 100%; background: {kleur}; color: white; border: none;
+          border-radius: 8px; padding: 13px; font-size: 15px; font-weight: 600;
+          cursor: pointer; margin-top: 8px; transition: opacity .15s; }}
+  .btn:hover {{ opacity: .88; }}
+  .error {{ background: #fef2f2; border: 1px solid #fecaca; color: #dc2626;
+            border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 18px; }}
+  .footer {{ margin-top: 20px; font-size: 11px; color: #94a3b8; text-align: center; }}
+  .section {{ font-size: 11px; font-weight: 700; color: #94a3b8; letter-spacing: .08em;
+              text-transform: uppercase; margin: 24px 0 14px; border-top: 1px solid #f1f5f9; padding-top: 18px; }}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🔐</div>
+    <h1>Welkom bij Kluisjesbeheer</h1>
+    <p class="sub">Vul de Entra ID-gegevens in om de app te activeren. Je vindt deze in de Azure Portal onder <strong>App registrations → jouw app</strong>.</p>
+    {err_html}
+    <form method="post" action="/auth/setup">
+      <div class="field">
+        <label>Tenant ID</label>
+        <div class="hint">Azure Portal → Azure Active Directory → Tenant ID</div>
+        <input type="text" name="TenantId" value="{_val('TenantId')}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required>
+      </div>
+      <div class="field">
+        <label>Client ID (Application ID)</label>
+        <div class="hint">App registrations → jouw app → Application (client) ID</div>
+        <input type="text" name="ClientId" value="{_val('ClientId')}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required>
+      </div>
+      <div class="field">
+        <label>Client Secret</label>
+        <div class="hint">App registrations → jouw app → Certificates &amp; secrets → Client secrets</div>
+        <input type="password" name="ClientSecret" value="{_val('ClientSecret')}" placeholder="Plak hier de secret value" required>
+      </div>
+      <div class="section">Redirect URI</div>
+      <div class="field">
+        <label>Redirect URI</label>
+        <div class="hint">Moet exact overeenkomen met wat je in Entra hebt ingevuld onder Authentication → Redirect URIs</div>
+        <input type="text" name="RedirectUri" value="{_val('RedirectUri') or f'https://{request.host}/auth/callback'}" required>
+      </div>
+      <button type="submit" class="btn">Opslaan en inloggen →</button>
+    </form>
+    <div class="footer">Kluisjesbeheer — eerste instelling</div>
+  </div>
+</body>
+</html>'''
+    return Response(page, status=200, mimetype='text/html')
+
+
+@auth_bp.route('/setup', methods=['GET', 'POST'])
+def setup():
+    """Setup-wizard: alleen toegankelijk als de Entra-config nog niet compleet is."""
+    ok, _ = _config_complete()
+    if ok:
+        return redirect('/')
+
+    if request.method == 'GET':
+        return _setup_page()
+
+    # POST — valideer en sla op
+    tenant = request.form.get('TenantId', '').strip()
+    client_id = request.form.get('ClientId', '').strip()
+    client_secret = request.form.get('ClientSecret', '').strip()
+    redirect_uri = request.form.get('RedirectUri', '').strip()
+
+    if not all([tenant, client_id, client_secret, redirect_uri]):
+        return _setup_page(error='Vul alle velden in.')
+    if not redirect_uri.startswith('http'):
+        return _setup_page(error='Redirect URI moet beginnen met http:// of https://')
+
+    # Lees bestaande config zodat we SecretKey etc. bewaren
+    cfg_path = _config_path()
+    try:
+        with open(cfg_path) as f:
+            existing = json.load(f)
+    except Exception:
+        existing = {}
+
+    existing['TenantId'] = tenant
+    existing['ClientId'] = client_id
+    existing['ClientSecret'] = client_secret
+    existing['RedirectUri'] = redirect_uri
+
+    try:
+        with open(cfg_path, 'w') as f:
+            json.dump(existing, f, indent=2)
+    except Exception as e:
+        return _setup_page(error=f'Kan config.json niet schrijven: {e}')
+
+    # Herlaad config in geheugen en reset MSAL
+    import config as config_module
+    config_module.config = config_module.load_config()
+    global _msal_app
+    _msal_app = None
+
+    return redirect('/auth/login')
+
+
 @auth_bp.route('/login')
 def login():
     ok, missend = _config_complete()
     if not ok:
-        return _error_page(
-            'Configuratie nog niet voltooid',
-            f'De Entra ID koppeling is nog niet ingesteld (veld "{missend}" '
-            f'ontbreekt of staat nog op de standaard-placeholder). '
-            f'Vraag de beheerder om backend/config.json in te vullen en '
-            f'de service te herstarten — zie install/README.md stap 4.',
-            status=503,
-        )
+        return redirect('/auth/setup')
     msal_app = _get_msal_app()
     flow = msal_app.initiate_auth_code_flow(
         scopes=['User.Read'],
