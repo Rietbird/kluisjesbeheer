@@ -1477,8 +1477,112 @@ function GebruikersTab() {
   )
 }
 
-const BEHEERDER_TABS = ['Instellingen', 'Import', 'Vestigingen', 'Gebruikers', 'Entra']
+const BEHEERDER_TABS = ['Instellingen', 'Import', 'Vestigingen', 'Gebruikers', 'Entra', 'Certificaat']
 const CONCIERGE_TABS = ['Vestigingen']
+
+function CertTab() {
+  const [info, setInfo] = useState(null)
+  const [error, setError] = useState('')
+  const [msg, setMsg] = useState('')
+  const [certFile, setCertFile] = useState(null)
+  const [keyFile, setKeyFile] = useState(null)
+  const [uploading, setUploading] = useState(false)
+
+  function loadInfo() {
+    api.get('/api/cert/info').then(setInfo).catch(e => setError(e.message))
+  }
+  useEffect(loadInfo, [])
+
+  async function handleInstall(e) {
+    e.preventDefault()
+    setError(''); setMsg('')
+    if (!certFile || !keyFile) { setError('Kies beide bestanden.'); return }
+    const fd = new FormData()
+    fd.append('cert', certFile)
+    fd.append('key', keyFile)
+    setUploading(true)
+    try {
+      const res = await fetch('/api/cert/install', { method: 'POST', body: fd, credentials: 'same-origin' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
+      setMsg('Certificaat geïnstalleerd en NGINX herladen.')
+      setCertFile(null); setKeyFile(null)
+      // Reset file-inputs
+      document.querySelectorAll('input[type=file].cert-upload').forEach(i => i.value = '')
+      loadInfo()
+    } catch (err) { setError(err.message) }
+    finally { setUploading(false) }
+  }
+
+  function expiryColor(days) {
+    if (days == null) return 'text-slate-500'
+    if (days < 0) return 'text-red-600 dark:text-red-400'
+    if (days < 14) return 'text-red-600 dark:text-red-400'
+    if (days < 60) return 'text-amber-600 dark:text-amber-400'
+    return 'text-emerald-600 dark:text-emerald-400'
+  }
+
+  const inputCls = "w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white"
+
+  return (
+    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 max-w-2xl">
+      <h2 className="text-lg font-bold text-navy dark:text-white mb-2">TLS-certificaat</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+        Vervang het zelf-ondertekende certificaat door een officieel (of wildcard) cert. NGINX wordt direct herladen — geen herstart van de app nodig.
+      </p>
+
+      {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+      {msg && <p className="text-emerald-600 dark:text-emerald-400 text-sm mb-3">{msg}</p>}
+
+      {/* Status van huidig cert */}
+      {info && info.installed && (
+        <div className="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl p-4 mb-5 text-sm">
+          <div className="font-semibold text-slate-700 dark:text-slate-200 mb-2">Huidig certificaat</div>
+          <div className="grid grid-cols-[140px_1fr] gap-y-1">
+            <div className="text-slate-500">Common Name</div><div className="font-mono">{info.cn || '—'}</div>
+            <div className="text-slate-500">Issuer</div><div className="font-mono">{info.issuer_cn || '—'}{info.self_signed && <span className="ml-2 text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">self-signed</span>}</div>
+            {info.sans?.length > 0 && (
+              <>
+                <div className="text-slate-500">Hostnames</div>
+                <div className="font-mono text-xs">{info.sans.join(', ')}</div>
+              </>
+            )}
+            <div className="text-slate-500">Geldig tot</div>
+            <div>
+              <span className="font-mono">{info.valid_until?.slice(0, 10)}</span>
+              <span className={`ml-2 font-semibold ${expiryColor(info.days_left)}`}>
+                ({info.days_left < 0 ? `${-info.days_left} dagen verlopen` : `nog ${info.days_left} dagen`})
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+      {info && !info.installed && (
+        <p className="text-sm text-amber-600 dark:text-amber-400 mb-5">Geen certificaat gevonden op {`/etc/nginx/ssl/self.crt`}.</p>
+      )}
+
+      {/* Upload-form */}
+      <form onSubmit={handleInstall} className="space-y-4">
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Certificaat (.crt of .pem)</label>
+          <input type="file" accept=".crt,.pem,.cer" className={`cert-upload ${inputCls}`}
+            onChange={e => setCertFile(e.target.files[0])} required />
+          <p className="text-xs text-slate-500 mt-1">Inclusief eventuele intermediate-certs (chain).</p>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Private key (.key of .pem)</label>
+          <input type="file" accept=".key,.pem" className={`cert-upload ${inputCls}`}
+            onChange={e => setKeyFile(e.target.files[0])} required />
+          <p className="text-xs text-slate-500 mt-1">Niet versleuteld (geen passphrase). Vanuit een PFX: <code className="text-xs">openssl pkcs12 -in cert.pfx -nocerts -nodes -out key.pem</code></p>
+        </div>
+        <button type="submit" disabled={uploading}
+          className="bg-primary text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-primary-600 disabled:opacity-50">
+          {uploading ? 'Installeren...' : 'Installeren'}
+        </button>
+      </form>
+    </div>
+  )
+}
 
 function EntraTab() {
   const [cfg, setCfg] = useState(null)
@@ -1614,6 +1718,7 @@ export default function Beheer({ onClose }) {
           {activeTab === 2 && vestigingenPanel}
           {activeTab === 3 && <GebruikersTab />}
           {activeTab === 4 && <EntraTab />}
+          {activeTab === 5 && <CertTab />}
         </>
       ) : (
         vestigingenPanel

@@ -101,6 +101,9 @@ def create_app(test_config=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(entra_api_bp)
 
+    from api_cert import cert_bp
+    app.register_blueprint(cert_bp)
+
     from api_vestigingen import vestigingen_bp
     app.register_blueprint(vestigingen_bp)
 

@@ -357,6 +357,92 @@ ensure_tls_cert() {
 }
 
 # ============================================================
+# Helper script + sudoers regel zodat de app via één gericht
+# commando een nieuw TLS-cert kan installeren via Beheer -> Certificaat
+# ============================================================
+install_cert_helper() {
+    step "Cert-install helper (voor Beheer -> Certificaat)"
+
+    local helper="/usr/local/sbin/kluisjes-install-cert"
+    local staging="/var/lib/kluisjesbeheer/cert-staging"
+
+    # Staging-map waar de app uploads neerzet voordat dit script ze installeert.
+    # Eigendom van de kluisjes-user; helper-script (als root) leest hier uit.
+    install -d -o "$APP_USER" -g "$APP_USER" -m 700 "$staging"
+
+    # Helper-script zelf — root-owned, niet schrijfbaar voor kluisjes.
+    cat > "$helper" <<'HELPER_EOF'
+#!/bin/bash
+# Installeer een nieuw TLS-cert+key voor kluisjesbeheer/nginx.
+# Aangeroepen door de app via:  sudo /usr/local/sbin/kluisjes-install-cert
+# Leest uit /var/lib/kluisjesbeheer/cert-staging/{cert.pem,key.pem}
+# Schrijft naar /etc/nginx/ssl/self.{crt,key}, reload nginx bij succes.
+set -euo pipefail
+
+STAGING="/var/lib/kluisjesbeheer/cert-staging"
+TARGET_CERT="/etc/nginx/ssl/self.crt"
+TARGET_KEY="/etc/nginx/ssl/self.key"
+SRC_CERT="$STAGING/cert.pem"
+SRC_KEY="$STAGING/key.pem"
+
+if [[ ! -f "$SRC_CERT" || ! -f "$SRC_KEY" ]]; then
+    echo "ERROR: staging-bestanden ontbreken in $STAGING" >&2
+    exit 1
+fi
+
+# Valideer dat het cert en de key bij elkaar horen (modulus-vergelijking)
+cert_mod=$(openssl x509 -noout -modulus -in "$SRC_CERT" 2>/dev/null | openssl md5)
+key_mod=$(openssl rsa  -noout -modulus -in "$SRC_KEY" 2>/dev/null | openssl md5)
+if [[ "$cert_mod" != "$key_mod" || -z "$cert_mod" ]]; then
+    echo "ERROR: cert en key horen niet bij elkaar (modulus mismatch)" >&2
+    exit 2
+fi
+
+# Backup van het bestaande cert+key (één rollende kopie)
+[[ -f "$TARGET_CERT" ]] && cp -a "$TARGET_CERT" "$TARGET_CERT.bak"
+[[ -f "$TARGET_KEY"  ]] && cp -a "$TARGET_KEY"  "$TARGET_KEY.bak"
+
+# Installeer nieuwe bestanden met juiste permissies
+install -o root -g root -m 644 "$SRC_CERT" "$TARGET_CERT"
+install -o root -g root -m 600 "$SRC_KEY"  "$TARGET_KEY"
+
+# Test nginx-config; bij fout: rollback en exit
+if ! nginx -t >/dev/null 2>&1; then
+    echo "ERROR: nginx -t faalde, rollback uitgevoerd" >&2
+    [[ -f "$TARGET_CERT.bak" ]] && mv "$TARGET_CERT.bak" "$TARGET_CERT"
+    [[ -f "$TARGET_KEY.bak"  ]] && mv "$TARGET_KEY.bak"  "$TARGET_KEY"
+    exit 3
+fi
+
+systemctl reload nginx
+
+# Opruimen: backup behouden voor 1 generatie, staging leegmaken
+rm -f "$SRC_CERT" "$SRC_KEY"
+
+echo "OK: cert geïnstalleerd en nginx reloaded"
+HELPER_EOF
+    chown root:root "$helper"
+    chmod 750 "$helper"
+    info "Helper-script: $helper"
+
+    # Sudoers-regel: alleen dit ene commando, zonder wachtwoord, niets anders.
+    local sudoers="/etc/sudoers.d/kluisjesbeheer-cert"
+    cat > "$sudoers" <<EOF
+# Sta de kluisjes-user toe om uitsluitend het cert-install helper script te
+# draaien als root. Geen andere commandos. Beheerd door install.sh.
+$APP_USER ALL=(root) NOPASSWD: /usr/local/sbin/kluisjes-install-cert
+EOF
+    chmod 440 "$sudoers"
+    # visudo -c valideert syntax; faalt het, dan removen we het bestand weer.
+    if ! visudo -c -f "$sudoers" >/dev/null 2>&1; then
+        rm -f "$sudoers"
+        err "sudoers-regel afgewezen door visudo; cert-upload werkt niet via UI"
+        return 1
+    fi
+    info "Sudoers-regel: $sudoers (alleen 1 commando toegestaan)"
+}
+
+# ============================================================
 # NGINX reverse-proxy (HTTP 80 -> HTTPS 443 -> 127.0.0.1:5000)
 # ============================================================
 install_nginx() {
@@ -587,6 +673,7 @@ main() {
     ensure_config
     set_permissions
     install_service
+    install_cert_helper
     install_nginx
     install_cron
     start_service
