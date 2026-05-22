@@ -7,6 +7,7 @@ from flask import Blueprint, redirect, request, session, jsonify, url_for, g, Re
 from config import config, _config_path
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+entra_api_bp = Blueprint('entra_api', __name__, url_prefix='/api')
 
 
 def _error_page(title, message, status=403):
@@ -254,23 +255,83 @@ def setup():
     existing['RedirectUri'] = redirect_uri
 
     try:
-        with open(cfg_path, 'w') as f:
-            json.dump(existing, f, indent=2)
+        _write_config_and_reload(existing)
     except Exception as e:
         return _setup_page(error=f'Kan config.json niet schrijven: {e}')
 
-    # Herlaad config in geheugen en reset MSAL
+    return redirect('/auth/login')
+
+
+def _write_config_and_reload(new_config):
+    """Schrijf config.json en herlaad de in-memory config + MSAL-client.
+    Raises on write failure."""
+    cfg_path = _config_path()
+    with open(cfg_path, 'w') as f:
+        json.dump(new_config, f, indent=2)
     import config as config_module
-    new_cfg = config_module.load_config()
+    fresh = config_module.load_config()
     config_module.config.clear()
-    config_module.config.update(new_cfg)
-    # Ook de lokale referentie in dit module bijwerken
+    config_module.config.update(fresh)
     config.clear()
-    config.update(new_cfg)
+    config.update(fresh)
     global _msal_app
     _msal_app = None
 
-    return redirect('/auth/login')
+
+@entra_api_bp.route('/entra/config', methods=['GET'])
+def get_entra_config():
+    """Toont de huidige Entra-config aan beheerders (zonder secret)."""
+    if 'user' not in session:
+        return jsonify({'error': 'Niet ingelogd'}), 401
+    if not session.get('user', {}).get('is_beheerder'):
+        return jsonify({'error': 'Alleen beheerders'}), 403
+    return jsonify({
+        'TenantId': config.get('TenantId', ''),
+        'ClientId': config.get('ClientId', ''),
+        'RedirectUri': config.get('RedirectUri', ''),
+        'has_secret': bool(config.get('ClientSecret', '').strip()
+                           and not str(config.get('ClientSecret', '')).startswith('VUL_IN')),
+    })
+
+
+@entra_api_bp.route('/entra/config', methods=['PUT'])
+def update_entra_config():
+    """Wijzig de Entra-config. ClientSecret blijft staan als veld leeg."""
+    if 'user' not in session:
+        return jsonify({'error': 'Niet ingelogd'}), 401
+    if not session.get('user', {}).get('is_beheerder'):
+        return jsonify({'error': 'Alleen beheerders'}), 403
+
+    data = request.get_json() or {}
+    tenant = str(data.get('TenantId', '')).strip()
+    client_id = str(data.get('ClientId', '')).strip()
+    client_secret = str(data.get('ClientSecret', '')).strip()  # leeg = niet wijzigen
+    redirect_uri = str(data.get('RedirectUri', '')).strip()
+
+    if not tenant or not client_id or not redirect_uri:
+        return jsonify({'error': 'TenantId, ClientId en RedirectUri zijn verplicht'}), 400
+    if not redirect_uri.startswith('http'):
+        return jsonify({'error': 'RedirectUri moet beginnen met http:// of https://'}), 400
+
+    cfg_path = _config_path()
+    try:
+        with open(cfg_path) as f:
+            existing = json.load(f)
+    except Exception:
+        existing = {}
+
+    existing['TenantId'] = tenant
+    existing['ClientId'] = client_id
+    existing['RedirectUri'] = redirect_uri
+    if client_secret:
+        existing['ClientSecret'] = client_secret
+
+    try:
+        _write_config_and_reload(existing)
+    except Exception as e:
+        return jsonify({'error': f'Kan config.json niet schrijven: {e}'}), 500
+
+    return jsonify({'ok': True})
 
 
 @auth_bp.route('/login')

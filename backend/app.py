@@ -97,8 +97,9 @@ def create_app(test_config=None):
         }
 
     # Register blueprints
-    from auth import auth_bp
+    from auth import auth_bp, entra_api_bp
     app.register_blueprint(auth_bp)
+    app.register_blueprint(entra_api_bp)
 
     from api_vestigingen import vestigingen_bp
     app.register_blueprint(vestigingen_bp)

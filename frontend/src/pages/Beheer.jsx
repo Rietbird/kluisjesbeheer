@@ -1477,8 +1477,83 @@ function GebruikersTab() {
   )
 }
 
-const BEHEERDER_TABS = ['Instellingen', 'Import', 'Vestigingen', 'Gebruikers']
+const BEHEERDER_TABS = ['Instellingen', 'Import', 'Vestigingen', 'Gebruikers', 'Entra']
 const CONCIERGE_TABS = ['Vestigingen']
+
+function EntraTab() {
+  const [cfg, setCfg] = useState(null)
+  const [secret, setSecret] = useState('')
+  const [msg, setMsg] = useState('')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    api.get('/api/entra/config').then(setCfg).catch(e => setError(e.message))
+  }, [])
+
+  if (error && !cfg) return <p className="text-red-500 text-sm">{error}</p>
+  if (!cfg) return <p className="text-slate-400 text-sm">Laden...</p>
+
+  async function handleSave(e) {
+    e.preventDefault()
+    setError(''); setMsg(''); setSaving(true)
+    try {
+      await api.put('/api/entra/config', {
+        TenantId: cfg.TenantId,
+        ClientId: cfg.ClientId,
+        RedirectUri: cfg.RedirectUri,
+        ClientSecret: secret, // leeg = niet wijzigen
+      })
+      setMsg('Opgeslagen. Bij volgende login wordt de nieuwe configuratie gebruikt.')
+      setSecret('')
+      // Herlaad om has_secret te updaten
+      const fresh = await api.get('/api/entra/config')
+      setCfg(fresh)
+    } catch (err) { setError(err.message) }
+    finally { setSaving(false) }
+  }
+
+  const inputCls = "w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white font-mono"
+
+  return (
+    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 max-w-2xl">
+      <h2 className="text-lg font-bold text-navy dark:text-white mb-2">Entra ID configuratie</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+        Microsoft Entra-koppeling voor inloggen. Wijzigingen worden direct toegepast — geen herstart nodig.
+      </p>
+      {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+      {msg && <p className="text-emerald-600 dark:text-emerald-400 text-sm mb-3">{msg}</p>}
+      <form onSubmit={handleSave} className="space-y-4">
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Tenant ID</label>
+          <input className={inputCls} value={cfg.TenantId}
+            onChange={e => setCfg(c => ({ ...c, TenantId: e.target.value }))} required />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Client ID (Application ID)</label>
+          <input className={inputCls} value={cfg.ClientId}
+            onChange={e => setCfg(c => ({ ...c, ClientId: e.target.value }))} required />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Client Secret</label>
+          <input type="password" className={inputCls} value={secret}
+            onChange={e => setSecret(e.target.value)}
+            placeholder={cfg.has_secret ? '•••••••• (laat leeg om niet te wijzigen)' : 'Nog niet ingesteld'} />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Redirect URI</label>
+          <input className={inputCls} value={cfg.RedirectUri}
+            onChange={e => setCfg(c => ({ ...c, RedirectUri: e.target.value }))} required />
+          <p className="text-xs text-slate-500 mt-1">Moet exact matchen met een toegestane Redirect URI in Entra (App Registration → Authentication).</p>
+        </div>
+        <button type="submit" disabled={saving}
+          className="bg-primary text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-primary-600 disabled:opacity-50">
+          {saving ? 'Opslaan...' : 'Opslaan'}
+        </button>
+      </form>
+    </div>
+  )
+}
 
 export default function Beheer({ onClose }) {
   const user = useAuth()
@@ -1538,6 +1613,7 @@ export default function Beheer({ onClose }) {
           {activeTab === 1 && <ImportTab />}
           {activeTab === 2 && vestigingenPanel}
           {activeTab === 3 && <GebruikersTab />}
+          {activeTab === 4 && <EntraTab />}
         </>
       ) : (
         vestigingenPanel
