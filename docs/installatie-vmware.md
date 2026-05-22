@@ -151,7 +151,11 @@ Open `https://<server-ip>/` in een browser. De eerste keer geeft de
 browser één keer een "Niet beveiligd"-waarschuwing (zelf-ondertekend
 certificaat) — klik **Geavanceerd → Doorgaan naar deze website**.
 
-Je komt automatisch op een setup-scherm. Vul in:
+Je komt automatisch op een setup-scherm:
+
+![Setup-wizard](handleiding/screenshots/setup-wizard.png)
+
+Vul in:
 
 | Veld | Waarde |
 |---|---|

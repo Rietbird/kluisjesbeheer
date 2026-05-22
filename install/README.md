@@ -227,7 +227,11 @@ Het script draait nu ~3-5 minuten. Aan het eind toont het:
 De browser geeft één keer een "Niet beveiligd"-waarschuwing (zelf-ondertekend
 certificaat) — klik **Geavanceerd → Doorgaan naar deze website**.
 
-Je komt automatisch op een setup-scherm. Vul in:
+Je komt automatisch op een setup-scherm:
+
+![Setup-wizard](../docs/handleiding/screenshots/setup-wizard.png)
+
+Vul in:
 
 | Veld | Waarde |
 |---|---|
