@@ -145,39 +145,35 @@ géén bestaande database of `config.json`.
 
 ## 3. Wat je hierna nog moet doen
 
-### 3.1 `config.json` invullen
+### 3.1 Entra-gegevens invullen via de browser
 
-```bash
-sudo nano /opt/kluisjesbeheer/backend/config.json
-```
+Open `https://<server-ip>/` in een browser. De eerste keer geeft de
+browser één keer een "Niet beveiligd"-waarschuwing (zelf-ondertekend
+certificaat) — klik **Geavanceerd → Doorgaan naar deze website**.
 
-Vervang de `VUL_IN_*`-velden:
+Je komt automatisch op een setup-scherm. Vul in:
 
 | Veld | Waarde |
 |---|---|
-| `TenantId` | Entra Tenant-GUID |
-| `ClientId` | Entra App Registration GUID |
-| `ClientSecret` | Entra Client Secret |
-| `RedirectUri` | Volledige URL incl. `/auth/callback`, bv. `https://[ip-adres server]/auth/callback` |
-| `AllowedOrigins` | Lijst met frontend-URLs, bv. `["https://[ip-adres server]"]` |
-| `SchoolNaam` | Naam van de school (zichtbaar in UI) |
-| `SchoolSubtitel` | Optioneel subtitel onder de naam |
-| `SchoolLogo` | Pad naar logo (default `/img/logo.png`) |
-| `SchoolKleur` | Hex-kleur voor branding, bv. `#FF8200` |
+| Tenant ID | Entra Tenant-GUID |
+| Client ID | Entra App Registration GUID |
+| Client Secret | Entra Client Secret (de **value**, niet de Secret ID) |
+| Redirect URI | `https://<server-ip>/auth/callback` — moet exact matchen met wat in Entra staat |
 
-**Niet wijzigen:** `SecretKey` (zie 2.2).
+Klik **Opslaan en inloggen**. De app schrijft de waarden naar
+`backend/config.json`, laadt de configuratie opnieuw en stuurt je door
+naar de Microsoft-login. Geen handmatige herstart nodig.
 
-Daarna herstarten:
-
-```bash
-sudo systemctl restart kluisjesbeheer
-```
+> ⚠️ Andere instellingen (SchoolNaam, SchoolLogo, SchoolKleur, etc.)
+> stel je later in via **Beheer → Instellingen** binnen de app.
+> `SecretKey` is al automatisch gegenereerd — **NIET wijzigen** na
+> gebruik (zie 2.2).
 
 ### 3.2 Eerste login
 
-Open de app in de browser via de URL die je in `RedirectUri` hebt opgegeven
-(zonder het `/auth/callback`-deel). De **eerste gebruiker die inlogt
-wordt automatisch beheerder**.
+Na het opslaan in de setup-wizard word je automatisch doorgestuurd
+naar Microsoft. Log in met je beheerder-account — de **eerste
+gebruiker die inlogt wordt automatisch beheerder**.
 
 Volgende collega's loggen ook gewoon zelf in via Entra (mits hen toegang
 is gegeven op de Enterprise App via *Assignment*). Zij worden automatisch

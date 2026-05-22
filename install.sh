@@ -542,34 +542,33 @@ Uitgaand IP voor SWP-whitelist:
                       $ip
 
 ================================================================
-Volgende stappen (handmatig):
+Volgende stappen:
 
-  1. Bewerk $APP_DIR/backend/config.json:
-     - TenantId, ClientId, ClientSecret (Entra)
-     - RedirectUri (bv. https://$lan_ip/auth/callback)
-     - AllowedOrigins (frontend-URL, bv. ["https://$lan_ip"])
-     LET OP: SecretKey is al automatisch ingevuld -- NIET wijzigen na
-     gebruik (versleutelt Magister-wachtwoord in DB).
-     (SchoolNaam/Logo/Kleur stel je later via Beheer -> Instellingen in.)
-     Toegangscontrole gaat via Entra "Assignment required: Yes" op de
-     Enterprise App -- niet via een groep in config.json.
+  1. Open https://$lan_ip/ in de browser.
+     Je krijgt automatisch een setup-scherm waar je de Entra-gegevens
+     invult (TenantId, ClientId, ClientSecret, RedirectUri).
+     Tip: stel de RedirectUri in Entra in op:
+       https://$lan_ip/auth/callback
 
-  2. systemctl restart $SERVICE_NAME
+  2. Na opslaan word je doorgestuurd naar de inlogpagina. Log in met je
+     Microsoft-account. De eerste gebruiker wordt automatisch beheerder.
 
-  3. Open https://$lan_ip/ in de browser -> log in met je beheerder-
-     account. Eerste login = automatisch beheerder.
-
-  4. Vul Magister-koppeling in via Beheer -> Import:
+  3. Vul de Magister-koppeling in via Beheer -> Instellingen:
      URL (https://<jouwschool>.swp.nl:8800/doc), account, wachtwoord.
      Wordt versleuteld in de database opgeslagen.
 
-  5. Test de leerling-sync:
+  4. Test de leerling-sync:
      sudo -u $APP_USER $VENV_DIR/bin/python $APP_DIR/backend/cron_sync.py
 
-  6. (Later, voor productie) Vervang het self-signed cert door een echt
+  5. (Later, voor productie) Vervang het self-signed cert door een echt
      cert: overschrijf /etc/nginx/ssl/self.crt en /etc/nginx/ssl/self.key
      met de echte bestanden (zelfde bestandsnamen). Daarna:
      nginx -t && systemctl reload nginx
+
+LET OP: SecretKey in config.json is automatisch ingevuld -- NIET wijzigen
+na gebruik (versleutelt Magister-wachtwoord in DB).
+Toegangscontrole gaat via Entra "Assignment required: Yes" op de
+Enterprise App -- niet via een groep in config.json.
 ================================================================
 EOF
 }

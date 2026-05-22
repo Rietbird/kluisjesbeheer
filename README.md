@@ -74,8 +74,10 @@ Zie [docs/docker.md](docs/docker.md) voor de complete handleiding.
 
 ---
 
-Daarna `config.json` invullen (Entra-credentials), service herstarten,
-inloggen — de eerste user wordt automatisch beheerder.
+Daarna open je `https://<server-ip>/` in de browser — je krijgt
+automatisch een setup-scherm waarin je de Entra-gegevens invult
+(TenantId, ClientId, ClientSecret, RedirectUri). Na opslaan kun je
+direct inloggen — de eerste user wordt automatisch beheerder.
 
 ## Ontwikkelen
 

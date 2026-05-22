@@ -220,40 +220,34 @@ Het script draait nu ~3-5 minuten. Aan het eind toont het:
 
 ---
 
-## Stap 4 — `config.json` invullen (doelserver, nog steeds root)
+## Stap 4 — Entra-gegevens invullen via de browser
 
-🐧 **Server**:
+🌐 **Open in de browser**: `https://<server-ip>/`
 
-```bash
-nano /opt/kluisjesbeheer/backend/config.json
-```
+De browser geeft één keer een "Niet beveiligd"-waarschuwing (zelf-ondertekend
+certificaat) — klik **Geavanceerd → Doorgaan naar deze website**.
 
-Vervang de `VUL_IN_*`-velden:
+Je komt automatisch op een setup-scherm. Vul in:
 
 | Veld | Waarde |
 |---|---|
-| `TenantId` | Entra Tenant-GUID |
-| `ClientId` | Entra App Registration GUID |
-| `ClientSecret` | Entra Client Secret |
-| `RedirectUri` | bv. `https://kluisjes.intern.<school>.nl/auth/callback` of `https://<server-ip>/auth/callback` |
-| `AllowedOrigins` | lijst, bv. `["https://kluisjes.intern.<school>.nl"]` of `["https://<server-ip>"]` |
-| `SchoolNaam` | naam van de school (zichtbaar in UI) |
-| `SchoolSubtitel` | optioneel |
-| `SchoolLogo` | `/img/logo.png` (vervang via Beheer later) |
-| `SchoolKleur` | hex, bv. `#0066CC` |
+| Tenant ID | Entra Tenant-GUID |
+| Client ID | Entra App Registration GUID |
+| Client Secret | Entra Client Secret |
+| Redirect URI | `https://<server-ip>/auth/callback` (moet exact matchen met wat in Entra staat) |
 
-> ⚠️ `SecretKey` is al automatisch ingevuld — **NIET wijzigen** na
-> gebruik (versleutelt het Magister-wachtwoord in de DB).
+Klik **Opslaan en inloggen** — de app schrijft de waarden naar
+`backend/config.json`, laadt de configuratie opnieuw en stuurt je door
+naar de Microsoft-login.
 
-Opslaan (Ctrl+O, Enter, Ctrl+X) en herstarten:
+> ⚠️ Andere velden (`SchoolNaam`, `SchoolLogo`, `SchoolKleur`,
+> `AllowedOrigins`, etc.) stel je later in via **Beheer → Instellingen**
+> binnen de app. `SecretKey` is al automatisch gegenereerd — **NIET
+> wijzigen** na gebruik (versleutelt het Magister-wachtwoord in de DB).
 
-```bash
-systemctl restart kluisjesbeheer
-systemctl status kluisjesbeheer --no-pager | head -5
-curl -sS -o /dev/null -w "HTTP %{http_code}\n" http://127.0.0.1:5000/
-```
-
-Verwacht: `active (running)` + `HTTP 200`.
+Verwacht: je wordt doorgestuurd naar Microsoft, logt in en komt op het
+kluisjesbeheer-dashboard. De eerste gebruiker wordt automatisch
+beheerder.
 
 ---
 
