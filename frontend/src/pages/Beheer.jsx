@@ -229,6 +229,8 @@ function genereerReeks(prefix, van, tot, padding) {
 }
 
 function KluisjesPanel({ clusterId, vestigingId }) {
+  const user = useAuth()
+  const isBeheerder = user?.is_beheerder
   const [kluisjes, setKluisjes] = useState([])
   const [kluisnummer, setKluisnummer] = useState('')
   const [sleutelnummer, setSleutelnummer] = useState('')
@@ -369,11 +371,13 @@ function KluisjesPanel({ clusterId, vestigingId }) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-base font-bold text-navy dark:text-white">Kluisjes</h2>
-        <button
-          onClick={() => { setSelectMode(s => !s); setSelected(new Set()); setBulkMsg('') }}
-          className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${selectMode ? 'bg-red-50 border-red-300 text-red-600 dark:bg-red-900/30 dark:border-red-700 dark:text-red-400' : 'border-slate-300 dark:border-slate-600 text-slate-500 hover:border-slate-400'}`}>
-          {selectMode ? 'Annuleer selectie' : 'Selecteer voor verwijderen'}
-        </button>
+        {isBeheerder && (
+          <button
+            onClick={() => { setSelectMode(s => !s); setSelected(new Set()); setBulkMsg('') }}
+            className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${selectMode ? 'bg-red-50 border-red-300 text-red-600 dark:bg-red-900/30 dark:border-red-700 dark:text-red-400' : 'border-slate-300 dark:border-slate-600 text-slate-500 hover:border-slate-400'}`}>
+            {selectMode ? 'Annuleer selectie' : 'Selecteer voor verwijderen'}
+          </button>
+        )}
       </div>
 
       {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
@@ -387,10 +391,12 @@ function KluisjesPanel({ clusterId, vestigingId }) {
               {selected.size === kluisjes.filter(k => k.status !== 'uitgeleend').length ? 'Deselecteer alles' : 'Selecteer alle vrije'}
             </button>
             <span className="text-slate-400">{selected.size} geselecteerd</span>
-            <ConfirmButton onConfirm={handleBulkDelete}
-              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${selected.size > 0 ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
-              Verwijder {selected.size > 0 ? `(${selected.size})` : ''}
-            </ConfirmButton>
+            {isBeheerder && (
+              <ConfirmButton onConfirm={handleBulkDelete}
+                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${selected.size > 0 ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
+                Verwijder {selected.size > 0 ? `(${selected.size})` : ''}
+              </ConfirmButton>
+            )}
           </div>
           <div className="flex items-center justify-end pt-2 border-t border-slate-200 dark:border-slate-600">
             <button onClick={handleVerplaatsSelectie}
@@ -443,10 +449,12 @@ function KluisjesPanel({ clusterId, vestigingId }) {
                       className="text-slate-400 hover:text-primary p-1 rounded hover:bg-slate-100 transition-colors">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                     </button>
-                    <ConfirmButton onConfirm={() => handleDelete(k.id)}
-                      className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-slate-100 transition-colors">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </ConfirmButton>
+                    {isBeheerder && (
+                      <ConfirmButton onConfirm={() => handleDelete(k.id)}
+                        className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-slate-100 transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </ConfirmButton>
+                    )}
                   </div>
                 )}
               </div>
