@@ -117,11 +117,26 @@ def assert_vestiging_access(vestiging_id):
 
 def _config_complete():
     """Check of de Entra-velden in config.json daadwerkelijk zijn ingevuld
-    (niet leeg, niet de VUL_IN_*-placeholders uit install.sh)."""
+    (niet leeg, niet de VUL_IN_*-placeholders uit install.sh).
+
+    Leest direct van schijf zodat alle gunicorn-workers de actuele staat
+    zien — de in-memory `config` dict raakt anders alleen op de worker
+    bijgewerkt die de POST /auth/setup verwerkte."""
+    try:
+        with open(_config_path()) as f:
+            disk_cfg = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        disk_cfg = {}
     for veld in ('TenantId', 'ClientId', 'ClientSecret', 'RedirectUri'):
-        waarde = config.get(veld, '').strip()
+        waarde = str(disk_cfg.get(veld, '')).strip()
         if not waarde or waarde.startswith('VUL_IN'):
             return False, veld
+    # Sync ook de in-memory config zodat MSAL e.d. de juiste waarden zien
+    if disk_cfg != config:
+        config.clear()
+        config.update(disk_cfg)
+        global _msal_app
+        _msal_app = None
     return True, None
 
 
