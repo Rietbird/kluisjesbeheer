@@ -1565,13 +1565,15 @@ function CertTab() {
       <form onSubmit={handleInstall} className="space-y-4">
         <div>
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Certificaat (.crt of .pem)</label>
-          <input type="file" accept=".crt,.pem,.cer" className={`cert-upload ${inputCls}`}
+          <input type="file" accept=".crt,.pem,.cer"
+            className="cert-upload block w-full text-sm text-slate-600 dark:text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-600 file:cursor-pointer border border-slate-300 dark:border-slate-600 rounded-lg p-1.5 dark:bg-slate-700"
             onChange={e => setCertFile(e.target.files[0])} required />
           <p className="text-xs text-slate-500 mt-1">Inclusief eventuele intermediate-certs (chain).</p>
         </div>
         <div>
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Private key (.key of .pem)</label>
-          <input type="file" accept=".key,.pem" className={`cert-upload ${inputCls}`}
+          <input type="file" accept=".key,.pem"
+            className="cert-upload block w-full text-sm text-slate-600 dark:text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-600 file:cursor-pointer border border-slate-300 dark:border-slate-600 rounded-lg p-1.5 dark:bg-slate-700"
             onChange={e => setKeyFile(e.target.files[0])} required />
           <p className="text-xs text-slate-500 mt-1">Niet versleuteld (geen passphrase). Vanuit een PFX: <code className="text-xs">openssl pkcs12 -in cert.pfx -nocerts -nodes -out key.pem</code></p>
         </div>
