@@ -310,29 +310,20 @@ final_report() {
   ${BOLD}Stop/start${NC}   : pct stop $CTID  |  pct start $CTID
   ${BOLD}Verwijderen${NC}  : pct stop $CTID && pct destroy $CTID --purge
 
-${BOLD}Volgende stappen (eenmalig):${NC}
-EOF
-    if [[ "$MODE" == "classic" ]]; then
-        cat <<EOF
-  1. Vul Entra-credentials in:
-     pct exec $CTID -- nano /opt/kluisjesbeheer/backend/config.json
-  2. Restart de app:
-     pct exec $CTID -- systemctl restart kluisjesbeheer
-EOF
-    else
-        cat <<EOF
-  1. Vul Entra-credentials in (config.json zit in docker volume):
-     CFG=\$(pct exec $CTID -- docker volume inspect kluisjesbeheer_app-data --format '{{ .Mountpoint }}')/config.json
-     pct exec $CTID -- nano "\$CFG"
-  2. Restart de app-container:
-     pct exec $CTID -- docker compose -f /opt/kluisjesbeheer/docker-compose.yml restart app
-EOF
-    fi
-    cat <<EOF
-  3. Open https://$CT_IP/ in de browser → log in met je Entra-account.
-     De eerste user wordt automatisch beheerder.
-  4. Vul Magister-koppeling in via Beheer → Import.
-  5. Vraag bij SWP een IP-whitelist aan voor het uitgaande IP:
+${BOLD}Volgende stappen:${NC}
+  1. Open https://$CT_IP/ in de browser.
+     Je krijgt automatisch een setup-scherm waar je de Entra-gegevens
+     invult (TenantId, ClientId, ClientSecret, RedirectUri).
+     Stel de RedirectUri in Entra in op:
+       https://$CT_IP/auth/callback
+
+  2. Na opslaan word je doorgestuurd naar de inlogpagina. Log in met
+     je Microsoft-account. De eerste gebruiker wordt automatisch
+     beheerder.
+
+  3. Vul Magister-koppeling in via Beheer → Instellingen.
+
+  4. Vraag bij SWP een IP-whitelist aan voor het uitgaande IP:
      pct exec $CTID -- curl -s https://ifconfig.me
 
 Volledige docs: https://github.com/Rietbird/kluisjesbeheer
