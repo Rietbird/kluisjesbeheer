@@ -392,6 +392,14 @@ Lijst van alle accounts. Per gebruiker:
 
 Toegang regel je in Entra zelf via *Enterprise applications → [jouw app] → Users and groups* (Assignment required staat op Yes). Wie daar niet bij staat, komt er ook niet in.
 
+### 12.5 Entra
+
+Bevat de Entra ID-koppeling: TenantId, ClientId, ClientSecret en RedirectUri. Hier kun je deze waarden later aanpassen — bijvoorbeeld als je een nieuw domein in gebruik neemt en de RedirectUri moet wijzigen, of als je de ClientSecret roteert.
+
+- Het secret wordt nooit teruggetoond. Laat het veld leeg om de bestaande te behouden, of plak een nieuwe value om hem te vervangen.
+- Wijzigingen zijn direct actief; geen herstart van de service nodig.
+- ⚠️ Voeg een nieuwe RedirectUri eerst toe in Entra (App Registration → Authentication → Redirect URIs) voordat je hem hier instelt — anders weigert Microsoft de login.
+
 ---
 
 ## 13. Uitrol bij een nieuwe school

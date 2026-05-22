@@ -298,6 +298,11 @@ Ga naar **Beheer → Import → Magister-koppeling**:
 Klik *Opslaan*. Het wachtwoord wordt versleuteld (Fernet / AES-128-CBC
 + HMAC) in de database opgeslagen.
 
+> 💡 Wil je later de Entra-koppeling wijzigen (bv. RedirectUri
+> aanpassen na het toevoegen van een eigen domein, of ClientSecret
+> roteren)? Dat kan volledig via **Beheer → Entra**. Het secret blijft
+> gemaskeerd — leeg laten = ongewijzigd. Geen herstart nodig.
+
 ---
 
 ## Stap 7 — IP-whitelist verifiëren (aangevraagd in 1.4)

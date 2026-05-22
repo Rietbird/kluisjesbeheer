@@ -184,7 +184,22 @@ is gegeven op de Enterprise App via *Assignment*). Zij worden automatisch
 aangemaakt als conciërge zonder vestiging. Jij koppelt ze daarna in
 *Beheer → Gebruikers* aan een rol + vestiging(en).
 
-### 3.3 Magister-koppeling invullen
+### 3.3 Entra-gegevens later wijzigen
+
+Als je later een andere RedirectUri wilt (bv. omdat je een eigen domein
+toevoegt zoals `https://kluisjes.<school>.nl/auth/callback`) of de
+ClientSecret roteert, dan kan dat volledig via de browser:
+
+**Beheer → Entra** toont de huidige TenantId, ClientId en RedirectUri.
+Het secret blijft gemaskeerd — laat het veld leeg om de bestaande te
+behouden, of plak een nieuwe secret-value om hem te vervangen. Na
+*Opslaan* is de wijziging direct actief, geen herstart nodig.
+
+> ⚠️ Vergeet niet om in Entra (App Registration → Authentication →
+> Redirect URIs) ook de nieuwe URI toe te voegen voordat je deze in de
+> app instelt, anders weigert Microsoft de login.
+
+### 3.4 Magister-koppeling invullen
 
 Ga naar **Beheer → Import** en vul de Magister-koppeling in:
 
@@ -194,7 +209,7 @@ Ga naar **Beheer → Import** en vul de Magister-koppeling in:
 
 Klik *Opslaan*. De cache wordt direct ververst, dus je kunt meteen testen.
 
-### 3.4 IP-whitelist aanvragen bij SWP
+### 3.5 IP-whitelist aanvragen bij SWP
 
 In het eindrapport van het script staat het **uitgaande publieke IP-
 adres** van de server. Geef dat aan de Magister-/SWP-beheerder van de
@@ -210,7 +225,7 @@ curl -s https://ifconfig.me
 > Bij verhuizing naar een andere server moet het nieuwe IP opnieuw
 > aangevraagd worden.
 
-### 3.5 Test de leerling-sync handmatig
+### 3.6 Test de leerling-sync handmatig
 
 ```bash
 sudo -u kluisjes /opt/kluisjesbeheer/.venv/bin/python /opt/kluisjesbeheer/backend/cron_sync.py
