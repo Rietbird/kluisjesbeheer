@@ -240,6 +240,12 @@ setup_python() {
 # ============================================================
 build_frontend() {
     step "Frontend bouwen (Vite)"
+    # Als frontend/dist al bestaat én frontend/src ontbreekt, is dit een
+    # deploy-tarball zonder bron — niet bouwen, gewoon hergebruiken.
+    if [[ -d "$APP_DIR/frontend/dist" && ! -d "$APP_DIR/frontend/src" ]]; then
+        info "dist/ aanwezig zonder src/ — frontend al gebouwd, sla npm build over"
+        return
+    fi
     cd "$APP_DIR/frontend"
     run_with_spinner "npm ci (dependencies downloaden)" \
         npm ci --silent --no-audit --no-fund
