@@ -396,6 +396,12 @@ if [[ ! -f "$SRC_CERT" || ! -f "$SRC_KEY" ]]; then
     exit 1
 fi
 
+# Security: Voorkom symlink-aanval (TOCTOU) vanuit de kluisjes-user
+if [[ -L "$SRC_CERT" || -L "$SRC_KEY" ]]; then
+    echo "ERROR: staging-bestanden mogen geen symlinks zijn" >&2
+    exit 1
+fi
+
 # Valideer dat het cert en de key bij elkaar horen (modulus-vergelijking)
 cert_mod=$(openssl x509 -noout -modulus -in "$SRC_CERT" 2>/dev/null | openssl md5)
 key_mod=$(openssl rsa  -noout -modulus -in "$SRC_KEY" 2>/dev/null | openssl md5)
