@@ -331,7 +331,7 @@ Per-school branding en gedrag:
 
 Wijzigingen worden direct opgeslagen. Een refresh van de pagina kan nodig zijn voor logo/kleur-cache.
 
-> 🖼 **Logo via deploy.** Het logo wordt apart geüpload (binair PNG corrupteert door CRLF-conversie tijdens deploy). Bij re-deploy moet het soms opnieuw geüpload worden — zie [docs/installatie.md](../installatie.md).
+> 🖼 **Logo via deploy.** Het logo wordt apart geüpload (binair PNG corrupteert door CRLF-conversie tijdens deploy). Bij re-deploy moet het soms opnieuw geüpload worden — zie [install/README.md](../../install/README.md).
 
 ### 12.2 Import
 
@@ -404,7 +404,7 @@ Bevat de Entra ID-koppeling: TenantId, ClientId, ClientSecret en RedirectUri. Hi
 
 ## 13. Uitrol bij een nieuwe school
 
-Een nieuwe school in gebruik nemen vereist server- en cloud-werk. Hieronder een korte checklist; de gedetailleerde technische stappen staan in [docs/installatie.md](../installatie.md) en [docs/configuratie.md](../configuratie.md).
+Een nieuwe school in gebruik nemen vereist server- en cloud-werk. Hieronder een korte checklist; de gedetailleerde technische stappen staan in [install/README.md](../../install/README.md) en [docs/configuratie.md](../configuratie.md).
 
 **Vooraf nodig:**
 
@@ -423,7 +423,7 @@ Een nieuwe school in gebruik nemen vereist server- en cloud-werk. Hieronder een 
 
 **Server-installatie:**
 
-1. Volg [docs/installatie-vmware.md](../installatie-vmware.md) — `install.sh` regelt Debian-packages, Python venv, Vite-build, systemd-service, NGINX + self-signed TLS, cron-job en genereert `config.json` met een willekeurige `SecretKey`.
+1. Volg [install/README.md](../../install/README.md) — `install.sh` regelt Debian-packages, Python venv, Vite-build, systemd-service, NGINX + self-signed TLS, cron-job en genereert `config.json` met een willekeurige `SecretKey`.
 2. Vul de Entra-velden in `/opt/kluisjesbeheer/backend/config.json`: `TenantId`, `ClientId`, `ClientSecret`, `RedirectUri`, `AllowedOrigins`. **Niet wijzigen:** `SecretKey` (versleutelt Magister-wachtwoord in de DB).
 3. `systemctl restart kluisjesbeheer`
 

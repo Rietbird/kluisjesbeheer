@@ -7,7 +7,7 @@ Kluisjesbeheer is een webapplicatie voor het beheren van schoolkluisjes. Gebouwd
 | Pagina | Beschrijving |
 |--------|-------------|
 | [Systeemeisen](systeemeisen.md) | Server, Entra ID en Magister API vereisten |
-| [Installatie](installatie.md) | Drie installatiepaden (Proxmox helper / klassiek / Docker) + wat install.sh voor je doet |
+| [Installatie (volledig stappenplan)](../install/README.md) | Verse Debian → draaiende app, met Entra-checklist en troubleshooting |
 | [Configuratie](configuratie.md) | Eerste gebruik via de app: instellingen, import, gebruikers |
 | [Architectuur](architectuur.md) | Technisch overzicht, stack, database, encryptie |
 | [Onderhoud](onderhoud.md) | Logs, updates, cronjobs, troubleshooting |
@@ -27,4 +27,4 @@ Kluisjesbeheer is een webapplicatie voor het beheren van schoolkluisjes. Gebouwd
 7. Beheer → Import: Magister-koppeling instellen, daarna kluisjes-XLSX importeren
 ```
 
-Zie [Installatie](installatie.md) voor de volledige stappen en alternatieve paden (Proxmox helper-script of Docker compose).
+Zie [install/README.md](../install/README.md) voor het volledige stappenplan, en de [README op de repo-root](../README.md) voor alternatieve paden (Proxmox helper-script of Docker compose).

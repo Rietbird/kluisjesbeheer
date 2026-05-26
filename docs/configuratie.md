@@ -1,6 +1,6 @@
 # Configuratie
 
-Na de [installatie](installatie.md) wordt de app volledig via de webinterface geconfigureerd.
+Na de [installatie](../install/README.md) wordt de app volledig via de webinterface geconfigureerd.
 
 ## Eerste login
 

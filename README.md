@@ -30,24 +30,7 @@ Webapplicatie voor het beheer van schoolkluisjes — uitleen, inname, defectmeld
 
 ## Installatie
 
-Drie installatiepaden — kies wat past:
-
-### 1. Proxmox helper-script (snelste, all-in-one)
-
-Op de **Proxmox host** als root:
-
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/Rietbird/kluisjesbeheer/master/proxmox/install-ct.sh)"
-```
-
-Maakt automatisch een Debian 12 LXC container aan, installeert
-kluisjesbeheer erin (klassiek of via Docker), en geeft je IP + URL.
-Klaar in 5-7 minuten. Zie [docs/proxmox.md](docs/proxmox.md) — die
-beschrijft ook hoe je het script eerst leest vóór je 'm draait.
-
-### 2. Klassieke install op een verse VM (Debian 12/13)
-
-Op de **doelserver** als root:
+Op een verse **Debian 12/13** server (VM of LXC), als root:
 
 ```bash
 apt-get update && apt-get install -y git
@@ -56,13 +39,32 @@ cd /root/kluisjesbeheer
 bash install.sh
 ```
 
-Volledig stappenplan met TLS, NGINX, cron, Entra-checklist en
-troubleshooting: [install/README.md](install/README.md). **Updaten
-later:** `cd /root/kluisjesbeheer && git pull && bash install.sh`.
+Daarna open je `https://<server-ip>/` in de browser — je krijgt een
+setup-scherm waarin je de Entra-gegevens invult (TenantId, ClientId,
+ClientSecret, RedirectUri). Na opslaan kun je direct inloggen — de
+eerste user wordt automatisch beheerder.
 
-### 3. Docker compose
+**Updaten:** `cd /root/kluisjesbeheer && git pull && bash install.sh`.
 
-Server met Docker (eigen VM, VPS, NAS, Raspberry Pi):
+Volledig stappenplan met Entra-checklist, TLS, Magister-koppeling en
+troubleshooting: **[install/README.md](install/README.md)**.
+
+<details>
+<summary>Alternatief — Proxmox helper-script (in 5-7 min een complete LXC)</summary>
+
+Op de **Proxmox host** als root:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Rietbird/kluisjesbeheer/master/proxmox/install-ct.sh)"
+```
+
+Maakt automatisch een Debian 12 LXC aan, installeert kluisjesbeheer
+erin en geeft je IP + URL. Zie [docs/proxmox.md](docs/proxmox.md).
+
+</details>
+
+<details>
+<summary>Alternatief — Docker compose</summary>
 
 ```bash
 git clone https://github.com/Rietbird/kluisjesbeheer.git
@@ -70,14 +72,9 @@ cd kluisjesbeheer
 docker compose up -d --build
 ```
 
-Zie [docs/docker.md](docs/docker.md) voor de complete handleiding.
+Zie [docs/docker.md](docs/docker.md).
 
----
-
-Daarna open je `https://<server-ip>/` in de browser — je krijgt
-automatisch een setup-scherm waarin je de Entra-gegevens invult
-(TenantId, ClientId, ClientSecret, RedirectUri). Na opslaan kun je
-direct inloggen — de eerste user wordt automatisch beheerder.
+</details>
 
 ## Ontwikkelen
 
@@ -101,9 +98,9 @@ Tests draaien: `cd backend && pytest -v`.
 
 | Doel | Document |
 |---|---|
-| Installeren op verse VM | [install/README.md](install/README.md) |
+| Installeren op verse VM (volledig stappenplan) | [install/README.md](install/README.md) |
+| Systeemeisen vooraf | [docs/systeemeisen.md](docs/systeemeisen.md) |
 | Configuratie na install | [docs/configuratie.md](docs/configuratie.md) |
-| Systeemeisen | [docs/systeemeisen.md](docs/systeemeisen.md) |
 | Onderhoud en troubleshooting | [docs/onderhoud.md](docs/onderhoud.md) |
 | Architectuur | [docs/architectuur.md](docs/architectuur.md) |
 | Conciërge-handleiding (functioneel) | [docs/handleiding/HANDLEIDING.md](docs/handleiding/HANDLEIDING.md) |
