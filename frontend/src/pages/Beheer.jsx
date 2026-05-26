@@ -1502,9 +1502,7 @@ function CertTab() {
     fd.append('key', keyFile)
     setUploading(true)
     try {
-      const res = await fetch('/api/cert/install', { method: 'POST', body: fd, credentials: 'same-origin' })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
+      await api.upload('/api/cert/install', fd)
       setMsg('Certificaat geïnstalleerd en NGINX herladen.')
       setCertFile(null); setKeyFile(null)
       // Reset file-inputs
