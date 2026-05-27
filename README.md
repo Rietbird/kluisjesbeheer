@@ -76,24 +76,6 @@ Zie [docs/docker.md](docs/docker.md).
 
 </details>
 
-## Ontwikkelen
-
-```bash
-# Backend
-cd backend
-python -m venv venv
-venv/Scripts/activate     # Windows; Linux/macOS: . venv/bin/activate
-pip install -r requirements.txt
-python app.py             # draait op http://localhost:5000
-
-# Frontend
-cd frontend
-npm install
-npm run dev               # draait op http://localhost:5173 (proxy /api naar :5000)
-```
-
-Tests draaien: `cd backend && pytest -v`.
-
 ## Documentatie
 
 | Doel | Document |
@@ -104,6 +86,7 @@ Tests draaien: `cd backend && pytest -v`.
 | Onderhoud en troubleshooting | [docs/onderhoud.md](docs/onderhoud.md) |
 | Architectuur | [docs/architectuur.md](docs/architectuur.md) |
 | Conciërge-handleiding (functioneel) | [docs/handleiding/HANDLEIDING.md](docs/handleiding/HANDLEIDING.md) |
+| Lokaal ontwikkelen (backend + frontend + tests) | [CLAUDE.md](CLAUDE.md) |
 
 ## Licentie
 
