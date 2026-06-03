@@ -52,12 +52,12 @@ export default function EndRentalForm({ kluisje, onDone, onCancel }) {
       )}
       <div>
         <label className="block text-xs text-slate-500 mb-1">Einddatum</label>
-        <input type="date" className="w-full border rounded px-2 py-1 text-sm" value={einddatum}
+        <input type="date" className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white rounded px-2 py-1 text-sm" value={einddatum}
           onChange={e => setEinddatum(e.target.value)} />
       </div>
       <div>
         <label className="block text-xs text-slate-500 mb-1">Opmerking</label>
-        <textarea className="w-full border rounded px-2 py-1 text-sm" rows={3} value={opmerking}
+        <textarea className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white rounded px-2 py-1 text-sm" rows={3} value={opmerking}
           onChange={e => setOpmerking(e.target.value)} placeholder="Optionele opmerking..." />
       </div>
       {error && <p className="text-red-500 text-xs">{error}</p>}
@@ -67,7 +67,7 @@ export default function EndRentalForm({ kluisje, onDone, onCancel }) {
           {loading ? 'Bezig...' : 'Bevestigen'}
         </button>
         <button type="button" onClick={onCancel}
-          className="flex-1 border rounded py-1.5 text-sm text-slate-500 hover:bg-slate-50">
+          className="flex-1 border border-slate-300 dark:border-slate-600 rounded py-1.5 text-sm text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
           Annuleren
         </button>
       </div>

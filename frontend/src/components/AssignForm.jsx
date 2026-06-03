@@ -86,19 +86,19 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
       <div className="relative">
         <label className="block text-xs text-slate-500 mb-1">Leerling</label>
         <input
-          className="w-full border rounded px-2 py-1 text-sm"
+          className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white rounded px-2 py-1 text-sm"
           placeholder="Zoek op naam of stamnr..."
           value={q}
           onChange={e => { setQ(e.target.value); setSelected(null) }}
           autoComplete="off"
         />
         {showDropdown && results.length > 0 && (
-          <div className="absolute z-10 w-full bg-white border border-slate-200 rounded shadow-lg max-h-40 overflow-y-auto">
+          <div className="absolute z-10 w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded shadow-lg max-h-40 overflow-y-auto">
             {results.map((l, i) => (
               <button key={i} type="button"
-                className="w-full text-left px-4 py-3 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b last:border-b-0"
+                className="w-full text-left px-4 py-3 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-slate-100 dark:border-slate-600 last:border-b-0"
                 onClick={() => selectLeerling(l)}>
-                <div className="font-medium">{l.naam || l.leerling_naam}{l.vertrokken_op && <span className="ml-2 text-xs text-red-600 font-bold">Vertrokken</span>}</div>
+                <div className="font-medium text-slate-900 dark:text-white">{l.naam || l.leerling_naam}{l.vertrokken_op && <span className="ml-2 text-xs text-red-600 dark:text-red-400 font-bold">Vertrokken</span>}</div>
                 <div className="text-xs text-slate-400 mt-0.5">{l.stamnr || l.leerling_stamnr} — {l.klas || l.leerling_klas}</div>
               </button>
             ))}
@@ -122,12 +122,12 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="block text-xs text-slate-500 mb-1">Periode van</label>
-          <input type="date" className="w-full border rounded px-2 py-1 text-sm" value={periodeVan}
+          <input type="date" className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white rounded px-2 py-1 text-sm" value={periodeVan}
             onChange={e => setPeriodeVan(e.target.value)} />
         </div>
         <div>
           <label className="block text-xs text-slate-500 mb-1">Periode tot</label>
-          <input type="date" className="w-full border rounded px-2 py-1 text-sm" value={periodeTot}
+          <input type="date" className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white rounded px-2 py-1 text-sm" value={periodeTot}
             onChange={e => setPeriodeTot(e.target.value)} />
         </div>
       </div>
@@ -135,7 +135,7 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
         <>
           <div>
             <label className="block text-xs text-slate-500 mb-1">Borgbedrag (€)</label>
-            <input type="number" step="0.01" className="w-full border rounded px-2 py-1 text-sm" value={borgbedrag}
+            <input type="number" step="0.01" className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white rounded px-2 py-1 text-sm" value={borgbedrag}
               onChange={e => setBorgbedrag(e.target.value)} placeholder="0.00" />
           </div>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -157,7 +157,7 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
           {loading ? 'Bezig...' : 'Toewijzen'}
         </button>
         <button type="button" onClick={onCancel}
-          className="flex-1 border rounded py-1.5 text-sm text-slate-500 hover:bg-slate-50">
+          className="flex-1 border border-slate-300 dark:border-slate-600 rounded py-1.5 text-sm text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
           Annuleren
         </button>
       </div>
