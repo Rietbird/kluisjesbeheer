@@ -1659,6 +1659,62 @@ function EntraTab() {
   )
 }
 
+// ── Update-banner (Beheer -> bovenaan, alleen beheerder) ─────────────────────
+function UpdateBanner() {
+  const [state, setState] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.get('/api/update/check').then(setState).catch(() => {})
+  }, [])
+
+  if (!state || !state.git || !state.available) return null
+
+  async function doUpdate() {
+    setBusy(true); setError('')
+    try {
+      await api.post('/api/update/apply', {})
+      setDone('Update gestart — de app herstart, deze pagina herlaadt zo automatisch…')
+      setTimeout(() => window.location.reload(), 6000)
+    } catch (err) {
+      setError(err.message || 'Update mislukt'); setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div className="font-semibold text-amber-800 dark:text-amber-200 flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Update beschikbaar
+          </div>
+          <div className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+            {state.behind} nieuwe {state.behind === 1 ? 'wijziging' : 'wijzigingen'} (<span className="font-mono">{state.current}</span> → <span className="font-mono">{state.latest}</span>).
+          </div>
+          {state.commits?.length > 0 && (
+            <ul className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-2 list-disc ml-5 space-y-0.5">
+              {state.commits.slice(0, 5).map((c, i) => <li key={i} className="font-mono">{c}</li>)}
+            </ul>
+          )}
+          {done && <div className="text-sm text-green-700 dark:text-green-300 mt-2">{done}</div>}
+          {error && <div className="text-sm text-red-600 mt-2">{error}</div>}
+        </div>
+        {!done && (
+          <button onClick={doUpdate} disabled={busy}
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white rounded-lg text-sm font-medium whitespace-nowrap">
+            {busy ? 'Bezig met updaten…' : 'Nu updaten'}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Beheer({ onClose }) {
   const user = useAuth()
   const isBeheerder = user?.is_beheerder
@@ -1695,6 +1751,8 @@ export default function Beheer({ onClose }) {
       </button>
 
       <h1 className="text-2xl font-bold text-navy dark:text-white mb-5">Beheer</h1>
+
+      {isBeheerder && <UpdateBanner />}
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700 mb-6">

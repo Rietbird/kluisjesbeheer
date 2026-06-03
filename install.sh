@@ -455,6 +455,80 @@ EOF
 }
 
 # ============================================================
+# Helper script + sudoers zodat de app via Beheer -> Onderhoud
+# zichzelf kan updaten vanuit git (git pull + deps/build + restart).
+# Werkt alleen bij een git-checkout install.
+# ============================================================
+install_update_helper() {
+    step "Update helper (voor Beheer -> Onderhoud)"
+
+    local helper="/usr/local/sbin/kluisjes-update"
+
+    cat > "$helper" <<'HELPER_EOF'
+#!/bin/bash
+# Update kluisjesbeheer vanuit git + herstart de service.
+# Aangeroepen door de app via:  sudo /usr/local/sbin/kluisjes-update
+set -euo pipefail
+
+APP_DIR="/opt/kluisjesbeheer"
+APP_USER="kluisjes"
+BRANCH="master"
+DB="$APP_DIR/backend/kluisjesbeheer.db"
+BACKUP_DIR="$APP_DIR/backend/backups"
+GIT="git -c safe.directory=$APP_DIR -C $APP_DIR"
+
+if [[ ! -d "$APP_DIR/.git" ]]; then
+    echo "ERROR: $APP_DIR is geen git-checkout; updaten niet mogelijk" >&2
+    exit 1
+fi
+
+# Pre-update DB-backup (consistent via sqlite .backup; valt terug op cp)
+if [[ -f "$DB" ]]; then
+    install -d -o "$APP_USER" -g "$APP_USER" "$BACKUP_DIR"
+    TS=$(date +%Y%m%d-%H%M%S)
+    sqlite3 "$DB" ".backup '$BACKUP_DIR/pre-update-$TS.db'" 2>/dev/null || cp -a "$DB" "$BACKUP_DIR/pre-update-$TS.db"
+fi
+
+OLD=$($GIT rev-parse --short HEAD)
+$GIT pull --ff-only origin "$BRANCH"
+NEW=$($GIT rev-parse --short HEAD)
+CHANGED=$($GIT diff --name-only "$OLD" "$NEW" || true)
+
+if grep -q 'backend/requirements.txt' <<<"$CHANGED"; then
+    echo "requirements gewijzigd -> pip install"
+    "$APP_DIR/.venv/bin/pip" install -q -r "$APP_DIR/backend/requirements.txt"
+fi
+if grep -qE '^frontend/' <<<"$CHANGED"; then
+    echo "frontend gewijzigd -> npm build"
+    ( cd "$APP_DIR/frontend" && npm ci --silent && npm run build )
+fi
+
+chown -R "$APP_USER:$APP_USER" "$APP_DIR"
+echo "OK: $OLD -> $NEW (herstart volgt)"
+# Herstart op de achtergrond zodat het HTTP-antwoord de UI nog bereikt
+nohup bash -c 'sleep 2; systemctl restart kluisjesbeheer' >/dev/null 2>&1 &
+exit 0
+HELPER_EOF
+    chown root:root "$helper"
+    chmod 750 "$helper"
+    info "Helper-script: $helper"
+
+    local sudoers="/etc/sudoers.d/kluisjesbeheer-update"
+    cat > "$sudoers" <<EOF
+# Sta de kluisjes-user toe om uitsluitend het update helper script te draaien
+# als root. Geen andere commandos. Beheerd door install.sh.
+$APP_USER ALL=(root) NOPASSWD: /usr/local/sbin/kluisjes-update
+EOF
+    chmod 440 "$sudoers"
+    if ! visudo -c -f "$sudoers" >/dev/null 2>&1; then
+        rm -f "$sudoers"
+        err "sudoers-regel afgewezen door visudo; update-knop werkt niet via UI"
+        return 1
+    fi
+    info "Sudoers-regel: $sudoers (alleen 1 commando toegestaan)"
+}
+
+# ============================================================
 # NGINX reverse-proxy (HTTP 80 -> HTTPS 443 -> 127.0.0.1:5000)
 # ============================================================
 install_nginx() {
@@ -686,6 +760,7 @@ main() {
     set_permissions
     install_service
     install_cert_helper
+    install_update_helper
     install_nginx
     install_cron
     start_service
