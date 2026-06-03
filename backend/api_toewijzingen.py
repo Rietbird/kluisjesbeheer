@@ -236,6 +236,10 @@ def ruilen():
     if kluisje_a['vestiging_id'] != kluisje_b['vestiging_id']:
         return jsonify({'error': 'Ruilen kan alleen binnen dezelfde vestiging'}), 409
 
+    # Vestiging-scope: user moet toegang hebben tot deze vestiging (A==B gecheckt)
+    err = assert_vestiging_access(kluisje_a['vestiging_id'])
+    if err: return err
+
     kid_a = a['kluisje_id']
     kid_b = b['kluisje_id']
     # 3-staps swap: A tijdelijk inactief zodat de partiele unique index
@@ -256,6 +260,8 @@ def ruilen():
 def borg_teruggestort(tid):
     """Mark deposit as refunded on a finished assignment.
     Audit-integriteit: alleen op afgesloten toewijzingen (actief=0)."""
+    err = _toewijzing_access(tid)
+    if err: return err
     row = g.db.execute('SELECT actief FROM toewijzingen WHERE id = ?', (tid,)).fetchone()
     if not row:
         return jsonify({'error': 'Toewijzing niet gevonden'}), 404
@@ -293,6 +299,16 @@ def actieve_toewijzingen():
     if cluster_id:
         query += ' AND k.cluster_id = ?'
         params.append(int(cluster_id))
+    # Vestiging-scope: conciërge ziet alleen eigen vestiging(en); beheerder = alles
+    allowed = user_vestiging_ids()
+    if allowed is not None:
+        if not allowed:
+            return jsonify([])
+        if vestiging_id and int(vestiging_id) not in allowed:
+            return jsonify({'error': 'Geen toegang tot deze vestiging'}), 403
+        ph = ','.join('?' * len(allowed))
+        query += f' AND k.vestiging_id IN ({ph})'
+        params += list(allowed)
     query += ' ORDER BY k.kluisnummer'
     rows = g.db.execute(query, params).fetchall()
     return jsonify([dict(r) for r in rows])
@@ -300,6 +316,8 @@ def actieve_toewijzingen():
 @toewijzingen_bp.route('/kluisjes/<int:kid>/geschiedenis', methods=['GET'])
 @login_required
 def geschiedenis(kid):
+    err = _kluisje_access(kid)
+    if err: return err
     rows = g.db.execute(
         'SELECT * FROM toewijzingen WHERE kluisje_id = ? ORDER BY created_at DESC',
         (kid,)
@@ -315,6 +333,22 @@ def bulk_toewijzen():
     periode_tot = data['periode_tot']
     borgbedrag = data.get('borgbedrag', 0)
     user = session.get('user', {})
+
+    # Vestiging-scope: alle kluisjes moeten binnen de toegang van de user vallen
+    allowed = user_vestiging_ids()
+    if allowed is not None:
+        if not allowed:
+            return jsonify({'error': 'Geen vestiging-toegang'}), 403
+        kids = [it['kluisje_id'] for it in toewijzingen]
+        if kids:
+            ph = ','.join('?' * len(kids))
+            vph = ','.join('?' * len(allowed))
+            rows = g.db.execute(
+                f'SELECT id FROM kluisjes WHERE id IN ({ph}) AND vestiging_id IN ({vph})',
+                list(kids) + list(allowed)
+            ).fetchall()
+            if {r['id'] for r in rows} != set(kids):
+                return jsonify({'error': 'Een of meer kluisjes vallen buiten je vestiging-toegang'}), 403
 
     count = 0
     skipped = []

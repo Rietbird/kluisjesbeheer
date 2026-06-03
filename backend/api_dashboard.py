@@ -1,15 +1,41 @@
 from flask import Blueprint, jsonify, g, request, Response
-from auth import login_required
+from auth import login_required, user_vestiging_ids
 from config import config
 import io
 from datetime import date
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/api')
 
+
+def _scope_report_vestiging(vestiging_id):
+    """Conciërge mag alleen rapporten van eigen vestiging(en); beheerder = alles.
+    Return (vestiging_id, error_or_None). Conciërge zonder filter → auto-scope
+    naar de enige vestiging, of 403 bij meerdere (kies er één)."""
+    allowed = user_vestiging_ids()
+    if allowed is None:
+        return vestiging_id, None
+    if not allowed:
+        return None, (jsonify({'error': 'Geen vestiging-toegang'}), 403)
+    if vestiging_id:
+        if int(vestiging_id) not in allowed:
+            return None, (jsonify({'error': 'Geen toegang tot deze vestiging'}), 403)
+        return vestiging_id, None
+    if len(allowed) == 1:
+        return str(next(iter(allowed))), None
+    return None, (jsonify({'error': 'Kies een vestiging'}), 403)
+
+
 @dashboard_bp.route('/dashboard/stats', methods=['GET'])
 @login_required
 def stats():
-    rows = g.db.execute('''
+    allowed = user_vestiging_ids()
+    where, wparams = '', []
+    if allowed is not None:
+        if not allowed:
+            return jsonify([])
+        where = 'WHERE v.id IN (%s)' % ','.join('?' * len(allowed))
+        wparams = list(allowed)
+    rows = g.db.execute(f'''
         SELECT v.id, v.naam,
             COUNT(k.id) as totaal,
             SUM(CASE WHEN k.status='uitgeleend' THEN 1 ELSE 0 END) as uitgeleend,
@@ -17,9 +43,10 @@ def stats():
             SUM(CASE WHEN k.is_defect=1 THEN 1 ELSE 0 END) as defect
         FROM vestigingen v
         LEFT JOIN kluisjes k ON k.vestiging_id = v.id AND k.verwijderd = 0
+        {where}
         GROUP BY v.id
         ORDER BY v.naam
-    ''').fetchall()
+    ''', wparams).fetchall()
 
     result = []
     for r in rows:
@@ -217,6 +244,8 @@ def rapport_preview():
     import html as htmllib
     report_type = request.args.get('type', 'inname')
     vestiging_id = request.args.get('vestiging_id')
+    vestiging_id, err = _scope_report_vestiging(vestiging_id)
+    if err: return err
     today = date.today().strftime('%d-%m-%Y')
 
     result = _get_rapport_data(report_type, vestiging_id, g.db)
@@ -372,6 +401,8 @@ def rapport():
 
     report_type = request.args.get('type', 'toewijzingen')
     vestiging_id = request.args.get('vestiging_id')
+    vestiging_id, err = _scope_report_vestiging(vestiging_id)
+    if err: return err
     today = date.today().strftime('%d-%m-%Y')
 
     font_normal, font_bold = _register_font()
