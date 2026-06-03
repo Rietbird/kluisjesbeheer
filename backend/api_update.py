@@ -50,6 +50,11 @@ def check():
             behind = int(_git('rev-list', '--count', f'HEAD..origin/{BRANCH}').stdout.strip())
         except ValueError:
             behind = 0
+        try:
+            build_current = int(_git('rev-list', '--count', 'HEAD').stdout.strip())
+            build_latest = build_current + behind
+        except ValueError:
+            build_current = build_latest = 0
         commits = []
         if behind:
             log = _git('log', '--format=%h %s', f'HEAD..origin/{BRANCH}', '-n', '10')
@@ -58,6 +63,8 @@ def check():
             'git': True,
             'available': behind > 0,
             'behind': behind,
+            'build': build_current,
+            'build_latest': build_latest,
             'current': local[:7],
             'latest': remote[:7],
             'commits': commits,

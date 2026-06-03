@@ -1700,7 +1700,7 @@ function UpdatePanel() {
       ) : state.available ? (
         <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-3">
           <div className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-            ⬆️ Update beschikbaar — {state.behind} {state.behind === 1 ? 'wijziging' : 'wijzigingen'} (<span className="font-mono">{state.current}</span> → <span className="font-mono">{state.latest}</span>)
+            ⬆️ Update beschikbaar — build {state.build} → build {state.build_latest}
           </div>
           {state.commits?.length > 0 && (
             <ul className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-2 list-disc ml-5 space-y-0.5">
@@ -1710,7 +1710,7 @@ function UpdatePanel() {
         </div>
       ) : (
         <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-          ✅ Bijgewerkt — versie <span className="font-mono">{state.current}</span>
+          ✅ Bijgewerkt — build {state.build}
         </p>
       )}
 
