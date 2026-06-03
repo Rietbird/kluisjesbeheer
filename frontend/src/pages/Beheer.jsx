@@ -1204,9 +1204,6 @@ function BeheerInstellingenTab() {
         </div>
       </div>
 
-      {/* Backups */}
-      <BackupPanel />
-
     </div>
   )
 }
@@ -1477,7 +1474,7 @@ function GebruikersTab() {
   )
 }
 
-const BEHEERDER_TABS = ['Instellingen', 'Import', 'Vestigingen', 'Gebruikers', 'Entra', 'Certificaat']
+const BEHEERDER_TABS = ['Instellingen', 'Import', 'Vestigingen', 'Gebruikers', 'Entra', 'Certificaat', 'Onderhoud']
 const CONCIERGE_TABS = ['Vestigingen']
 
 function CertTab() {
@@ -1659,18 +1656,22 @@ function EntraTab() {
   )
 }
 
-// ── Update-banner (Beheer -> bovenaan, alleen beheerder) ─────────────────────
-function UpdateBanner() {
+// ── Onderhoud-tab: software-update + backups ─────────────────────────────────
+function UpdatePanel() {
+  const cardClass = "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6"
   const [state, setState] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [checking, setChecking] = useState(false)
   const [done, setDone] = useState('')
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    api.get('/api/update/check').then(setState).catch(() => {})
-  }, [])
-
-  if (!state || !state.git || !state.available) return null
+  function load() {
+    setChecking(true); setError('')
+    api.get('/api/update/check')
+      .then(s => { setState(s); setChecking(false) })
+      .catch(e => { setError(e.message); setChecking(false) })
+  }
+  useEffect(() => { load() }, [])
 
   async function doUpdate() {
     setBusy(true); setError('')
@@ -1684,33 +1685,58 @@ function UpdateBanner() {
   }
 
   return (
-    <div className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div className="font-semibold text-amber-800 dark:text-amber-200 flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Update beschikbaar
-          </div>
-          <div className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-            {state.behind} nieuwe {state.behind === 1 ? 'wijziging' : 'wijzigingen'} (<span className="font-mono">{state.current}</span> → <span className="font-mono">{state.latest}</span>).
+    <div className={cardClass}>
+      <h2 className="text-base font-bold text-slate-800 dark:text-white mb-1">Software-update</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+        Werk de applicatie bij naar de nieuwste versie vanuit GitHub.
+      </p>
+
+      {!state ? (
+        <p className="text-sm text-slate-400">Bezig met controleren…</p>
+      ) : !state.git ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Deze installatie is geen git-checkout; automatisch updaten staat uit.
+        </p>
+      ) : state.available ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-3">
+          <div className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+            ⬆️ Update beschikbaar — {state.behind} {state.behind === 1 ? 'wijziging' : 'wijzigingen'} (<span className="font-mono">{state.current}</span> → <span className="font-mono">{state.latest}</span>)
           </div>
           {state.commits?.length > 0 && (
             <ul className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-2 list-disc ml-5 space-y-0.5">
-              {state.commits.slice(0, 5).map((c, i) => <li key={i} className="font-mono">{c}</li>)}
+              {state.commits.slice(0, 6).map((c, i) => <li key={i} className="font-mono">{c}</li>)}
             </ul>
           )}
-          {done && <div className="text-sm text-green-700 dark:text-green-300 mt-2">{done}</div>}
-          {error && <div className="text-sm text-red-600 mt-2">{error}</div>}
         </div>
-        {!done && (
+      ) : (
+        <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+          ✅ Bijgewerkt — versie <span className="font-mono">{state.current}</span>
+        </p>
+      )}
+
+      <div className="flex items-center gap-3 mt-4">
+        <button onClick={load} disabled={checking || busy}
+          className="px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-60">
+          {checking ? 'Controleren…' : 'Controleer op updates'}
+        </button>
+        {state?.git && state?.available && !done && (
           <button onClick={doUpdate} disabled={busy}
-            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white rounded-lg text-sm font-medium whitespace-nowrap">
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white rounded-lg text-sm font-medium">
             {busy ? 'Bezig met updaten…' : 'Nu updaten'}
           </button>
         )}
+        {done && <span className="text-sm text-emerald-600 font-medium">{done}</span>}
+        {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
+    </div>
+  )
+}
+
+function OnderhoudTab() {
+  return (
+    <div className="max-w-3xl space-y-5">
+      <UpdatePanel />
+      <BackupPanel />
     </div>
   )
 }
@@ -1752,8 +1778,6 @@ export default function Beheer({ onClose }) {
 
       <h1 className="text-2xl font-bold text-navy dark:text-white mb-5">Beheer</h1>
 
-      {isBeheerder && <UpdateBanner />}
-
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700 mb-6">
         {TABS.map((tab, i) => (
@@ -1777,6 +1801,7 @@ export default function Beheer({ onClose }) {
           {activeTab === 3 && <GebruikersTab />}
           {activeTab === 4 && <EntraTab />}
           {activeTab === 5 && <CertTab />}
+          {activeTab === 6 && <OnderhoudTab />}
         </>
       ) : (
         vestigingenPanel
