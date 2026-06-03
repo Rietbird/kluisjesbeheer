@@ -5,14 +5,12 @@ tot een draaiende app.
 
 > 📋 **Werkwijze:** vervang in de commando's `<server-ip>` door het
 > interne IP van je doelserver. Markering:
-> 🖥️ = jouw werkstation · 🐧 = doelserver (via console of SSH).
+> 🖥️ = jouw werkstation · 🐧 = doelserver (via console).
 
 ---
 
-> 🔒 Dit stappenplan kiest voor `root` + wachtwoord op SSH — snel en
-> prima voor een server op een intern beheernet. Productie-veilig
-> (admin-account + SSH-key)? Zie de tip onderaan stap 1.5. Gebruik
-> `-p 2222` bij `ssh`/`scp` als de standaardpoort 22 geblokkeerd is.
+> 🔒 **Security First:** Dit stappenplan gaat uit van SSH-sleutel authenticatie. 
+> Gebruik geen wachtwoorden voor SSH, zelfs niet op interne netwerken.
 
 ---
 
