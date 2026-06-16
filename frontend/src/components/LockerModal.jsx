@@ -31,6 +31,11 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
   const [opmerkingen, setOpmerkingen] = useState(kluisje.opmerkingen || '')
   const [mode, setMode] = useState(null)
   const [savingStatus, setSavingStatus] = useState(null)
+  const [editSleutel, setEditSleutel] = useState(false)
+  const [sleutelInput, setSleutelInput] = useState(kluisje.sleutelnummer || '')
+  const [sleutelSaving, setSleutelSaving] = useState(false)
+  const [sleutelError, setSleutelError] = useState('')
+  const [sleutelForce, setSleutelForce] = useState(false)
   const { borgActiefVoor } = useInstellingen()
 
   // Sync detail bij elke prop-update (na lijst-reload), zodat waarschuwingsblokken etc. up-to-date zijn
@@ -44,6 +49,10 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
     setOpmerkingen(kluisje.opmerkingen || '')
     setMode(null)
     setVerplaatsCluster('')
+    setEditSleutel(false)
+    setSleutelError('')
+    setSleutelForce(false)
+    setSleutelInput(kluisje.sleutelnummer || '')
     api.get(`/api/kluisjes/${kluisje.id}/geschiedenis`)
       .then(setGeschiedenis)
       .catch(() => setGeschiedenis([]))
@@ -115,6 +124,44 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
     } catch {
       setSavingStatus('error')
     }
+  }
+
+  async function saveSleutelnummer() {
+    setSleutelError('')
+    const waarde = sleutelInput.trim()
+    // Niets gewijzigd: gewoon sluiten.
+    if (waarde === (detail.sleutelnummer || '')) { setEditSleutel(false); setSleutelForce(false); return }
+    try {
+      setSleutelSaving(true)
+      // Sleutelnummers mogen dubbel zijn, maar waarschuw vóór opslaan.
+      // Tweede klik (sleutelForce) slaat alsnog op.
+      if (waarde && !sleutelForce) {
+        const check = await api.get(`/api/kluisjes/${kluisje.id}/sleutel-check?waarde=${encodeURIComponent(waarde)}`)
+        if (check.in_gebruik) {
+          const lijst = check.kluisnummers || []
+          const tekst = lijst.slice(0, 4).join(', ') + (lijst.length > 4 ? ` +${lijst.length - 4} meer` : '')
+          setSleutelError(`Al in gebruik bij ${tekst}. Klik nogmaals op opslaan om toch door te gaan.`)
+          setSleutelForce(true)
+          return
+        }
+      }
+      const updated = await api.put(`/api/kluisjes/${kluisje.id}`, { sleutelnummer: waarde })
+      setDetail(d => ({ ...d, sleutelnummer: updated.sleutelnummer }))
+      setEditSleutel(false)
+      setSleutelForce(false)
+      onUpdate()
+    } catch (err) {
+      setSleutelError(err.message)
+    } finally {
+      setSleutelSaving(false)
+    }
+  }
+
+  function annuleerSleutel() {
+    setEditSleutel(false)
+    setSleutelError('')
+    setSleutelForce(false)
+    setSleutelInput(detail.sleutelnummer || '')
   }
 
   async function toggleDefect() {
@@ -230,7 +277,44 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
 
           {/* Basic info */}
           <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 text-sm">
-            <InfoRow label="Sleutelnummer">{detail.sleutelnummer || '—'}</InfoRow>
+            <InfoRow label="Sleutelnummer">
+              {editSleutel ? (
+                <span className="flex flex-col items-end gap-1">
+                  <span className="flex items-center gap-1.5">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={sleutelInput}
+                      onChange={e => { setSleutelInput(e.target.value); setSleutelError(''); setSleutelForce(false) }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') saveSleutelnummer()
+                        if (e.key === 'Escape') annuleerSleutel()
+                      }}
+                      placeholder="Sleutelnr"
+                      className="w-32 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-2 py-1 text-sm text-right outline-none focus:ring-2 focus:ring-blue-300" />
+                    <button onClick={saveSleutelnummer} disabled={sleutelSaving}
+                      title={sleutelForce ? 'Toch opslaan' : 'Opslaan'}
+                      className={`${sleutelForce ? 'text-amber-600 hover:text-amber-700' : 'text-emerald-600 hover:text-emerald-700'} disabled:opacity-40 p-1`}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    </button>
+                    <button onClick={annuleerSleutel} title="Annuleren"
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </span>
+                  {sleutelError && <span className={`text-xs font-normal text-right max-w-[14rem] ${sleutelForce ? 'text-amber-600 dark:text-amber-400' : 'text-red-500'}`}>{sleutelError}</span>}
+                </span>
+              ) : (
+                <span className="flex items-center gap-2 justify-end">
+                  <span>{detail.sleutelnummer || '—'}</span>
+                  <button onClick={() => { setSleutelInput(detail.sleutelnummer || ''); setEditSleutel(true) }}
+                    title="Sleutelnummer aanpassen"
+                    className="text-slate-400 hover:text-primary p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  </button>
+                </span>
+              )}
+            </InfoRow>
             <InfoRow label="Status">
               <span className="inline-flex flex-wrap gap-1 justify-end">
                 <StatusBadge status={detail.status} sleutelNietIngeleverd={detail._sleutel_niet_ingeleverd} />

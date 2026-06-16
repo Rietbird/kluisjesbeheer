@@ -159,6 +159,29 @@ def get_kluisje(kid):
         return jsonify({'error': 'Niet gevonden'}), 404
     return jsonify(dict(row))
 
+@kluisjes_bp.route('/kluisjes/<int:kid>/sleutel-check', methods=['GET'])
+@login_required
+def sleutel_check(kid):
+    """Advies-check: welke ANDERE kluisjes in dezelfde vestiging gebruiken dit
+    sleutelnummer al? Blokkeert niets — sleutelnummers mogen dubbel zijn — maar
+    laat de UI een waarschuwing tonen vóór opslaan."""
+    err = _assert_kluisje_access(kid)
+    if err: return err
+    waarde = (request.args.get('waarde') or '').strip()
+    row = g.db.execute('SELECT vestiging_id FROM kluisjes WHERE id = ? AND verwijderd = 0', (kid,)).fetchone()
+    if not row:
+        return jsonify({'error': 'Niet gevonden'}), 404
+    if not waarde:
+        return jsonify({'in_gebruik': False, 'kluisnummers': []})
+    rows = g.db.execute(
+        '''SELECT kluisnummer FROM kluisjes
+           WHERE vestiging_id = ? AND TRIM(sleutelnummer) = ? AND verwijderd = 0 AND id != ?
+           ORDER BY kluisnummer''',
+        (row['vestiging_id'], waarde, kid)
+    ).fetchall()
+    return jsonify({'in_gebruik': len(rows) > 0, 'kluisnummers': [r['kluisnummer'] for r in rows]})
+
+
 @kluisjes_bp.route('/clusters/<int:cid>/kluisjes', methods=['POST'])
 @login_required
 def create_kluisje(cid):
@@ -174,7 +197,7 @@ def create_kluisje(cid):
         return jsonify({'error': 'Cluster niet gevonden'}), 404
 
     vestiging_id = cluster['vestiging_id']
-    sleutelnummer = data.get('sleutelnummer', '')
+    sleutelnummer = (data.get('sleutelnummer', '') or '').strip()
     locatie = data.get('locatie', '')
 
     try:
@@ -201,7 +224,13 @@ def update_kluisje(kid):
     if not row:
         return jsonify({'error': 'Niet gevonden'}), 404
 
-    sleutelnummer = data.get('sleutelnummer', row['sleutelnummer'])
+    # Sleutelnummers zijn bewust NIET uniek (categorieën als 'Eraspas'/'Pasje'
+    # en hergebruikte sleutels komen voor). De UI waarschuwt via /sleutel-check,
+    # maar de backend blokkeert duplicaten niet.
+    if 'sleutelnummer' in data:
+        sleutelnummer = (data.get('sleutelnummer') or '').strip()
+    else:
+        sleutelnummer = row['sleutelnummer']
     locatie = data.get('locatie', row['locatie'])
     opmerkingen = data.get('opmerkingen', row['opmerkingen'])
     status = data.get('status', row['status'])
