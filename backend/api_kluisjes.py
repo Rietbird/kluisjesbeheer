@@ -71,7 +71,8 @@ def search_kluisjes():
     query = '''
         SELECT k.*, c.naam as cluster_naam, c.standaard_borg,
                t.id as toewijzing_id,
-               t.leerling_naam, t.leerling_stamnr, t.leerling_klas,
+               t.leerling_naam, t.leerling_stamnr,
+               COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) AS leerling_klas,
                t.periode_van, t.periode_tot, t.borgbedrag, t.borg_betaald,
                t.reservesleutel_uitgegeven, t.reservesleutel_datum,
                l.vertrokken_op as leerling_vertrokken_op,
