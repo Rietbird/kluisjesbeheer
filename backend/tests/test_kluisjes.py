@@ -26,6 +26,36 @@ def test_search_kluisjes(client):
     assert len(data) == 1
     assert data[0]['kluisnummer'] == 'P001'
 
+def test_search_filter_op_klas_snapshot(client):
+    """Filter op klas die op de toewijzing zelf staat (snapshot)."""
+    client.post('/api/clusters/1/kluisjes', json={'kluisnummer': 'P001', 'sleutelnummer': 'S-001'})
+    client.post('/api/clusters/1/kluisjes', json={'kluisnummer': 'P002', 'sleutelnummer': 'S-002'})
+    client.post('/api/kluisjes/1/toewijzen', json={
+        'leerling_stamnr': '100', 'leerling_naam': 'Anna', 'leerling_klas': '2A',
+        'periode_van': '2026-01-01', 'periode_tot': '2026-07-31', 'borgbedrag': 0
+    })
+    client.post('/api/kluisjes/2/toewijzen', json={
+        'leerling_stamnr': '200', 'leerling_naam': 'Bram', 'leerling_klas': '3B',
+        'periode_van': '2026-01-01', 'periode_tot': '2026-07-31', 'borgbedrag': 0
+    })
+    rv = client.get('/api/kluisjes?vestiging_id=1&klas=2A')
+    data = rv.get_json()
+    assert rv.status_code == 200
+    assert [d['kluisnummer'] for d in data] == ['P001']
+
+def test_search_filter_op_klas_live_fallback(client, db):
+    """Lege snapshot-klas -> klas komt uit de live leerlingen-tabel."""
+    client.post('/api/clusters/1/kluisjes', json={'kluisnummer': 'P001', 'sleutelnummer': 'S-001'})
+    client.post('/api/kluisjes/1/toewijzen', json={
+        'leerling_stamnr': '300', 'leerling_naam': 'Cara', 'leerling_klas': '',
+        'periode_van': '2026-01-01', 'periode_tot': '2026-07-31', 'borgbedrag': 0
+    })
+    db.execute("INSERT INTO leerlingen (stamnr, naam, klas) VALUES ('300', 'Cara', 'M2HV1')")
+    db.commit()
+    rv = client.get('/api/kluisjes?vestiging_id=1&klas=M2HV1')
+    data = rv.get_json()
+    assert [d['kluisnummer'] for d in data] == ['P001']
+
 def test_update_kluisje(client):
     client.post('/api/clusters/1/kluisjes', json={'kluisnummer': 'P001', 'sleutelnummer': 'S-001'})
     rv = client.put('/api/kluisjes/1', json={'sleutelnummer': 'S-999', 'opmerkingen': 'Test notitie'})

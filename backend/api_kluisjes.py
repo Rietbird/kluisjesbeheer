@@ -67,6 +67,7 @@ def search_kluisjes():
     q = request.args.get('q', '').strip()
     vestiging_id = request.args.get('vestiging_id')
     status = request.args.get('status')
+    klas = request.args.get('klas')
 
     query = '''
         SELECT k.*, c.naam as cluster_naam, c.standaard_borg,
@@ -145,6 +146,9 @@ def search_kluisjes():
                      OR t.leerling_naam LIKE ? ESCAPE '\\' OR t.leerling_stamnr LIKE ? ESCAPE '\\')"""
         like = f'%{q_escaped}%'
         params.extend([like, like, like, like])
+    if klas:
+        query += " AND COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) = ?"
+        params.append(klas)
 
     query += ' ORDER BY k.kluisnummer'
     rows = g.db.execute(query, params).fetchall()
