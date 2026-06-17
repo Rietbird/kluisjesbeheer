@@ -185,7 +185,7 @@ export default function Uitleenoverzicht() {
   // Concierge with exactly 1 vestiging: skip the picker and go straight in
   useEffect(() => {
     if (isConcierge && vestigingen.length === 1 && !filters.vestiging_id) {
-      setFilters(f => ({ ...f, vestiging_id: String(vestigingen[0].id), cluster_id: null }))
+      setFilters(f => ({ ...f, vestiging_id: String(vestigingen[0].id), cluster_id: null, klas: '' }))
     }
   }, [isConcierge, vestigingen, filters.vestiging_id])
 
@@ -195,9 +195,9 @@ export default function Uitleenoverzicht() {
       return
     }
     if (id === null) {
-      setFilters(f => ({ ...f, vestiging_id: null, cluster_id: null }))
+      setFilters(f => ({ ...f, vestiging_id: null, cluster_id: null, klas: '' }))
     } else {
-      setFilters(f => ({ ...f, vestiging_id: String(id), cluster_id: null }))
+      setFilters(f => ({ ...f, vestiging_id: String(id), cluster_id: null, klas: '' }))
     }
   }
 

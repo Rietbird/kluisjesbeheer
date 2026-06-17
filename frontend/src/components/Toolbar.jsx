@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useInstellingen } from '../context/InstellingenContext'
+import { api } from '../api'
 
 const statusOptions = [
   { value: '', label: 'Alles' },
@@ -26,20 +27,22 @@ function RapportRij({ label, type, onDownload, onPreview }) {
   )
 }
 
-function RapportDropdown({ vestigingId }) {
+function RapportDropdown({ vestigingId, klas }) {
   const [open, setOpen] = useState(false)
   const { borgActiefVoor } = useInstellingen()
 
-  function download(type) {
+  function download(type, extra = {}) {
     const params = new URLSearchParams({ type })
     if (vestigingId) params.set('vestiging_id', vestigingId)
+    Object.entries(extra).forEach(([k, v]) => v && params.set(k, v))
     window.open(`/api/dashboard/rapport?${params}`, '_blank')
     setOpen(false)
   }
 
-  function preview(type) {
+  function preview(type, extra = {}) {
     const params = new URLSearchParams({ type })
     if (vestigingId) params.set('vestiging_id', vestigingId)
+    Object.entries(extra).forEach(([k, v]) => v && params.set(k, v))
     window.open(`/api/dashboard/rapport/preview?${params}`, '_blank')
     setOpen(false)
   }
@@ -68,6 +71,26 @@ function RapportDropdown({ vestigingId }) {
             {borgActiefVoor(vestigingId) && (
               <RapportRij label="Openstaande borg" type="borg" onDownload={download} onPreview={preview} />
             )}
+            <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
+            <div className="px-4 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Per klas</div>
+            {klas ? (
+              <div className="flex items-center justify-between pr-2">
+                <button onClick={() => download('klas', { klas })}
+                  className="flex-1 text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700">
+                  Huidige klas ({klas})
+                </button>
+                <button onClick={() => preview('klas', { klas })} className="text-slate-400 hover:text-primary px-2 py-1" title="Preview"><EyeIcon /></button>
+              </div>
+            ) : (
+              <div className="px-4 py-1.5 text-xs text-slate-400">Kies eerst een klas in de filterbalk voor één klas</div>
+            )}
+            <div className="flex items-center justify-between pr-2">
+              <button onClick={() => download('klas')}
+                className="flex-1 text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700">
+                Alle klassen
+              </button>
+              <button onClick={() => preview('klas')} className="text-slate-400 hover:text-primary px-2 py-1" title="Preview"><EyeIcon /></button>
+            </div>
           </div>
         </>
       )}
@@ -77,6 +100,12 @@ function RapportDropdown({ vestigingId }) {
 
 export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, onBulkEnd, vestigingId }) {
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [klassen, setKlassen] = useState([])
+
+  useEffect(() => {
+    if (!vestigingId) { setKlassen([]); return }
+    api.get(`/api/vestigingen/${vestigingId}/klassen`).then(setKlassen).catch(() => setKlassen([]))
+  }, [vestigingId])
 
   const selectClass = "border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none"
 
@@ -88,6 +117,13 @@ export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, o
           onChange={e => setFilters(f => ({ ...f, cluster_id: e.target.value || null }))}>
           <option value="">Alle clusters</option>
           {clusters.map(c => <option key={c.id} value={c.id}>{c.naam}</option>)}
+        </select>
+
+        {/* Klas */}
+        <select className={selectClass} value={filters.klas || ''}
+          onChange={e => setFilters(f => ({ ...f, klas: e.target.value }))}>
+          <option value="">Alle klassen</option>
+          {klassen.map(k => <option key={k} value={k}>{k}</option>)}
         </select>
 
         {/* Search */}
@@ -157,7 +193,7 @@ export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, o
         )}
 
         {/* Rapport */}
-        <RapportDropdown vestigingId={vestigingId} />
+        <RapportDropdown vestigingId={vestigingId} klas={filters.klas} />
       </div>
     </div>
   )
