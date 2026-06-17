@@ -7,7 +7,7 @@ export function useKluisjes() {
   const [kluisjes, setKluisjes] = useState([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
-    vestiging_id: null, cluster_id: null, status: '', q: '', view: 'grid',
+    vestiging_id: null, cluster_id: null, status: '', q: '', klas: '', view: 'grid',
   })
 
   useEffect(() => {
@@ -29,8 +29,9 @@ export function useKluisjes() {
     params.set('vestiging_id', filters.vestiging_id)
     if (filters.status) params.set('status', filters.status)
     if (filters.q) params.set('q', filters.q)
+    if (filters.klas) params.set('klas', filters.klas)
     api.get(`/api/kluisjes?${params}`).then(setKluisjes).finally(() => setLoading(false))
-  }, [filters.vestiging_id, filters.status, filters.q])
+  }, [filters.vestiging_id, filters.status, filters.q, filters.klas])
 
   useEffect(() => { loadKluisjes() }, [loadKluisjes])
 
