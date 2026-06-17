@@ -56,6 +56,21 @@ def test_search_filter_op_klas_live_fallback(client, db):
     data = rv.get_json()
     assert [d['kluisnummer'] for d in data] == ['P001']
 
+def test_klassen_per_vestiging(client):
+    client.post('/api/clusters/1/kluisjes', json={'kluisnummer': 'P001'})
+    client.post('/api/clusters/1/kluisjes', json={'kluisnummer': 'P002'})
+    client.post('/api/clusters/1/kluisjes', json={'kluisnummer': 'P003'})
+    client.post('/api/kluisjes/1/toewijzen', json={
+        'leerling_stamnr': '1', 'leerling_naam': 'A', 'leerling_klas': '3B',
+        'periode_van': '2026-01-01', 'periode_tot': '2026-07-31', 'borgbedrag': 0})
+    client.post('/api/kluisjes/2/toewijzen', json={
+        'leerling_stamnr': '2', 'leerling_naam': 'B', 'leerling_klas': '2A',
+        'periode_van': '2026-01-01', 'periode_tot': '2026-07-31', 'borgbedrag': 0})
+    # P003 blijft vrij -> levert geen klas
+    rv = client.get('/api/vestigingen/1/klassen')
+    assert rv.status_code == 200
+    assert rv.get_json() == ['2A', '3B']  # uniek + gesorteerd, geen lege
+
 def test_update_kluisje(client):
     client.post('/api/clusters/1/kluisjes', json={'kluisnummer': 'P001', 'sleutelnummer': 'S-001'})
     rv = client.put('/api/kluisjes/1', json={'sleutelnummer': 'S-999', 'opmerkingen': 'Test notitie'})

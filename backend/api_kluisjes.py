@@ -154,6 +154,25 @@ def search_kluisjes():
     rows = g.db.execute(query, params).fetchall()
     return jsonify([dict(r) for r in rows])
 
+@kluisjes_bp.route('/vestigingen/<int:vid>/klassen', methods=['GET'])
+@login_required
+def klassen_in_vestiging(vid):
+    """Unieke klassen met een actieve huurder in deze vestiging (voor de filter-dropdown)."""
+    err = assert_vestiging_access(vid)
+    if err: return err
+    rows = g.db.execute(
+        '''SELECT DISTINCT COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) AS klas
+           FROM toewijzingen t
+           JOIN kluisjes k ON t.kluisje_id = k.id
+           LEFT JOIN leerlingen l ON t.leerling_stamnr = l.stamnr
+           WHERE k.verwijderd = 0 AND t.actief = 1 AND k.vestiging_id = ?
+             AND TRIM(COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas)) <> ''
+           ORDER BY klas''',
+        (vid,)
+    ).fetchall()
+    return jsonify([r['klas'] for r in rows])
+
+
 @kluisjes_bp.route('/kluisjes/<int:kid>', methods=['GET'])
 @login_required
 def get_kluisje(kid):
