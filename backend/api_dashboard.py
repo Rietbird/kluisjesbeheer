@@ -224,6 +224,53 @@ def _get_rapport_data(report_type, vestiging_id, db):
         return title, rows, borg_actief, vestiging_naam, True
 
 
+def _get_klas_rapport_data(vestiging_id, klas, db):
+    """Per-klas overzicht. Geeft een dict {klasnaam: {'met': [...], 'zonder': [...]}}.
+    Klassen-set = de klassen die in deze vestiging een actieve huurder hebben
+    (zelfde set als de filter-dropdown). 'zonder' = leerlingen in die klas zonder
+    actieve toewijzing (leunt op de leerlingen-tabel / Magister-sync)."""
+    KLAS = "COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas)"
+    params = [int(vestiging_id)]
+    klas_filter = ''
+    if klas:
+        klas_filter = f' AND {KLAS} = ?'
+        params.append(klas)
+    met_rows = db.execute(f'''
+        SELECT {KLAS} AS klas, t.leerling_naam, t.leerling_stamnr,
+               k.kluisnummer, k.sleutelnummer, t.periode_van, t.periode_tot,
+               l.vertrokken_op
+        FROM toewijzingen t
+        JOIN kluisjes k ON t.kluisje_id = k.id
+        LEFT JOIN leerlingen l ON t.leerling_stamnr = l.stamnr
+        WHERE k.verwijderd = 0 AND t.actief = 1 AND k.vestiging_id = ?{klas_filter}
+        ORDER BY klas, t.leerling_naam
+    ''', params).fetchall()
+
+    klassen = []
+    for r in met_rows:
+        kn = r['klas'] or '-'
+        if kn not in klassen:
+            klassen.append(kn)
+
+    result = {}
+    for kn in klassen:
+        result[kn] = {
+            'met': [r for r in met_rows if (r['klas'] or '-') == kn],
+            'zonder': [],
+        }
+        if kn == '-':
+            continue
+        result[kn]['zonder'] = db.execute('''
+            SELECT l.naam, l.stamnr, l.klas
+            FROM leerlingen l
+            WHERE l.klas = ? AND l.vertrokken_op IS NULL
+              AND NOT EXISTS (
+                SELECT 1 FROM toewijzingen t WHERE t.leerling_stamnr = l.stamnr AND t.actief = 1)
+            ORDER BY l.naam
+        ''', (kn,)).fetchall()
+    return result
+
+
 def _register_font():
     """Registreer DejaVuSans voor Unicode-ondersteuning (accenten etc.)."""
     try:
@@ -252,6 +299,52 @@ def rapport_preview():
     vestiging_id, err = _scope_report_vestiging(vestiging_id)
     if err: return err
     today = date.today().strftime('%d-%m-%Y')
+
+    if report_type == 'klas':
+        klas = request.args.get('klas')
+        data = _get_klas_rapport_data(vestiging_id, klas, g.db)
+        def e(v):
+            return htmllib.escape(str(v) if v else '')
+        kleur = config.get('SchoolKleur', '#FF8200')
+        title = f"Kluisjes per klas{(' — ' + klas) if klas else ''}"
+        secties = ''
+        for kn, groep in data.items():
+            secties += f'<h3>Klas: {e(kn)} <span>({len(groep["met"])} mét kluisje, {len(groep["zonder"])} zonder)</span></h3>'
+            secties += '<h4>Mét kluisje</h4><table><thead><tr><th>Naam</th><th class="nr">Kluisnr</th><th class="nr">Sleutelnr</th><th>Van</th><th>Tot</th></tr></thead><tbody>'
+            for i, r in enumerate(groep['met']):
+                rc = 'alt' if i % 2 else ''
+                vt = ' <span style="color:#dc2626;font-size:10px;font-weight:bold">[Vertrokken]</span>' if r['vertrokken_op'] else ''
+                secties += f'<tr class="{rc}"><td class="naam">{e(r["leerling_naam"])}{vt}</td><td class="nr">{e(r["kluisnummer"])}</td><td class="nr">{e(r["sleutelnummer"])}</td><td>{e(r["periode_van"])}</td><td>{e(r["periode_tot"])}</td></tr>'
+            secties += '</tbody></table>'
+            if groep['zonder']:
+                secties += '<h4>Zonder kluisje</h4><table><thead><tr><th>Naam</th><th>Stamnr</th></tr></thead><tbody>'
+                for i, r in enumerate(groep['zonder']):
+                    rc = 'alt' if i % 2 else ''
+                    secties += f'<tr class="{rc}"><td class="naam">{e(r["naam"])}</td><td>{e(r["stamnr"])}</td></tr>'
+                secties += '</tbody></table>'
+        if not data:
+            secties = '<p>Geen klassen met huurders gevonden.</p>'
+        pdf_url = '/api/dashboard/rapport?type=klas' + (f'&vestiging_id={vestiging_id}' if vestiging_id else '') + (f'&klas={htmllib.escape(klas)}' if klas else '')
+        html_out = f'''<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>{e(title)}</title>
+<style>
+  body {{ font-family: Arial, sans-serif; font-size: 13px; margin: 0; background: #f8fafc; color: #1e293b; }}
+  .toolbar {{ background: #1e3a5f; color: white; padding: 12px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; }}
+  .toolbar h1 {{ margin: 0; font-size: 16px; flex: 1; }}
+  .toolbar a {{ background: {kleur}; color: white; padding: 7px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; }}
+  .content {{ max-width: 900px; margin: 24px auto; padding: 0 16px; }}
+  h3 {{ color: #1e3a5f; font-size: 14px; margin: 24px 0 4px; }}
+  h3 span {{ color: #64748b; font-weight: normal; }}
+  h4 {{ color: #334155; font-size: 12px; margin: 10px 0 4px; }}
+  table {{ width: 100%; border-collapse: collapse; margin-bottom: 8px; }}
+  th {{ background: {kleur}; color: white; text-align: left; padding: 7px 10px; font-size: 12px; }}
+  td {{ padding: 6px 10px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }}
+  tr.alt td {{ background: #fff7ed; }}
+  @media print {{ .toolbar {{ display: none; }} body {{ background: white; }} .content {{ margin: 0; max-width: 100%; }} table {{ page-break-inside: avoid; }} }}
+</style></head><body>
+<div class="toolbar"><h1>Kluisjesbeheer &mdash; {e(title)}</h1><a href="{pdf_url}">Download PDF</a></div>
+<div class="content"><p style="color:#64748b;font-size:12px">{e(config.get('SchoolNaam', ''))} &mdash; {today}</p>{secties}</div>
+</body></html>'''
+        return Response(html_out, mimetype='text/html; charset=utf-8')
 
     result = _get_rapport_data(report_type, vestiging_id, g.db)
     title, rows, borg_actief, vestiging_naam = result[0], result[1], result[2], result[3]
@@ -411,6 +504,73 @@ def rapport():
     today = date.today().strftime('%d-%m-%Y')
 
     font_normal, font_bold = _register_font()
+
+    if report_type == 'klas':
+        klas = request.args.get('klas')
+        data = _get_klas_rapport_data(vestiging_id, klas, g.db)
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15*mm, rightMargin=15*mm,
+                                topMargin=15*mm, bottomMargin=15*mm)
+        page_w = A4[0] - 30*mm
+        styles = getSampleStyleSheet()
+        school_color = colors.HexColor(config.get('SchoolKleur', '#FF8200'))
+        title_style = ParagraphStyle('KTitle', parent=styles['Title'], fontSize=16,
+                                     fontName=font_bold, textColor=colors.HexColor('#1e3a5f'))
+        klas_style = ParagraphStyle('KKlas', parent=styles['Normal'], fontSize=11,
+                                    fontName=font_bold, textColor=colors.HexColor('#1e3a5f'),
+                                    spaceBefore=8, spaceAfter=2)
+        sub_style = ParagraphStyle('KSub', parent=styles['Normal'], fontSize=9,
+                                   fontName=font_bold, textColor=colors.gray, spaceBefore=4)
+
+        def ktable(data_rows, col_widths):
+            t = Table(data_rows, colWidths=col_widths, repeatRows=1)
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), school_color),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, -1), font_normal),
+                ('FONTNAME', (0, 0), (-1, 0), font_bold),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#FFF7ED')]),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('LEFTPADDING', (0, 0), (-1, -1), 5),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+            ]))
+            return t
+
+        title = f"Kluisjes per klas{(' - ' + klas) if klas else ''}"
+        elements = [Paragraph(f"Kluisjesbeheer - {title}", title_style),
+                    Paragraph(f"{config.get('SchoolNaam', '')} - {today}", sub_style),
+                    Spacer(1, 6*mm)]
+        if not data:
+            elements.append(Paragraph("Geen klassen met huurders gevonden.", styles['Normal']))
+        nr_w = 28*mm
+        date_w = 26*mm
+        for kn, groep in data.items():
+            elements.append(Paragraph(
+                f"Klas: {kn}  ({len(groep['met'])} mét kluisje, {len(groep['zonder'])} zonder)", klas_style))
+            elements.append(Paragraph("Mét kluisje", sub_style))
+            mdata = [['Naam', 'Kluisnr', 'Sleutelnr', 'Van', 'Tot']]
+            for r in groep['met']:
+                naam = r['leerling_naam'] + (' [V]' if r['vertrokken_op'] else '')
+                mdata.append([naam, r['kluisnummer'], r['sleutelnummer'] or '',
+                              r['periode_van'] or '', r['periode_tot'] or ''])
+            elements.append(ktable(mdata, [page_w - 2*nr_w - 2*date_w, nr_w, nr_w, date_w, date_w]))
+            if groep['zonder']:
+                elements.append(Paragraph("Zonder kluisje", sub_style))
+                zdata = [['Naam', 'Stamnr']]
+                for r in groep['zonder']:
+                    zdata.append([r['naam'], r['stamnr']])
+                elements.append(ktable(zdata, [page_w - nr_w, nr_w]))
+            elements.append(Spacer(1, 5*mm))
+        doc.build(elements)
+        buf.seek(0)
+        suffix = f'-{klas}' if klas else '-alle'
+        filename = f'kluisjes-klas{suffix}-{date.today().isoformat()}.pdf'
+        return Response(buf.getvalue(), mimetype='application/pdf',
+                        headers={'Content-Disposition': f'attachment; filename={filename}'})
 
     result = _get_rapport_data(report_type, vestiging_id, g.db)
     title, rows, borg_actief, vestiging_naam = result[0], result[1], result[2], result[3]

@@ -52,3 +52,39 @@ def test_rapport_toewijzingen_gebruikt_live_klas(client, db):
     rv = client.get('/api/dashboard/rapport/preview?type=toewijzingen&vestiging_id=1')
     assert rv.status_code == 200
     assert 'Klas: 4VWO' in rv.get_data(as_text=True)
+
+def test_klas_rapport_preview_met_en_zonder(client, db):
+    # Eén leerling MET kluisje in klas 2A
+    client.post('/api/kluisjes/1/toewijzen', json={
+        'leerling_stamnr': '10', 'leerling_naam': 'Eva Met', 'leerling_klas': '2A',
+        'periode_van': '2026-01-01', 'periode_tot': '2026-07-31', 'borgbedrag': 0})
+    # Eén leerling ZONDER kluisje in klas 2A (alleen in leerlingen-tabel)
+    db.execute("INSERT INTO leerlingen (stamnr, naam, klas) VALUES ('11', 'Finn Zonder', '2A')")
+    db.commit()
+    rv = client.get('/api/dashboard/rapport/preview?type=klas&vestiging_id=1')
+    body = rv.get_data(as_text=True)
+    assert rv.status_code == 200
+    assert 'Eva Met' in body
+    assert 'Finn Zonder' in body
+    assert 'Klas: 2A' in body
+
+def test_klas_rapport_filtert_op_klas(client, db):
+    client.post('/api/kluisjes/1/toewijzen', json={
+        'leerling_stamnr': '10', 'leerling_naam': 'Eva 2A', 'leerling_klas': '2A',
+        'periode_van': '2026-01-01', 'periode_tot': '2026-07-31', 'borgbedrag': 0})
+    client.post('/api/kluisjes/2/toewijzen', json={
+        'leerling_stamnr': '20', 'leerling_naam': 'Gijs 3B', 'leerling_klas': '3B',
+        'periode_van': '2026-01-01', 'periode_tot': '2026-07-31', 'borgbedrag': 0})
+    rv = client.get('/api/dashboard/rapport/preview?type=klas&vestiging_id=1&klas=2A')
+    body = rv.get_data(as_text=True)
+    assert 'Eva 2A' in body
+    assert 'Gijs 3B' not in body
+
+def test_klas_rapport_pdf_download(client):
+    client.post('/api/kluisjes/1/toewijzen', json={
+        'leerling_stamnr': '10', 'leerling_naam': 'Eva', 'leerling_klas': '2A',
+        'periode_van': '2026-01-01', 'periode_tot': '2026-07-31', 'borgbedrag': 0})
+    rv = client.get('/api/dashboard/rapport?type=klas&vestiging_id=1')
+    assert rv.status_code == 200
+    assert rv.mimetype == 'application/pdf'
+    assert rv.get_data().startswith(b'%PDF')
