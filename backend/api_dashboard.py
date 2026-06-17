@@ -138,7 +138,9 @@ def _get_rapport_data(report_type, vestiging_id, db):
     elif report_type == 'sleutels':
         query = '''
             SELECT v.naam as vestiging, k.kluisnummer, k.sleutelnummer,
-                   t.leerling_naam, t.leerling_stamnr, t.leerling_klas, t.periode_tot, t.einddatum,
+                   t.leerling_naam, t.leerling_stamnr,
+                   COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) as leerling_klas,
+                   t.periode_tot, t.einddatum,
                    l.vertrokken_op
             FROM kluisjes k
             JOIN vestigingen v ON k.vestiging_id = v.id
@@ -159,7 +161,8 @@ def _get_rapport_data(report_type, vestiging_id, db):
     elif report_type == 'borg':
         query = '''
             SELECT v.naam as vestiging, k.kluisnummer,
-                   t.leerling_naam, t.leerling_stamnr, t.leerling_klas,
+                   t.leerling_naam, t.leerling_stamnr,
+                   COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) as leerling_klas,
                    t.borgbedrag, t.borg_betaald, t.borg_teruggestort, t.actief,
                    l.vertrokken_op
             FROM toewijzingen t
@@ -200,7 +203,9 @@ def _get_rapport_data(report_type, vestiging_id, db):
 
     else:  # toewijzingen + inname
         query = '''
-            SELECT t.leerling_naam, t.leerling_klas, t.leerling_stamnr,
+            SELECT t.leerling_naam,
+                   COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) as leerling_klas,
+                   t.leerling_stamnr,
                    k.kluisnummer, k.sleutelnummer,
                    t.periode_van, t.periode_tot, t.borgbedrag, t.borg_betaald,
                    l.vertrokken_op
@@ -213,7 +218,7 @@ def _get_rapport_data(report_type, vestiging_id, db):
         if vestiging_id:
             query += ' AND k.vestiging_id = ?'
             params.append(int(vestiging_id))
-        query += ' ORDER BY t.leerling_klas, t.leerling_naam'
+        query += ' ORDER BY leerling_klas, t.leerling_naam'
         rows = db.execute(query, params).fetchall()
         # Determine if sleutelnummer is always equal to kluisnummer (hide if so)
         return title, rows, borg_actief, vestiging_naam, True

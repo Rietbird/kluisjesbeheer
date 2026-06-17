@@ -41,3 +41,14 @@ def test_dashboard_sleutel_niet_ingeleverd(client):
     rv = client.get('/api/dashboard/stats')
     stats = rv.get_json()
     assert stats[0]['sleutel_niet_ingeleverd'] == 1
+
+def test_rapport_toewijzingen_gebruikt_live_klas(client, db):
+    """Rapport toont de live klas als de toewijzing-snapshot leeg is."""
+    client.post('/api/kluisjes/1/toewijzen', json={
+        'leerling_stamnr': '500', 'leerling_naam': 'Dirk', 'leerling_klas': '',
+        'periode_van': '2026-01-01', 'periode_tot': '2026-07-31', 'borgbedrag': 0})
+    db.execute("INSERT INTO leerlingen (stamnr, naam, klas) VALUES ('500', 'Dirk', '4VWO')")
+    db.commit()
+    rv = client.get('/api/dashboard/rapport/preview?type=toewijzingen&vestiging_id=1')
+    assert rv.status_code == 200
+    assert 'Klas: 4VWO' in rv.get_data(as_text=True)
