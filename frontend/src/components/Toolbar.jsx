@@ -9,6 +9,7 @@ const statusOptions = [
   { value: 'defect', label: 'Defect', dot: 'bg-amber-500' },
   { value: 'sleutel', label: 'Sleutel', dot: 'bg-red-500' },
   { value: 'borg', label: 'Borg', dot: 'bg-yellow-400' },
+  { value: 'vertrokken', label: 'Vertrokken', dot: 'bg-rose-600' },
 ]
 
 const EyeIcon = () => (

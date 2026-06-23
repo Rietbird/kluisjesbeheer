@@ -12,6 +12,7 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
   const [clusters, setClusters] = useState([])
   const [clusterId, setClusterId] = useState('')
   const [klasFilter, setKlasFilter] = useState('')
+  const [alleenVertrokken, setAlleenVertrokken] = useState(false)
   const [selected, setSelected] = useState(new Set())
   const [sleutelMap, setSleutelMap] = useState({}) // { [toewijzing_id]: boolean }
   const [borgTeruggestort, setBorgTeruggestort] = useState(false)
@@ -41,11 +42,11 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
   }, [toewijzingen])
 
   const filtered = useMemo(() => {
-    const list = klasFilter
-      ? toewijzingen.filter(t => t.leerling_klas === klasFilter)
-      : toewijzingen
+    let list = toewijzingen
+    if (klasFilter) list = list.filter(t => t.leerling_klas === klasFilter)
+    if (alleenVertrokken) list = list.filter(t => t.leerling_vertrokken_op)
     return [...list].sort((a, b) => (a.leerling_naam || '').localeCompare(b.leerling_naam || '', 'nl'))
-  }, [toewijzingen, klasFilter])
+  }, [toewijzingen, klasFilter, alleenVertrokken])
 
   function toggleAll() {
     if (selected.size === filtered.length) {
@@ -61,11 +62,13 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
     setSelected(next)
   }
 
-  // When moving to step 1, initialize sleutelMap for all selected toewijzingen (default: true)
+  // When moving to step 1, initialize sleutelMap for all selected toewijzingen.
+  // Default: sleutel ingeleverd = true, behalve bij "alleen vertrokken" — die
+  // leerlingen leveren niets meer in, dus default false.
   function goToStep1() {
     const map = {}
     for (const id of selected) {
-      map[id] = sleutelMap[id] !== undefined ? sleutelMap[id] : true
+      map[id] = sleutelMap[id] !== undefined ? sleutelMap[id] : !alleenVertrokken
     }
     setSleutelMap(map)
     setStep(1)
@@ -135,7 +138,7 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
           {/* Step 0: Selectie — gesorteerd op leerling_naam */}
           {step === 0 && (
             <div className="space-y-4">
-              <div className="flex gap-3">
+              <div className="flex gap-3 items-center flex-wrap">
                 <select className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-700 dark:text-white"
                   value={clusterId} onChange={e => setClusterId(e.target.value)}>
                   <option value="">Alle clusters</option>
@@ -146,6 +149,12 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
                   <option value="">Alle klassen</option>
                   {klassen.map(k => <option key={k} value={k}>{k}</option>)}
                 </select>
+                <label className="flex items-center gap-2 text-sm cursor-pointer text-rose-700 dark:text-rose-400">
+                  <input type="checkbox" className="w-4 h-4 accent-rose-600"
+                    checked={alleenVertrokken}
+                    onChange={e => { setAlleenVertrokken(e.target.checked); setSelected(new Set()) }} />
+                  <span className="font-medium">Alleen vertrokken</span>
+                </label>
               </div>
 
               {loading ? (
@@ -168,7 +177,10 @@ export default function BulkEndWizard({ vestigingId, onClose, onDone }) {
                       <label key={t.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors">
                         <input type="checkbox" className="w-4 h-4 accent-primary"
                           checked={selected.has(t.id)} onChange={() => toggle(t.id)} />
-                        <span className="text-sm flex-1">{t.leerling_naam}</span>
+                        <span className="text-sm flex-1">
+                          {t.leerling_vertrokken_op && <span className="text-rose-600 mr-1" title="Vertrokken">⚠</span>}
+                          {t.leerling_naam}
+                        </span>
                         <span className="text-xs text-slate-500 w-16">{t.leerling_klas}</span>
                         <span className="font-medium text-sm text-navy dark:text-white w-20 text-right">{t.kluisnummer}</span>
                       </label>

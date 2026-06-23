@@ -136,6 +136,9 @@ def search_kluisjes():
     elif status == 'defect':
         # Defect is nu een aparte vlag, los van huurstatus
         query += ' AND k.is_defect = 1'
+    elif status == 'vertrokken':
+        # Bezet kluisje waarvan de huurder van school is (vertrokken_op gezet)
+        query += ' AND t.actief = 1 AND l.vertrokken_op IS NOT NULL'
     elif status:
         query += ' AND k.status = ?'
         params.append(status)

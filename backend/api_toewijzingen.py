@@ -283,10 +283,12 @@ def actieve_toewijzingen():
     cluster_id = request.args.get('cluster_id')
     stamnr = request.args.get('stamnr', '').strip()
     query = '''
-        SELECT t.*, k.kluisnummer, k.sleutelnummer, k.cluster_id, k.vestiging_id, c.naam as cluster_naam
+        SELECT t.*, k.kluisnummer, k.sleutelnummer, k.cluster_id, k.vestiging_id, c.naam as cluster_naam,
+               l.vertrokken_op AS leerling_vertrokken_op
         FROM toewijzingen t
         JOIN kluisjes k ON t.kluisje_id = k.id
         JOIN clusters c ON k.cluster_id = c.id
+        LEFT JOIN leerlingen l ON t.leerling_stamnr = l.stamnr
         WHERE t.actief = 1 AND k.verwijderd = 0
     '''
     params = []

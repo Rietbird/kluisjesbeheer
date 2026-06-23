@@ -7,6 +7,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 from magister_client import MagisterClient, safe_error
 from db import get_db, default_db_path
+from leerling_sync import sync_leerlingen_to_db
 
 
 def _magister_from_db(db):
@@ -64,21 +65,14 @@ def main():
         klassen = sorted(set(l['klas'] for l in leerlingen if l['klas']))
         print(f'{len(leerlingen)} leerlingen opgehaald, {len(klassen)} klassen')
 
-        for l in leerlingen:
-            db.execute('''
-                INSERT INTO leerlingen (stamnr, naam, roepnaam, tussenvoegsel, achternaam, email, klas, leerjaar, studie, locatie, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-                ON CONFLICT(stamnr) DO UPDATE SET
-                    naam=excluded.naam, roepnaam=excluded.roepnaam, tussenvoegsel=excluded.tussenvoegsel,
-                    achternaam=excluded.achternaam, email=excluded.email, klas=excluded.klas,
-                    leerjaar=excluded.leerjaar, studie=excluded.studie, locatie=excluded.locatie,
-                    updated_at=datetime('now')
-            ''', (
-                l['stamnr'], l['naam'], l.get('roepnaam', ''), l.get('tussenvoegsel', ''),
-                l.get('achternaam', ''), l.get('email', ''), l['klas'],
-                l.get('leerjaar', ''), l.get('studie', ''), l.get('locatie', ''),
-            ))
-        db.commit()
+        summary = sync_leerlingen_to_db(db, leerlingen)
+        if summary['brake_triggered']:
+            # Loud: the cron is unattended. A skipped marking during the 1-8
+            # window means leavers never get flagged -- this must be noticed.
+            print('WAARSCHUWING: leerlingenlijst opvallend klein -- vertrokken-markering '
+                  'OVERGESLAGEN (veiligheidsrem). Controleer de Magister-koppeling.')
+        else:
+            print(f'{summary["vertrokken_marked"]} leerling(en) als vertrokken gemarkeerd.')
         print(f'Database bijgewerkt. Done!')
     except Exception as e:
         # NEVER print {e} directly -- requests exceptions contain the full URL

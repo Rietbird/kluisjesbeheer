@@ -1,38 +1,16 @@
 from flask import Blueprint, request, jsonify, g
 from auth import login_required, beheerder_required, assert_vestiging_access
 from magister_client import magister, safe_error as _safe_error
+from leerling_sync import sync_leerlingen_to_db
 
 magister_bp = Blueprint('magister', __name__, url_prefix='/api')
 
 
 def _sync_to_db(leerlingen):
-    """Upsert leerlingen list into the database. Marks absent students as vertrokken."""
-    synced_stamnrs = set()
-    for l in leerlingen:
-        synced_stamnrs.add(l['stamnr'])
-        g.db.execute('''
-            INSERT INTO leerlingen (stamnr, naam, roepnaam, tussenvoegsel, achternaam, email, klas, leerjaar, studie, locatie, vertrokken_op, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))
-            ON CONFLICT(stamnr) DO UPDATE SET
-                naam=excluded.naam, roepnaam=excluded.roepnaam, tussenvoegsel=excluded.tussenvoegsel,
-                achternaam=excluded.achternaam, email=excluded.email, klas=excluded.klas,
-                leerjaar=excluded.leerjaar, studie=excluded.studie, locatie=excluded.locatie,
-                vertrokken_op=NULL, updated_at=datetime('now')
-        ''', (
-            l['stamnr'], l['naam'], l.get('roepnaam', ''), l.get('tussenvoegsel', ''),
-            l.get('achternaam', ''), l.get('email', ''), l['klas'],
-            l.get('leerjaar', ''), l.get('studie', ''), l.get('locatie', ''),
-        ))
-
-    # Mark students no longer in Magister as vertrokken (only if not already marked)
-    if synced_stamnrs:
-        placeholders = ','.join('?' * len(synced_stamnrs))
-        g.db.execute(f'''
-            UPDATE leerlingen SET vertrokken_op = date('now'), updated_at = datetime('now')
-            WHERE stamnr NOT IN ({placeholders}) AND vertrokken_op IS NULL
-        ''', list(synced_stamnrs))
-
-    g.db.commit()
+    """Upsert leerlingen and mark absent students as vertrokken.
+    Thin wrapper over the shared sync used by the daily cron, so both paths
+    behave identically (incl. the safety brake). Returns the summary dict."""
+    return sync_leerlingen_to_db(g.db, leerlingen)
 
 
 @magister_bp.route('/magister/locaties', methods=['GET'])
@@ -181,9 +159,17 @@ def sync_leerlingen():
     except ConnectionError as e:
         return jsonify({'error': _safe_error(e)}), 502
 
-    _sync_to_db(leerlingen)
+    summary = _sync_to_db(leerlingen)
 
-    return jsonify({
+    resp = {
         'leerlingen': len(leerlingen),
         'klassen': len(klassen),
-    })
+        'vertrokken_gemarkeerd': summary['vertrokken_marked'],
+    }
+    if summary['brake_triggered']:
+        resp['waarschuwing'] = (
+            'De lijst uit Magister was opvallend klein; de vertrokken-markering is '
+            'overgeslagen als veiligheidsmaatregel. Controleer de Magister-koppeling '
+            'en probeer opnieuw.'
+        )
+    return jsonify(resp)
