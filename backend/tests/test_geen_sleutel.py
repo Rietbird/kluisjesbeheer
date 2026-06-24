@@ -67,6 +67,14 @@ def test_filter_sleutel_niet_ingeleverd(client):
     assert nummers == ['P003']
 
 
+def test_stats_vrij_excludes_geen_sleutel(client):
+    # De vestigingskaart-teller "Vrij" moet gelijk lopen met de "Vrij"-filter
+    before = next(v for v in client.get('/api/dashboard/stats').get_json() if v['vestiging_id'] == 1)['vrij']
+    client.put('/api/kluisjes/1', json={'geen_sleutel': True})
+    after = next(v for v in client.get('/api/dashboard/stats').get_json() if v['vestiging_id'] == 1)['vrij']
+    assert after == before - 1
+
+
 def test_filter_sleutel_all_combines(client, db_path):
     client.put('/api/kluisjes/1', json={'geen_sleutel': True})   # geen_sleutel
     _assign(client, 2, '2')

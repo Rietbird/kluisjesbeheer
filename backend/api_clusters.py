@@ -33,7 +33,7 @@ def create_cluster():
 @clusters_bp.route('/clusters/<int:cid>', methods=['PUT'])
 @login_required
 def update_cluster(cid):
-    row = g.db.execute('SELECT * FROM clusters WHERE id = ?', (cid,)).fetchone()
+    row = g.db.execute('SELECT * FROM clusters WHERE id = ? AND verwijderd = 0', (cid,)).fetchone()
     if not row:
         return jsonify({'error': 'Niet gevonden'}), 404
     err = assert_vestiging_access(row['vestiging_id'])
@@ -84,7 +84,7 @@ def verplaats_reeks(cid):
     Body: { prefix, van, tot }. Alleen binnen dezelfde vestiging.
     Conciërges mogen dit voor hun eigen vestiging(en); beheerders overal.
     """
-    doel = g.db.execute('SELECT id, vestiging_id FROM clusters WHERE id = ?', (cid,)).fetchone()
+    doel = g.db.execute('SELECT id, vestiging_id FROM clusters WHERE id = ? AND verwijderd = 0', (cid,)).fetchone()
     if not doel:
         return jsonify({'error': 'Doelcluster niet gevonden'}), 404
     err = assert_vestiging_access(doel['vestiging_id'])
@@ -131,7 +131,7 @@ def verplaats_reeks(cid):
 def verplaats_selectie(cid):
     """Verplaats geselecteerde kluisjes naar dit cluster (zelfde vestiging).
     Conciërges mogen dit voor hun eigen vestiging(en); beheerders overal."""
-    doel = g.db.execute('SELECT id, vestiging_id FROM clusters WHERE id = ?', (cid,)).fetchone()
+    doel = g.db.execute('SELECT id, vestiging_id FROM clusters WHERE id = ? AND verwijderd = 0', (cid,)).fetchone()
     if not doel:
         return jsonify({'error': 'Doelcluster niet gevonden'}), 404
     err = assert_vestiging_access(doel['vestiging_id'])

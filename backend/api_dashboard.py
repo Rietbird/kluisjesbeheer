@@ -39,7 +39,7 @@ def stats():
         SELECT v.id, v.naam,
             COUNT(k.id) as totaal,
             SUM(CASE WHEN k.status='uitgeleend' THEN 1 ELSE 0 END) as uitgeleend,
-            SUM(CASE WHEN k.status='vrij' THEN 1 ELSE 0 END) as vrij,
+            SUM(CASE WHEN k.status='vrij' AND k.geen_sleutel=0 THEN 1 ELSE 0 END) as vrij,
             SUM(CASE WHEN k.is_defect=1 THEN 1 ELSE 0 END) as defect
         FROM vestigingen v
         LEFT JOIN kluisjes k ON k.vestiging_id = v.id AND k.verwijderd = 0
