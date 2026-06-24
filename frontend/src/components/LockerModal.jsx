@@ -393,7 +393,7 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
             <AssignForm kluisje={detail} onDone={() => { onUpdate(); onClose() }} onCancel={() => setMode(null)} />
           )}
           {mode === 'beeindigen' && (
-            <EndRentalForm kluisje={detail} onDone={() => onUpdate()} onCancel={() => setMode(null)} />
+            <EndRentalForm kluisje={detail} onDone={() => { onUpdate(); onClose() }} onCancel={() => setMode(null)} />
           )}
 
           {/* Opmerkingen */}
