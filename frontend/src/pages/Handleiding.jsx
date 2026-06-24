@@ -30,6 +30,7 @@ const SECTIES = [
   ['kleuren', 'Kleuren & status'],
   ['toewijzen', 'Een kluisje toewijzen'],
   ['defect', 'Een defect melden'],
+  ['geensleutel', 'Geen sleutel'],
   ['reserve', 'Reservesleutel'],
   ['innemen', 'Een huur beëindigen'],
   ['eindeschooljaar', 'Einde schooljaar'],
@@ -80,8 +81,9 @@ export default function Handleiding({ onClose }) {
               <li><strong>Amber — Defect (en vrij).</strong> Gemarkeerd als defect, geen huurder.</li>
               <li><strong>Blauw met amber rand — Defect én in gebruik.</strong> ⚠ voor het nummer; de huurder blijft zichtbaar.</li>
               <li><strong>Rood — Vrij, maar sleutel/borg openstaand</strong> van de vorige huurder (🔑 / 💰).</li>
+              <li><strong>Grijs — Geen sleutel.</strong> Buiten gebruik tot er een sleutel is; niet uitleenbaar (🔑✕).</li>
             </ul>
-            <p>Een 🔑 bij een huurder betekent dat er een reservesleutel is uitgegeven.</p>
+            <p>Een 🗝️ bij een huurder betekent dat er een reservesleutel is uitgegeven. Let op het onderscheid: <strong>🔑</strong> = sleutel niet ingeleverd, <strong>🗝️</strong> = reservesleutel uitgegeven.</p>
           </Sectie>
 
           <Sectie id="toewijzen" titel="Een kluisje toewijzen">
@@ -106,6 +108,15 @@ export default function Handleiding({ onClose }) {
             <Tip>Een defect kluisje kan niet aan een nieuwe leerling worden toegewezen — hef eerst het defect op. Een lopende verhuur blijft wél gewoon doorlopen.</Tip>
           </Sectie>
 
+          <Sectie id="geensleutel" titel="Geen sleutel">
+            <p>Van sommige kluisjes is er geen (bruikbare) sleutel meer. Markeer die als <strong>"Geen sleutel"</strong> zodat ze niet tussen de vrije kluisjes blijven staan en niet per ongeluk worden uitgedeeld.</p>
+            <ol className="list-decimal pl-5">
+              <Stap><strong>Open een vrij kluisje</strong> en klik op <strong>"Geen sleutel"</strong>. De tegel wordt grijs met 🔑✕.</Stap>
+              <Stap><strong>Weer een sleutel?</strong> Open het kluisje en klik op <strong>"Sleutel weer aanwezig"</strong>.</Stap>
+            </ol>
+            <Tip>Een "geen sleutel"-kluisje is niet uitleenbaar en valt buiten de "Vrij"-lijst; je vindt ze terug via de status-chip <strong>Geen sleutel</strong>. Dit geldt alleen voor niet-verhuurde kluisjes — een verhuurd kluisje heeft immers een sleutel bij de leerling.</Tip>
+          </Sectie>
+
           <Sectie id="reserve" titel="Reservesleutel">
             <p>Bij een verhuurd kluisje kunt u vastleggen dat er een reservesleutel is afgegeven.</p>
             <ol className="list-decimal pl-5">
@@ -113,7 +124,7 @@ export default function Handleiding({ onClose }) {
               <Stap>Vink <strong>"Reservesleutel uitgegeven"</strong> aan in het huurderblok.</Stap>
               <Stap>Kies de datum van afgifte.</Stap>
             </ol>
-            <p>In het overzicht verschijnt een 🔑 bij de huurder. Een eventueel borgbedrag voor de reservesleutel noteert u in het opmerkingenveld.</p>
+            <p>In het overzicht verschijnt een 🗝️ bij de huurder. Een eventueel borgbedrag voor de reservesleutel noteert u in het opmerkingenveld.</p>
           </Sectie>
 
           <Sectie id="innemen" titel="Een huur beëindigen">
@@ -180,6 +191,9 @@ export default function Handleiding({ onClose }) {
               <Stap>Klik op <strong>"Verplaats naar cluster"</strong>, kies het doelcluster en bevestig.</Stap>
             </ol>
             <p>Verplaatsen verandert alleen de indeling — huurder, borg, sleutel en opmerkingen blijven ongewijzigd. Alleen binnen dezelfde vestiging.</p>
+
+            <p className="font-semibold text-navy dark:text-white mt-4">Een cluster verwijderen</p>
+            <p>Klik op het prullenbak-icoon bij een cluster. Dit kan ook als er al verhuurhistorie in zit — die historie blijft bewaard. Alleen als er nog een <strong>actieve</strong> verhuur in het cluster loopt, moet u die eerst beëindigen.</p>
           </Sectie>
 
           <Sectie id="zoeken" titel="Zoeken & filteren">

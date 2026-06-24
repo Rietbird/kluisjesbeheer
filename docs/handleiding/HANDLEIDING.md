@@ -74,6 +74,7 @@ Het hart van de applicatie. Hier zie je alle kluisjes van de gekozen vestiging a
 | Groen | Vrij |
 | Geel | Defect |
 | Geel + blauw randje | Defect én uitgeleend (huurder zit er nog) |
+| Grijs | Geen sleutel — buiten gebruik, niet uitleenbaar (🔑✕) |
 | Rood randje | Sleutel niet ingeleverd na einde huur |
 
 **Bovenste tabs:** schakelen tussen vestigingen (bijvoorbeeld een onderbouw-, bovenbouw- of locatie-tab) of terug naar het Overzicht.
@@ -206,11 +207,22 @@ In de tabelweergave krijgt een defect-uitgeleend kluisje twee pills (`uitgeleend
 
 ![Defect in tabel](screenshots/11-tabel-defect.png)
 
+### Geen sleutel
+
+Van sommige kluisjes is er geen (bruikbare) sleutel meer. Open een **vrij** kluisje en klik op **Geen sleutel**:
+
+- Tegel wordt grijs met badge `🔑✕ Geen sleutel`
+- Het kluisje verdwijnt uit de **Vrij**-lijst en toewijzen wordt geblokkeerd (vergelijkbaar met defect)
+- Terugdraaien via **Sleutel weer aanwezig**
+- Terug te vinden via de status-chip **Geen sleutel**
+
+Dit geldt alleen voor niet-verhuurde kluisjes (een verhuurd kluisje heeft een sleutel bij de leerling). De vlag staat los van defect — een kluisje kan dus niet tegelijk "geen sleutel" én verhuurd zijn.
+
 ---
 
 ## 8. Reservesleutel uitgeven
 
-In de modal van een uitgeleend kluisje staat onder de huurder-blok een checkbox **🔑 Reservesleutel uitgegeven**:
+In de modal van een uitgeleend kluisje staat onder de huurder-blok een checkbox **🗝️ Reservesleutel uitgegeven**:
 
 ![Reservesleutel checkbox in modal](screenshots/05-modal-uitgeleend.png)
 
@@ -218,7 +230,7 @@ Werkwijze:
 
 1. Vink de checkbox aan zodra je de reservesleutel meegeeft aan de leerling. Er verschijnt een datumveld; vul de uitgifte-datum in (default = vandaag).
 2. De wijziging wordt direct opgeslagen — geen knop nodig.
-3. Op het kluisje in het overzicht verschijnt een **🔑-icoon** zodat je in één oogopslag ziet dat hier al een reserve uit is.
+3. Op het kluisje in het overzicht verschijnt een **🗝️-icoon** zodat je in één oogopslag ziet dat hier al een reserve uit is. (Let op: 🔑 = sleutel niet ingeleverd, 🗝️ = reservesleutel.)
 
 > 💰 **Borg of bedrag voor de reservesleutel** registreer je in het **Opmerkingen**-veld (vrije tekst). Hier is geen apart bedrag-veld voor.
 
