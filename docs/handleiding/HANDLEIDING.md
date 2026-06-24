@@ -82,7 +82,7 @@ Het hart van de applicatie. Hier zie je alle kluisjes van de gekozen vestiging a
 
 - **Alle clusters** — dropdown om binnen een vestiging op cluster te filteren (bijv. Vleugel A, Vleugel B)
 - **Zoekveld** — zoekt live op kluisnummer, naam huurder, of stamnummer
-- **Status-chips**: `Alles / Vrij / Uitgeleend / Defect / Sleutel / Borg` — klik om te filteren
+- **Status-chips**: `Alles / Vrij / Uitgeleend / Defect / Sleutel / Borg / Vertrokken` — klik om te filteren. **Vertrokken** toont bezette kluisjes waarvan de huurder niet meer in Magister voorkomt (geslaagd/van school) — handig om aan het einde van het schooljaar de uitstroom op te ruimen.
 - **Tabel/grid-toggle** (twee icoontjes naast de chips) — wissel tussen tegelweergave en tabelweergave
 
 **Rechtsboven:**
@@ -282,6 +282,8 @@ Drie-staps wizard: **Selectie → Opties → Bevestigen**.
 **Stap 1 — Selectie:**
 
 Lijst van alle actieve toewijzingen. Filter op cluster en/of klas. Vink leerlingen aan, of klik **Alles selecteren** voor de hele gefilterde lijst.
+
+> 🎓 **Vink "Alleen vertrokken" aan** om in één keer alle huurders te selecteren die niet meer in Magister staan (geslaagd/van school, herkenbaar aan ⚠). Voor die groep staat "sleutel ingeleverd" standaard **uit** — ze leveren immers niets meer in. Ideaal voor de naloop einde schooljaar.
 
 **Stap 2 — Opties:**
 
