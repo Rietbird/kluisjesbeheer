@@ -18,7 +18,7 @@ const aandachtspunten = [
   { value: 'borg', label: 'Borg openstaand', icon: '💰' },
   { value: 'sleutel_niet_ingeleverd', label: 'Sleutel niet ingeleverd', icon: '🔑' },
   { value: 'vertrokken', label: 'Vertrokken', icon: '⚠' },
-  { value: 'reservesleutel', label: 'Reservesleutel uitgegeven', icon: '🔑' },
+  { value: 'reservesleutel', label: 'Reservesleutel uitgegeven', icon: '🗝️' },
 ]
 
 const EyeIcon = () => (

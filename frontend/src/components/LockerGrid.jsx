@@ -24,7 +24,7 @@ function getLabel(kluisje) {
       : ''
     return (
       <span className={`truncate block ${borgNietBetaald ? 'text-orange-700 dark:text-orange-300' : 'text-sky-800 dark:text-sky-300'}`}>
-        {borgNietBetaald && <span className="mr-0.5">💰</span>}{kluisje.leerling_vertrokken_op && <span className="text-red-600 mr-0.5" title="Vertrokken van school">⚠</span>}{!!kluisje.reservesleutel_uitgegeven && <span className="mr-0.5" title="Reservesleutel uitgegeven">🔑</span>}{short}
+        {borgNietBetaald && <span className="mr-0.5">💰</span>}{kluisje.leerling_vertrokken_op && <span className="text-red-600 mr-0.5" title="Vertrokken van school">⚠</span>}{!!kluisje.reservesleutel_uitgegeven && <span className="mr-0.5" title="Reservesleutel uitgegeven">🗝️</span>}{short}
       </span>
     )
   }
@@ -75,7 +75,7 @@ export default function LockerGrid({ kluisjes, onSelect, selectedId }) {
           <span className="flex items-center gap-1.5">💰 Borg openstaand</span>
           <span className="flex items-center gap-1.5">🔑 Sleutel niet ingeleverd</span>
           <span className="flex items-center gap-1.5">⚠ Vertrokken</span>
-          <span className="flex items-center gap-1.5">🔑 Reservesleutel</span>
+          <span className="flex items-center gap-1.5">🗝️ Reservesleutel</span>
           <span className="flex items-center gap-2 text-slate-500"><span className="w-4 h-4 bg-red-50 dark:bg-red-900/40 border-2 border-red-400 dark:border-red-600 rounded-lg" />open sleutel/borg kleurt een vrij kluisje rood</span>
         </div>
       </div>

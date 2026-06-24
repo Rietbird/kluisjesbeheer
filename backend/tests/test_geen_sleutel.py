@@ -44,6 +44,15 @@ def test_filter_geen_sleutel(client):
     assert [r['kluisnummer'] for r in rows] == ['P001']
 
 
+def test_geen_sleutel_filter_excludes_rented(client):
+    # Een verhuurd kluisje mag nooit onder "Geen sleutel" verschijnen (geen sleutel
+    # = vrij/buiten gebruik). Anders zie je een blauwe tegel onder een grijs filter.
+    _assign(client, 2, '99')
+    client.put('/api/kluisjes/2', json={'geen_sleutel': True})
+    nummers = [k['kluisnummer'] for k in client.get('/api/kluisjes?status=geen_sleutel').get_json()]
+    assert 'P002' not in nummers
+
+
 def test_vrij_excludes_geen_sleutel(client):
     client.put('/api/kluisjes/1', json={'geen_sleutel': True})
     nummers = [r['kluisnummer'] for r in client.get('/api/kluisjes?status=vrij').get_json()]

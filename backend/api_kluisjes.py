@@ -128,7 +128,8 @@ def search_kluisjes():
     elif status == 'sleutel_niet_ingeleverd':
         query += f' AND {_niet_ingeleverd}'
     elif status == 'geen_sleutel':
-        query += ' AND k.geen_sleutel = 1'
+        # Geen sleutel = vrij/buiten gebruik; een verhuurd kluisje hoort hier nooit
+        query += " AND k.geen_sleutel = 1 AND k.status != 'uitgeleend'"
     elif status == 'reservesleutel':
         query += f' AND {_reservesleutel}'
     elif status == 'borg':

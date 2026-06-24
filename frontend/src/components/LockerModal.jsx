@@ -376,7 +376,7 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                     checked={!!detail.reservesleutel_uitgegeven}
                     onChange={toggleReservesleutel}
                     className="rounded border-slate-300 w-4 h-4" />
-                  <span>🔑 Reservesleutel uitgegeven</span>
+                  <span>🗝️ Reservesleutel uitgegeven</span>
                 </label>
                 {!!detail.reservesleutel_uitgegeven && (
                   <input type="date"
@@ -508,7 +508,8 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                       Defect opheffen
                     </button>
                   )}
-                  {!geenSleutel ? (
+                  {/* Geen sleutel = vrij/buiten-gebruik begrip; niet tonen bij een verhuurd kluisje */}
+                  {!isUitgeleend && (!geenSleutel ? (
                     <button onClick={toggleGeenSleutel}
                       className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-rose-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors">
                       Geen sleutel
@@ -518,7 +519,7 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                       className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
                       Sleutel weer aanwezig
                     </button>
-                  )}
+                  ))}
                   {clusters.length > 1 && (
                     <button onClick={() => setMode('verplaats')}
                       className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">
