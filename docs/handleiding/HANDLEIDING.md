@@ -82,7 +82,8 @@ Het hart van de applicatie. Hier zie je alle kluisjes van de gekozen vestiging a
 
 - **Alle clusters** — dropdown om binnen een vestiging op cluster te filteren (bijv. Vleugel A, Vleugel B)
 - **Zoekveld** — zoekt live op kluisnummer, naam huurder, of stamnummer
-- **Status-chips**: `Alles / Vrij / Uitgeleend / Defect / Sleutel / Borg / Vertrokken` — klik om te filteren. **Vertrokken** toont bezette kluisjes waarvan de huurder niet meer in Magister voorkomt (geslaagd/van school) — handig om aan het einde van het schooljaar de uitstroom op te ruimen.
+- **Status-chips** (wat het kluisje is): `Alles / Vrij / Uitgeleend / Defect / Geen sleutel` — klik om te filteren.
+- **Aandachtspunten** (dropdown ▾, vlaggen die op een kluisje liggen): `Borg openstaand / Sleutel niet ingeleverd / Vertrokken / Reservesleutel uitgegeven`. **Vertrokken** toont bezette kluisjes waarvan de huurder niet meer in Magister voorkomt (geslaagd/van school) — handig om einde schooljaar de uitstroom op te ruimen.
 - **Tabel/grid-toggle** (twee icoontjes naast de chips) — wissel tussen tegelweergave en tabelweergave
 
 **Rechtsboven:**

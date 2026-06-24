@@ -60,15 +60,24 @@ export default function LockerGrid({ kluisjes, onSelect, selectedId }) {
           )
         })}
       </div>
-      <div className="mt-5 flex flex-wrap gap-6 text-sm text-slate-600 dark:text-slate-400">
-        <span className="flex items-center gap-2"><span className="w-4 h-4 bg-sky-50 dark:bg-sky-900/40 border-2 border-sky-400 dark:border-sky-600 rounded-lg" />Uitgeleend</span>
-        <span className="flex items-center gap-2"><span className="w-4 h-4 bg-orange-50 dark:bg-orange-900/40 border-2 border-orange-400 dark:border-orange-500 rounded-lg" />💰 Borg niet betaald</span>
-        <span className="flex items-center gap-2"><span className="w-4 h-4 bg-emerald-50 dark:bg-emerald-900/40 border-2 border-emerald-300 dark:border-emerald-600 rounded-lg" />Vrij</span>
-        <span className="flex items-center gap-2"><span className="w-4 h-4 bg-amber-50 dark:bg-amber-900/40 border-2 border-amber-400 dark:border-amber-600 rounded-lg" />Defect (vrij)</span>
-        <span className="flex items-center gap-2"><span className="w-4 h-4 bg-sky-50 dark:bg-sky-900/40 border-2 border-sky-400 dark:border-sky-600 ring-2 ring-amber-500 rounded-lg" />⚠ Defect + uitgeleend</span>
-        <span className="flex items-center gap-2"><span className="w-4 h-4 bg-red-50 dark:bg-red-900/40 border-2 border-red-400 dark:border-red-600 rounded-lg" />🔑 Sleutel / 💰 Borg openstaand (vrij)</span>
-        <span className="flex items-center gap-2"><span className="w-4 h-4 bg-slate-100 dark:bg-slate-700/60 border-2 border-slate-400 dark:border-slate-500 rounded-lg" />🔑✕ Geen sleutel</span>
-        <span className="flex items-center gap-2"><span title="Reservesleutel uitgegeven">🔑</span> Reservesleutel uitgegeven</span>
+      <div className="mt-5 space-y-2.5 text-sm text-slate-600 dark:text-slate-400">
+        {/* As 1 — Status (tegelkleur) */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 w-28 shrink-0">Status</span>
+          <span className="flex items-center gap-2"><span className="w-4 h-4 bg-emerald-50 dark:bg-emerald-900/40 border-2 border-emerald-300 dark:border-emerald-600 rounded-lg" />Vrij</span>
+          <span className="flex items-center gap-2"><span className="w-4 h-4 bg-sky-50 dark:bg-sky-900/40 border-2 border-sky-400 dark:border-sky-600 rounded-lg" />Uitgeleend</span>
+          <span className="flex items-center gap-2"><span className="w-4 h-4 bg-amber-50 dark:bg-amber-900/40 border-2 border-amber-400 dark:border-amber-600 rounded-lg" />Defect</span>
+          <span className="flex items-center gap-2"><span className="w-4 h-4 bg-slate-100 dark:bg-slate-700/60 border-2 border-slate-400 dark:border-slate-500 rounded-lg" />Geen sleutel</span>
+        </div>
+        {/* As 2 — Aandachtspunten (iconen op de tegel) */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 w-28 shrink-0">Aandachtspunten</span>
+          <span className="flex items-center gap-1.5">💰 Borg openstaand</span>
+          <span className="flex items-center gap-1.5">🔑 Sleutel niet ingeleverd</span>
+          <span className="flex items-center gap-1.5">⚠ Vertrokken</span>
+          <span className="flex items-center gap-1.5">🔑 Reservesleutel</span>
+          <span className="flex items-center gap-2 text-slate-500"><span className="w-4 h-4 bg-red-50 dark:bg-red-900/40 border-2 border-red-400 dark:border-red-600 rounded-lg" />open sleutel/borg kleurt een vrij kluisje rood</span>
+        </div>
       </div>
     </div>
   )

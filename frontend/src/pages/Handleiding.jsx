@@ -140,7 +140,7 @@ export default function Handleiding({ onClose }) {
 
             <p className="font-semibold text-navy dark:text-white mt-4">Kluisjes vrijmaken — collectief beëindigen</p>
             <p>Om niet elk kluisje los te hoeven afhandelen, is er <strong>"Collectief beëindigen"</strong> in de werkbalk van het overzicht: hiermee beëindigt u in één keer de huur van een selectie of een hele klas. Vink per kluisje af of de sleutel is ingeleverd en de borg is teruggestort. Gebruik de rapporten <strong>"Openstaande sleutels"</strong> en <strong>"Innameoverzicht"</strong> als werklijst om te zien wat er nog open staat.</p>
-            <Tip>Vink in stap 1 <strong>"Alleen vertrokken"</strong> aan om in één keer alle vertrokken leerlingen te selecteren. Voor die groep staat "sleutel ingeleverd" standaard uit (ze leveren niets meer in). In het overzicht doet de status-filter <strong>"Vertrokken"</strong> hetzelfde — die toont alleen kluisjes met een vertrokken huurder.</Tip>
+            <Tip>Vink in stap 1 <strong>"Alleen vertrokken"</strong> aan om in één keer alle vertrokken leerlingen te selecteren. Voor die groep staat "sleutel ingeleverd" standaard uit (ze leveren niets meer in). In het overzicht doet het filter <strong>Aandachtspunten ▾ → Vertrokken</strong> hetzelfde — dat toont alleen kluisjes met een vertrokken huurder.</Tip>
 
             <p className="font-semibold text-navy dark:text-white mt-4">Nieuw schooljaar — automatisch</p>
             <p>U hoeft de standaardperiode niet zelf te wijzigen. Vanaf 1 augustus stelt het systeem bij een nieuwe toewijzing automatisch de periode van het nieuwe schooljaar voor (1 september tot de zomervakantie erna). Bestaande huren van het oude jaar blijven gewoon staan tot u ze beëindigt — de overgang verandert daar niets aan.</p>
@@ -186,7 +186,8 @@ export default function Handleiding({ onClose }) {
             <p>Bovenaan vindt u een zoekbalk en filters:</p>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>Zoeken</strong> op kluisnummer, sleutelnummer, leerlingnaam of stamnummer.</li>
-              <li><strong>Filter</strong> op status: Alles, Vrij, Uitgeleend, Defect, openstaande sleutel/borg, of <strong>Vertrokken</strong> (huurder niet meer in Magister).</li>
+              <li><strong>Status</strong> (wat het kluisje is): Alles, Vrij, Uitgeleend, Defect, Geen sleutel.</li>
+              <li><strong>Aandachtspunten ▾</strong> (vlaggen op een kluisje): Borg openstaand, Sleutel niet ingeleverd, Vertrokken, Reservesleutel uitgegeven.</li>
               <li><strong>Cluster</strong> — beperk tot een gang of afdeling binnen de vestiging.</li>
             </ul>
             <p>Na een aanpassing blijft het detailscherm open staan, zodat u meerdere handelingen op hetzelfde kluisje kunt doen zonder uw plek in de lijst kwijt te raken.</p>
