@@ -148,6 +148,12 @@ def init_db(db_path):
         conn.commit()
     except Exception:
         pass
+    # Migration: verwijderd vlag op clusters (soft-delete, behoudt toewijzing-historie)
+    try:
+        conn.execute("ALTER TABLE clusters ADD COLUMN verwijderd INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
+    except Exception:
+        pass
     # Migration: reservesleutel velden op toewijzingen
     try:
         conn.execute("ALTER TABLE toewijzingen ADD COLUMN reservesleutel_uitgegeven INTEGER NOT NULL DEFAULT 0")

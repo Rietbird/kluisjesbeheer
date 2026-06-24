@@ -8,7 +8,7 @@ clusters_bp = Blueprint('clusters', __name__, url_prefix='/api')
 def list_clusters(vid):
     err = assert_vestiging_access(vid)
     if err: return err
-    rows = g.db.execute('SELECT * FROM clusters WHERE vestiging_id = ? ORDER BY naam', (vid,)).fetchall()
+    rows = g.db.execute('SELECT * FROM clusters WHERE vestiging_id = ? AND verwijderd = 0 ORDER BY naam', (vid,)).fetchall()
     return jsonify([dict(r) for r in rows])
 
 @clusters_bp.route('/clusters', methods=['POST'])
@@ -54,20 +54,24 @@ def update_cluster(cid):
 @clusters_bp.route('/clusters/<int:cid>', methods=['DELETE'])
 @login_required
 def delete_cluster(cid):
-    row = g.db.execute('SELECT id, vestiging_id FROM clusters WHERE id = ?', (cid,)).fetchone()
+    row = g.db.execute('SELECT id, vestiging_id FROM clusters WHERE id = ? AND verwijderd = 0', (cid,)).fetchone()
     if not row:
         return jsonify({'error': 'Niet gevonden'}), 404
     err = assert_vestiging_access(row['vestiging_id'])
     if err: return err
-    has_toewijzingen = g.db.execute('''
+    # Blokkeer alleen op ACTIEVE toewijzingen; historische (afgesloten) toewijzingen
+    # mogen blijven bestaan — die hebben we nodig voor de geschiedenis/rapporten.
+    actief = g.db.execute('''
         SELECT COUNT(*) as cnt FROM toewijzingen t
         JOIN kluisjes k ON t.kluisje_id = k.id
-        WHERE k.cluster_id = ?
+        WHERE k.cluster_id = ? AND t.actief = 1
     ''', (cid,)).fetchone()['cnt']
-    if has_toewijzingen > 0:
-        return jsonify({'error': 'Kan niet verwijderen: er zijn (historische) toewijzingen'}), 409
-    g.db.execute('DELETE FROM kluisjes WHERE cluster_id = ?', (cid,))
-    g.db.execute('DELETE FROM clusters WHERE id = ?', (cid,))
+    if actief > 0:
+        return jsonify({'error': 'Kan niet verwijderen: er zijn actieve toewijzingen in dit cluster — beëindig die eerst'}), 409
+    # Soft-delete: cluster + kluisjes gemarkeerd als verwijderd. De toewijzing-historie
+    # blijft intact (verwijst naar de soft-deleted kluisjes), net als bij losse kluisjes.
+    g.db.execute("UPDATE kluisjes SET verwijderd = 1, updated_at = datetime('now') WHERE cluster_id = ?", (cid,))
+    g.db.execute("UPDATE clusters SET verwijderd = 1, updated_at = datetime('now') WHERE id = ?", (cid,))
     g.db.commit()
     return jsonify({'ok': True})
 
