@@ -256,6 +256,8 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                     if (laatste) {
                       await api.post(`/api/toewijzingen/${laatste.id}/sleutel-ingeleverd`, {})
                       onUpdate()
+                      // Klaar → sluiten, tenzij er nog een openstaande borg is op dit kluisje
+                      if (!detail._borg_niet_teruggestort) onClose()
                     }
                   }}>
                   Sleutel is ingeleverd
@@ -278,6 +280,8 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                     if (laatste) {
                       await api.post(`/api/toewijzingen/${laatste.id}/borg-teruggestort`, {})
                       onUpdate()
+                      // Klaar → sluiten, tenzij er nog een openstaande sleutel is op dit kluisje
+                      if (!detail._sleutel_niet_ingeleverd) onClose()
                     }
                   }}>
                   Borg is teruggestort
