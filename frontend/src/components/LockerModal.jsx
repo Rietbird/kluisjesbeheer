@@ -175,6 +175,16 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
     }
   }
 
+  async function toggleGeenSleutel() {
+    try {
+      const updated = await api.put(`/api/kluisjes/${kluisje.id}`, { geen_sleutel: !detail.geen_sleutel })
+      setDetail(d => ({ ...d, geen_sleutel: updated.geen_sleutel }))
+      onUpdate()
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
   async function toggleReservesleutel() {
     if (!detail.toewijzing_id) return
     try {
@@ -207,6 +217,7 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
   const isUitgeleend = detail.status === 'uitgeleend'
   const isVrij = detail.status === 'vrij'
   const isDefect = !!detail.is_defect
+  const geenSleutel = !!detail.geen_sleutel
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -460,11 +471,16 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
             ) : (
               <>
                 {/* Primaire actie */}
-                {isVrij && !isDefect && (
+                {isVrij && !isDefect && !geenSleutel && (
                   <button onClick={() => setMode('toewijzen')}
                     className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl py-3 text-sm font-bold hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm">
                     Toewijzen
                   </button>
+                )}
+                {isVrij && geenSleutel && (
+                  <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+                    Geen sleutel — niet uitleenbaar tot je 'm weer als aanwezig markeert.
+                  </p>
                 )}
                 {isUitgeleend && (
                   <button onClick={() => setMode('beeindigen')}
@@ -490,6 +506,17 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                     <button onClick={toggleDefect}
                       className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
                       Defect opheffen
+                    </button>
+                  )}
+                  {!geenSleutel ? (
+                    <button onClick={toggleGeenSleutel}
+                      className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-rose-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors">
+                      Geen sleutel
+                    </button>
+                  ) : (
+                    <button onClick={toggleGeenSleutel}
+                      className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-xs font-medium hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                      Sleutel weer aanwezig
                     </button>
                   )}
                   {clusters.length > 1 && (

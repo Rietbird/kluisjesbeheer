@@ -7,9 +7,17 @@ const statusOptions = [
   { value: 'vrij', label: 'Vrij', dot: 'bg-emerald-500' },
   { value: 'uitgeleend', label: 'Uitgeleend', dot: 'bg-sky-400' },
   { value: 'defect', label: 'Defect', dot: 'bg-amber-500' },
-  { value: 'sleutel', label: 'Sleutel', dot: 'bg-red-500' },
   { value: 'borg', label: 'Borg', dot: 'bg-yellow-400' },
   { value: 'vertrokken', label: 'Vertrokken', dot: 'bg-rose-600' },
+]
+
+// Sub-filters onder één "Sleutel"-chip (zie SleutelDropdown). "Sleutel" als losse
+// chip was dubbelzinnig; deze submenu-opzet maakt elke sleutelstatus expliciet.
+const sleutelSubs = [
+  { value: 'sleutel', label: 'Alle sleutelkwesties' },
+  { value: 'sleutel_niet_ingeleverd', label: 'Niet ingeleverd' },
+  { value: 'geen_sleutel', label: 'Geen sleutel' },
+  { value: 'reservesleutel', label: 'Reservesleutel uitgegeven' },
 ]
 
 const EyeIcon = () => (
@@ -99,6 +107,45 @@ function RapportDropdown({ vestigingId, klas }) {
   )
 }
 
+function SleutelDropdown({ filters, setFilters }) {
+  const [open, setOpen] = useState(false)
+  const active = sleutelSubs.some(s => s.value === filters.status)
+  const activeLabel = sleutelSubs.find(s => s.value === filters.status)?.label
+
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-md transition-colors ${
+          active
+            ? 'bg-white dark:bg-slate-600 text-navy dark:text-white font-medium shadow-sm'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+        }`}>
+        <span className="w-2 h-2 rounded-full bg-red-500" />
+        {active ? activeLabel : 'Sleutel'}
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 mt-2 z-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-1 w-56">
+            {sleutelSubs.map(s => (
+              <button key={s.value}
+                onClick={() => { setFilters(f => ({ ...f, status: s.value })); setOpen(false) }}
+                className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 ${
+                  filters.status === s.value ? 'text-primary font-medium' : 'text-slate-600 dark:text-slate-300'
+                }`}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, onBulkEnd, vestigingId }) {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [klassen, setKlassen] = useState([])
@@ -159,6 +206,7 @@ export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, o
               {s.label}
             </button>
           ))}
+          <SleutelDropdown filters={filters} setFilters={setFilters} />
         </div>
 
         {/* View toggle */}

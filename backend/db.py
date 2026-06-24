@@ -141,6 +141,13 @@ def init_db(db_path):
         conn.commit()
     except Exception:
         pass
+    # Migration: geen_sleutel vlag op kluisjes (kluisje zonder (bruikbare) sleutel,
+    # los van huurstatus — net als is_defect: blokkeert toewijzen, uit "Vrij")
+    try:
+        conn.execute("ALTER TABLE kluisjes ADD COLUMN geen_sleutel INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
+    except Exception:
+        pass
     # Migration: reservesleutel velden op toewijzingen
     try:
         conn.execute("ALTER TABLE toewijzingen ADD COLUMN reservesleutel_uitgegeven INTEGER NOT NULL DEFAULT 0")

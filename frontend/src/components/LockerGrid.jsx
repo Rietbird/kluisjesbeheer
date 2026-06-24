@@ -7,6 +7,9 @@ function getColor(kluisje) {
   // Niet uitgeleend + defect: amber achtergrond (consistent met huidige UI)
   if (kluisje.is_defect)
     return 'bg-amber-50 border-amber-400 hover:bg-amber-100 dark:bg-amber-900/40 dark:border-amber-600 dark:hover:bg-amber-900/60'
+  // Geen sleutel (niet uitgeleend): grijs — buiten gebruik tot er een sleutel is
+  if (kluisje.status !== 'uitgeleend' && kluisje.geen_sleutel)
+    return 'bg-slate-100 border-slate-400 hover:bg-slate-200 dark:bg-slate-700/60 dark:border-slate-500 dark:hover:bg-slate-700'
   if (kluisje.status === 'vrij' && (kluisje._sleutel_niet_ingeleverd || kluisje._borg_niet_teruggestort))
     return 'bg-red-50 border-red-400 hover:bg-red-100 dark:bg-red-900/40 dark:border-red-600 dark:hover:bg-red-900/60'
   return 'bg-emerald-50 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:border-emerald-600 dark:hover:bg-emerald-900/60'
@@ -26,6 +29,7 @@ function getLabel(kluisje) {
     )
   }
   if (kluisje.is_defect) return <span className="text-amber-700 dark:text-amber-400 font-semibold">Defect</span>
+  if (kluisje.geen_sleutel) return <span className="text-slate-600 dark:text-slate-300 font-semibold" title="Geen sleutel">🔑✕ Geen sleutel</span>
   if (kluisje._sleutel_niet_ingeleverd && kluisje._borg_niet_teruggestort) return <span className="text-red-700 dark:text-red-400 font-semibold">🔑💰</span>
   if (kluisje._sleutel_niet_ingeleverd) return <span className="text-red-700 dark:text-red-400 font-semibold">🔑 Sleutel!</span>
   if (kluisje._borg_niet_teruggestort) return <span className="text-red-700 dark:text-red-400 font-semibold">💰 Borg!</span>
@@ -63,6 +67,7 @@ export default function LockerGrid({ kluisjes, onSelect, selectedId }) {
         <span className="flex items-center gap-2"><span className="w-4 h-4 bg-amber-50 dark:bg-amber-900/40 border-2 border-amber-400 dark:border-amber-600 rounded-lg" />Defect (vrij)</span>
         <span className="flex items-center gap-2"><span className="w-4 h-4 bg-sky-50 dark:bg-sky-900/40 border-2 border-sky-400 dark:border-sky-600 ring-2 ring-amber-500 rounded-lg" />⚠ Defect + uitgeleend</span>
         <span className="flex items-center gap-2"><span className="w-4 h-4 bg-red-50 dark:bg-red-900/40 border-2 border-red-400 dark:border-red-600 rounded-lg" />🔑 Sleutel / 💰 Borg openstaand (vrij)</span>
+        <span className="flex items-center gap-2"><span className="w-4 h-4 bg-slate-100 dark:bg-slate-700/60 border-2 border-slate-400 dark:border-slate-500 rounded-lg" />🔑✕ Geen sleutel</span>
         <span className="flex items-center gap-2"><span title="Reservesleutel uitgegeven">🔑</span> Reservesleutel uitgegeven</span>
       </div>
     </div>

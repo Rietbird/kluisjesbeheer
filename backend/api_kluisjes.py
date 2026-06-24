@@ -115,13 +115,22 @@ def search_kluisjes():
             placeholders = ','.join('?' * len(allowed))
             query += f' AND k.vestiging_id IN ({placeholders})'
             params.extend(allowed)
-    if status == 'sleutel':
-        # Lockers where key was not returned after ending assignment
-        query += ''' AND EXISTS (
+    # Sub-condities voor sleutel-statussen (hergebruikt door 'sleutel' = alle)
+    _niet_ingeleverd = '''EXISTS (
             SELECT 1 FROM toewijzingen t2
             WHERE t2.kluisje_id = k.id AND t2.actief = 0 AND t2.sleutel_ingeleverd = 0
             AND t2.id = (SELECT MAX(t3.id) FROM toewijzingen t3 WHERE t3.kluisje_id = k.id AND t3.actief = 0)
         )'''
+    _reservesleutel = '(t.actief = 1 AND t.reservesleutel_uitgegeven = 1)'
+    if status == 'sleutel':
+        # Alle sleutelkwesties: niet ingeleverd OF geen sleutel OF reservesleutel uitgegeven
+        query += f' AND ({_niet_ingeleverd} OR k.geen_sleutel = 1 OR {_reservesleutel})'
+    elif status == 'sleutel_niet_ingeleverd':
+        query += f' AND {_niet_ingeleverd}'
+    elif status == 'geen_sleutel':
+        query += ' AND k.geen_sleutel = 1'
+    elif status == 'reservesleutel':
+        query += f' AND {_reservesleutel}'
     elif status == 'borg':
         # Lockers with outstanding borg: active with borg NOT paid, OR ended with borg paid but not refunded
         query += ''' AND (
@@ -139,6 +148,9 @@ def search_kluisjes():
     elif status == 'vertrokken':
         # Bezet kluisje waarvan de huurder van school is (vertrokken_op gezet)
         query += ' AND t.actief = 1 AND l.vertrokken_op IS NOT NULL'
+    elif status == 'vrij':
+        # Vrij = écht uitleenbaar: geen kluisje-zonder-sleutel ertussen
+        query += " AND k.status = 'vrij' AND k.geen_sleutel = 0"
     elif status:
         query += ' AND k.status = ?'
         params.append(status)
@@ -277,15 +289,18 @@ def update_kluisje(kid):
         is_defect = row['is_defect']
         defect_sinds = row['defect_sinds']
 
+    # geen_sleutel is een aparte vlag (kluisje zonder bruikbare sleutel), los van huurstatus
+    geen_sleutel = (1 if data.get('geen_sleutel') else 0) if 'geen_sleutel' in data else row['geen_sleutel']
+
     if is_defect and defect_sinds is None:
         g.db.execute(
-            "UPDATE kluisjes SET sleutelnummer=?, locatie=?, opmerkingen=?, status=?, is_defect=?, defect_sinds=datetime('now'), updated_at=datetime('now') WHERE id=?",
-            (sleutelnummer, locatie, opmerkingen, status, is_defect, kid)
+            "UPDATE kluisjes SET sleutelnummer=?, locatie=?, opmerkingen=?, status=?, is_defect=?, defect_sinds=datetime('now'), geen_sleutel=?, updated_at=datetime('now') WHERE id=?",
+            (sleutelnummer, locatie, opmerkingen, status, is_defect, geen_sleutel, kid)
         )
     else:
         g.db.execute(
-            "UPDATE kluisjes SET sleutelnummer=?, locatie=?, opmerkingen=?, status=?, is_defect=?, defect_sinds=?, updated_at=datetime('now') WHERE id=?",
-            (sleutelnummer, locatie, opmerkingen, status, is_defect, defect_sinds, kid)
+            "UPDATE kluisjes SET sleutelnummer=?, locatie=?, opmerkingen=?, status=?, is_defect=?, defect_sinds=?, geen_sleutel=?, updated_at=datetime('now') WHERE id=?",
+            (sleutelnummer, locatie, opmerkingen, status, is_defect, defect_sinds, geen_sleutel, kid)
         )
     g.db.commit()
     row = g.db.execute('SELECT * FROM kluisjes WHERE id = ?', (kid,)).fetchone()

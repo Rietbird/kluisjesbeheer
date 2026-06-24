@@ -32,6 +32,8 @@ def toewijzen(kid):
         return jsonify({'error': 'Kluisje is al uitgeleend'}), 409
     if kluisje['is_defect']:
         return jsonify({'error': 'Kluisje is defect — hef het defect eerst op'}), 409
+    if kluisje['geen_sleutel']:
+        return jsonify({'error': 'Kluisje heeft geen sleutel — markeer eerst weer als sleutel aanwezig'}), 409
 
     # Blokkeer toewijzing als er openstaande borg of sleutel is van de vorige verhuur
     laatste = g.db.execute(
