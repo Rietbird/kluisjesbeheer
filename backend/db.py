@@ -130,6 +130,12 @@ def init_db(db_path):
         conn.commit()
     except Exception:
         pass  # kolom bestaat al
+    # Migration: nieuw_voor_schooljaar -- voorinschrijving leerlingen volgend schooljaar
+    try:
+        conn.execute("ALTER TABLE leerlingen ADD COLUMN nieuw_voor_schooljaar TEXT DEFAULT NULL")
+        conn.commit()
+    except Exception:
+        pass  # kolom bestaat al
     # Migration: is_defect + defect_sinds op kluisjes (defect los van huurstatus)
     try:
         conn.execute("ALTER TABLE kluisjes ADD COLUMN is_defect INTEGER NOT NULL DEFAULT 0")

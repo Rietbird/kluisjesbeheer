@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS leerlingen (
     studie TEXT DEFAULT '',
     locatie TEXT DEFAULT '',
     vertrokken_op DATE DEFAULT NULL,
+    nieuw_voor_schooljaar TEXT DEFAULT NULL,
     updated_at DATETIME DEFAULT (datetime('now'))
 );
 
