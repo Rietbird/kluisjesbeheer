@@ -93,6 +93,43 @@ def test_actieve_toewijzingen_effective_klas_and_flag(client, db, db_path):
     assert row['leerling_nieuw_voor_schooljaar'] == '2026-2027'
 
 
+def test_import_voorinschrijving_route(client, monkeypatch):
+    import magister_client
+    captured = {}
+
+    def fake_get_data(layout, parameters=''):
+        captured['layout'] = layout
+        captured['parameters'] = parameters
+        return [
+            {'Leerlingnummer': '9001', 'Voornaam': 'Bo', 'Tussenvoegsel': '',
+             'Achternaam': 'Jansen', 'Email': '9001@school.nl', 'Locatie': 'Hoofd'},
+            {'Leerlingnummer': '9002', 'Voornaam': 'Sam', 'Tussenvoegsel': 'de',
+             'Achternaam': 'Vos', 'Email': '9002@school.nl', 'Locatie': 'Hoofd'},
+        ]
+
+    monkeypatch.setattr(magister_client.magister, 'get_data', fake_get_data)
+    monkeypatch.setattr(magister_client.magister, 'flush_cache', lambda: None)
+
+    resp = client.post('/api/leerlingen/import-voorinschrijving', json={'schooljaar': '2026-2027'})
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body['geimporteerd'] == 2
+    assert captured['layout'] == 'sql-get-kluisjes-voorinschrijving'
+    assert captured['parameters'] == 'peildatum=2026-08-01'
+
+    # end-to-end: vindbaar in de zoek, met vlag, klasloos
+    found = client.get('/api/magister/leerlingen?q=Jansen').get_json()
+    bo = next(l for l in found if l['stamnr'] == '9001')
+    assert bo['nieuw_voor_schooljaar'] == '2026-2027'
+    assert bo['naam'] == 'Bo Jansen'
+    assert bo['klas'] == ''
+
+
+def test_import_voorinschrijving_requires_schooljaar(client):
+    resp = client.post('/api/leerlingen/import-voorinschrijving', json={})
+    assert resp.status_code == 400
+
+
 def test_get_data_parses_records(monkeypatch):
     import magister_client as mc
     client = mc.MagisterClient(url='http://x', user='u', password='p')

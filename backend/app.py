@@ -137,6 +137,9 @@ def create_app(test_config=None):
     from api_update import update_bp
     app.register_blueprint(update_bp)
 
+    from api_voorinschrijving import voorinschrijving_bp
+    app.register_blueprint(voorinschrijving_bp)
+
     # SPA catch-all
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
