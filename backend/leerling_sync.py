@@ -59,3 +59,32 @@ def sync_leerlingen_to_db(db, leerlingen):
     summary['vertrokken_marked'] = cur.rowcount
     db.commit()
     return summary
+
+
+def import_voorinschrijvingen(db, leerlingen, schooljaar):
+    """Upsert pre-registration students for an upcoming school year.
+
+    Writes klasloos (klas='') with nieuw_voor_schooljaar=schooljaar set. Does NOT
+    mark anyone vertrokken (unlike sync_leerlingen_to_db) and leaves the existing
+    klas of an already-known student untouched (a doorstromer keeps its current
+    class). Returns {'imported': <count>}.
+    """
+    imported = 0
+    for l in leerlingen:
+        db.execute('''
+            INSERT INTO leerlingen
+                (stamnr, naam, roepnaam, tussenvoegsel, achternaam, email,
+                 klas, leerjaar, studie, locatie, nieuw_voor_schooljaar, vertrokken_op, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, '', '', '', ?, ?, NULL, datetime('now'))
+            ON CONFLICT(stamnr) DO UPDATE SET
+                naam=excluded.naam, roepnaam=excluded.roepnaam, tussenvoegsel=excluded.tussenvoegsel,
+                achternaam=excluded.achternaam, email=excluded.email, locatie=excluded.locatie,
+                nieuw_voor_schooljaar=excluded.nieuw_voor_schooljaar,
+                vertrokken_op=NULL, updated_at=datetime('now')
+        ''', (
+            l['stamnr'], l['naam'], l.get('roepnaam', ''), l.get('tussenvoegsel', ''),
+            l.get('achternaam', ''), l.get('email', ''), l.get('locatie', ''), schooljaar,
+        ))
+        imported += 1
+    db.commit()
+    return {'imported': imported}
