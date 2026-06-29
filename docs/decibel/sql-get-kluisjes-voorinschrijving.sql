@@ -4,7 +4,7 @@
 -- Doel    : leerlingen die voor het KOMENDE schooljaar zijn geplaatst,
 --           voor de kluisjes-voorinschrijving. In de app KLASLOOS
 --           importeren; Klas + Email staan er alleen ter controle in.
--- Filter  : peildatum 1 sept van het komende schooljaar — zelfde
+-- Filter  : peildatum 1 sept van het komende schooljaar - zelfde
 --           dBegin/dEinde/dVertrek-logica als sql-get-isk-leerlingen,
 --           maar met een TOEKOMSTIGE peildatum i.p.v. GETDATE().
 -- Auteur  : Vincent + Claude, 2026-06-26
@@ -16,7 +16,7 @@
 --             Deze lijst zonder vestiging-filter hoort ~436 rijen te geven.
 --           * Webservice (Data.GetData) + account-koppeling: nog te testen.
 -- Account : Erasmus-kluisjesapp gebruikt vermoedelijk webservice-user
---           `webuser` (heeft al kluisjes-actueel/zoek-kluiscode) — nog te
+--           `webuser` (heeft al kluisjes-actueel/zoek-kluiscode) - nog te
 --           bevestigen op CT101. Hengelo gebruikt `Kluisjesmodule`.
 -- Aanroep : GET <url>/?library=Data&function=GetData
 --                 &Layout=sql-get-kluisjes-voorinschrijving
@@ -43,7 +43,7 @@ WHERE
     AND (sis_aanm.dVertrek >= '2026-08-01' OR sis_aanm.dVertrek IS NULL)
 ORDER BY sis_leer.stamnr;
 
--- Optioneel — beperk tot bepaalde vestiging(en):
+-- Optioneel - beperk tot bepaalde vestiging(en):
 --   AND sis_blok.c_lokatie IN ('...')
 --
 -- Alternatief next-year-filter via STUDYPERIOD (als de peildatum niet bevalt):

@@ -1,21 +1,21 @@
-# Voorinschrijving leerlingen volgend schooljaar — Implementation Plan
+# Voorinschrijving leerlingen volgend schooljaar - Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Leerlingen van het komende schooljaar vooraf in de app zetten (klasloos, met een vlag) zodat conciërges ze nu al aan vrije kluisjes kunnen koppelen; op 1-8 nemen ze automatisch hun echte klas over en valt de vlag weg.
 
-**Architecture:** Een aparte import (los van de gewone Magister-sync) haalt de volgend-jaars leerlingen op uit een custom Magister Decibel DD-lijst via `Data.GetData`, en schrijft ze klasloos in `leerlingen` met `nieuw_voor_schooljaar` gezet — zonder vertrokken-markering. De dagelijkse sync beschermt die leerlingen tot 1-8 en wist de vlag zodra ze actief binnenkomen. De klas op een gekoppeld kluisje volgt via een `COALESCE(snapshot, live)` op de leesquery (zelfde patroon als de klas-fix van 16-17 juni), niet via een snapshot-mutatie.
+**Architecture:** Een aparte import (los van de gewone Magister-sync) haalt de volgend-jaars leerlingen op uit een custom Magister Decibel DD-lijst via `Data.GetData`, en schrijft ze klasloos in `leerlingen` met `nieuw_voor_schooljaar` gezet - zonder vertrokken-markering. De dagelijkse sync beschermt die leerlingen tot 1-8 en wist de vlag zodra ze actief binnenkomen. De klas op een gekoppeld kluisje volgt via een `COALESCE(snapshot, live)` op de leesquery (zelfde patroon als de klas-fix van 16-17 juni), niet via een snapshot-mutatie.
 
 **Tech Stack:** Flask + SQLite (backend), pytest (tests), React/Vite (frontend), Magister SWP-webservice (`library=Data&function=GetData`).
 
 ## Global Constraints
 
-- **Bron = Decibel DD-lijst via `library=Data&function=GetData&Layout=<naam>`** — NIET `library=ADFuncties` (dat is alleen voor de vaste `GetActiveStudents`). Zie `docs/decibel/sql-get-kluisjes-voorinschrijving.sql` + `c:/Projects/isk-analyse/docs/decibel/aanroep-patroon.md`.
-- **Klasloos importeren** — `klas=''`. De nieuwe klas (bijv. "1A") botst met de huidige "1A"; klas komt op 1-8 via de gewone sync.
+- **Bron = Decibel DD-lijst via `library=Data&function=GetData&Layout=<naam>`** - NIET `library=ADFuncties` (dat is alleen voor de vaste `GetActiveStudents`). Zie `docs/decibel/sql-get-kluisjes-voorinschrijving.sql` + `c:/Projects/isk-analyse/docs/decibel/aanroep-patroon.md`.
+- **Klasloos importeren** - `klas=''`. De nieuwe klas (bijv. "1A") botst met de huidige "1A"; klas komt op 1-8 via de gewone sync.
 - **De import doet GEEN vertrokken-markering** (eigen functie, niet `sync_leerlingen_to_db`).
 - **Lijstnaam configureerbaar** via `instellingen.voorinschrijving_lijst`; default `sql-get-kluisjes-voorinschrijving`.
 - **Service-account per school**: Erasmus vermoedelijk `webuser`, Hengelo `Kluisjesmodule` (in de DB-instelling `magister_user`, niet in deze code).
-- **React + SQLite-bool**: render `nieuw_voor_schooljaar` conditioneel met een expliciete check (geen kale `0`/`''` in JSX) — zie memory `feedback_react_sqlite_bool`.
+- **React + SQLite-bool**: render `nieuw_voor_schooljaar` conditioneel met een expliciete check (geen kale `0`/`''` in JSX) - zie memory `feedback_react_sqlite_bool`.
 - **XML-parsing** volgt het bestaande `magister_client.py` (stdlib `xml.etree.ElementTree`). `defusedxml` (zoals in isk-analyse) is een eenvoudige hardening-swap tegen XXE/billion-laughs als gewenst; de SWP-server is intern en vertrouwd, dus het risico is laag. Bij invoeren: in `magister_client.py` `import defusedxml.ElementTree as ET` en `defusedxml` aan `requirements.txt` toevoegen.
 - **Commits zonder `Co-Authored-By`-trailer.**
 
@@ -58,7 +58,7 @@ def test_nieuw_voor_schooljaar_column_exists(db):
     assert 'nieuw_voor_schooljaar' in cols
 ```
 
-- [ ] **Step 2: Run de test — verwacht FAIL**
+- [ ] **Step 2: Run de test - verwacht FAIL**
 
 Run: `cd backend && pytest tests/test_voorinschrijving.py::test_nieuw_voor_schooljaar_column_exists -v`
 Expected: FAIL (kolom bestaat nog niet).
@@ -74,7 +74,7 @@ In `backend/schema.sql`, in de `leerlingen`-tabel, voeg toe direct na de regel `
 
 In `backend/db.py`, in `init_db`, naast de andere `ALTER TABLE`-migraties (bijv. na het `vertrokken_op`-blok rond regel 127-132):
 ```python
-    # Migration: nieuw_voor_schooljaar — voorinschrijving leerlingen volgend schooljaar
+    # Migration: nieuw_voor_schooljaar - voorinschrijving leerlingen volgend schooljaar
     try:
         conn.execute("ALTER TABLE leerlingen ADD COLUMN nieuw_voor_schooljaar TEXT DEFAULT NULL")
         conn.commit()
@@ -82,7 +82,7 @@ In `backend/db.py`, in `init_db`, naast de andere `ALTER TABLE`-migraties (bijv.
         pass  # kolom bestaat al
 ```
 
-- [ ] **Step 5: Run de test — verwacht PASS**
+- [ ] **Step 5: Run de test - verwacht PASS**
 
 Run: `cd backend && pytest tests/test_voorinschrijving.py::test_nieuw_voor_schooljaar_column_exists -v`
 Expected: PASS.
@@ -146,7 +146,7 @@ def test_import_preserves_klas_of_existing_student(db):
     assert db.execute("SELECT klas FROM leerlingen WHERE stamnr='1'").fetchone()['klas'] == '3A'
 ```
 
-- [ ] **Step 2: Run de tests — verwacht FAIL**
+- [ ] **Step 2: Run de tests - verwacht FAIL**
 
 Run: `cd backend && pytest tests/test_voorinschrijving.py -k import -v`
 Expected: FAIL (`ImportError: cannot import name 'import_voorinschrijvingen'`).
@@ -184,7 +184,7 @@ def import_voorinschrijvingen(db, leerlingen, schooljaar):
     return {'imported': imported}
 ```
 
-- [ ] **Step 4: Run de tests — verwacht PASS**
+- [ ] **Step 4: Run de tests - verwacht PASS**
 
 Run: `cd backend && pytest tests/test_voorinschrijving.py -k import -v`
 Expected: PASS (3 tests).
@@ -198,7 +198,7 @@ git commit -m "feat(voorinschrijving): add import_voorinschrijvingen (klasloos, 
 
 ---
 
-### Task 3: Sync — bescherming vóór 1-8 + vlag wissen bij activatie
+### Task 3: Sync - bescherming vóór 1-8 + vlag wissen bij activatie
 
 **Files:**
 - Modify: `backend/leerling_sync.py` (`sync_leerlingen_to_db`)
@@ -236,7 +236,7 @@ def test_noshow_marked_vertrokken_after_rollover(db):
     assert db.execute("SELECT vertrokken_op FROM leerlingen WHERE stamnr='9001'").fetchone()['vertrokken_op'] is not None
 ```
 
-- [ ] **Step 2: Run de tests — verwacht FAIL**
+- [ ] **Step 2: Run de tests - verwacht FAIL**
 
 Run: `cd backend && pytest tests/test_voorinschrijving.py -k "protected or cleared or noshow" -v`
 Expected: FAIL (`test_voorinschrijving_protected_before_rollover` markeert nu wél, `test_flag_cleared...` houdt de vlag).
@@ -263,10 +263,10 @@ In dezelfde functie, in de vertrokken-`UPDATE` (regel ~55-58), breid de `WHERE` 
     ''', list(synced_stamnrs))
 ```
 
-- [ ] **Step 5: Run de tests — verwacht PASS**
+- [ ] **Step 5: Run de tests - verwacht PASS**
 
 Run: `cd backend && pytest tests/test_voorinschrijving.py -v && pytest tests/test_leerling_sync.py -v`
-Expected: alle PASS (de bestaande sync-tests blijven groen — gewone leerlingen hebben `nieuw_voor_schooljaar IS NULL`, dus de `NOT(...)` is altijd waar voor hen).
+Expected: alle PASS (de bestaande sync-tests blijven groen - gewone leerlingen hebben `nieuw_voor_schooljaar IS NULL`, dus de `NOT(...)` is altijd waar voor hen).
 
 - [ ] **Step 6: Commit**
 
@@ -315,7 +315,7 @@ def test_actieve_toewijzingen_effective_klas_and_flag(client, db, db_path):
     assert row['leerling_nieuw_voor_schooljaar'] == '2026-2027'
 ```
 
-- [ ] **Step 2: Run de test — verwacht FAIL**
+- [ ] **Step 2: Run de test - verwacht FAIL**
 
 Run: `cd backend && pytest tests/test_voorinschrijving.py::test_actieve_toewijzingen_effective_klas_and_flag -v`
 Expected: FAIL (`KeyError: 'leerling_klas_effectief'`).
@@ -329,7 +329,7 @@ In `backend/api_toewijzingen.py`, in `actieve_toewijzingen`, in de `SELECT` (reg
                COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) AS leerling_klas_effectief
 ```
 
-- [ ] **Step 4: Run de test — verwacht PASS**
+- [ ] **Step 4: Run de test - verwacht PASS**
 
 Run: `cd backend && pytest tests/test_voorinschrijving.py::test_actieve_toewijzingen_effective_klas_and_flag -v`
 Expected: PASS.
@@ -343,7 +343,7 @@ git commit -m "feat(voorinschrijving): expose effective klas + flag on active to
 
 ---
 
-### Task 5: Webservice — `get_data()` op de Magister-client
+### Task 5: Webservice - `get_data()` op de Magister-client
 
 **Files:**
 - Modify: `backend/magister_client.py`
@@ -382,7 +382,7 @@ def test_get_data_parses_records(monkeypatch):
     assert records[1]['Tussenvoegsel'] == 'de'
 ```
 
-- [ ] **Step 2: Run de test — verwacht FAIL**
+- [ ] **Step 2: Run de test - verwacht FAIL**
 
 Run: `cd backend && pytest tests/test_voorinschrijving.py::test_get_data_parses_records -v`
 Expected: FAIL (`AttributeError: 'MagisterClient' object has no attribute 'get_data'`).
@@ -436,7 +436,7 @@ In `backend/magister_client.py`, in de `MagisterClient`-klasse (bijv. na `get_kl
         return [{child.tag: (child.text or '') for child in item} for item in list(wrappers[0])]
 ```
 
-- [ ] **Step 4: Run de test — verwacht PASS**
+- [ ] **Step 4: Run de test - verwacht PASS**
 
 Run: `cd backend && pytest tests/test_voorinschrijving.py::test_get_data_parses_records -v`
 Expected: PASS.
@@ -502,10 +502,10 @@ def test_import_voorinschrijving_requires_schooljaar(client):
     assert resp.status_code == 400
 ```
 
-- [ ] **Step 2: Run de tests — verwacht FAIL**
+- [ ] **Step 2: Run de tests - verwacht FAIL**
 
 Run: `cd backend && pytest tests/test_voorinschrijving.py -k route -v`
-Expected: FAIL (404 — route bestaat nog niet).
+Expected: FAIL (404 - route bestaat nog niet).
 
 - [ ] **Step 3: Maak de blueprint**
 
@@ -575,7 +575,7 @@ In `backend/app.py`, bij de andere blueprint-registraties (rond regel 119, naast
     app.register_blueprint(voorinschrijving_bp)
 ```
 
-- [ ] **Step 5: Run de tests — verwacht PASS**
+- [ ] **Step 5: Run de tests - verwacht PASS**
 
 Run: `cd backend && pytest tests/test_voorinschrijving.py -v`
 Expected: alle PASS.
@@ -589,10 +589,10 @@ git commit -m "feat(voorinschrijving): add import-voorinschrijving route via Dec
 
 ---
 
-### Task 7: Frontend — import-knop (Onderhoud) + badge `'26-'27`
+### Task 7: Frontend - import-knop (Onderhoud) + badge `'26-'27`
 
 **Files:**
-- Modify: `frontend/src/pages/Beheer.jsx` (Onderhoud — import-knop)
+- Modify: `frontend/src/pages/Beheer.jsx` (Onderhoud - import-knop)
 - Modify: `frontend/src/components/AssignForm.jsx` (badge in leerling-zoekresultaten)
 - Modify: `frontend/src/components/LockerModal.jsx` (badge + effectieve klas op het kluisje)
 
@@ -678,7 +678,7 @@ Alleen bouwen als de webservice-bron onverhoopt niet bruikbaar blijkt. Voeg een 
 - UI (Deel 5: knop + chip) → Task 7. ✓
 - Excel-achtervang → Task 8 (optioneel). ✓
 
-**Afwijking van de spec (bewust):** Deel 3b "snapshot-refresh op de actieve toewijzing" is vervangen door de eenvoudiger **COALESCE(snapshot, live)** in `actieve_toewijzingen` (Task 4) — conform de NB in de spec, en consistent met de klas-fix van 16-17 juni (`GET /api/kluisjes`). Geen data-mutatie nodig.
+**Afwijking van de spec (bewust):** Deel 3b "snapshot-refresh op de actieve toewijzing" is vervangen door de eenvoudiger **COALESCE(snapshot, live)** in `actieve_toewijzingen` (Task 4) - conform de NB in de spec, en consistent met de klas-fix van 16-17 juni (`GET /api/kluisjes`). Geen data-mutatie nodig.
 
 **Placeholder-scan:** geen TBD/TODO in de tasks; alle stappen bevatten echte code/commando's.
 
