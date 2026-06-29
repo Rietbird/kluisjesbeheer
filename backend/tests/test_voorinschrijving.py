@@ -254,3 +254,45 @@ def test_xlsx_import_missing_naam_column(client):
     assert resp.status_code == 400
     assert 'Leerlingnummer' in resp.get_json()['error']
     assert 'Naam' in resp.get_json()['error']
+
+
+# ---------------------------------------------------------------------------
+# Finding 1: /api/kluisjes must expose leerling_nieuw_voor_schooljaar
+# ---------------------------------------------------------------------------
+
+def test_kluisjes_list_exposes_nieuw_voor_schooljaar(client, db):
+    """Locker list endpoint must return leerling_nieuw_voor_schooljaar for flagged students."""
+    import_voorinschrijvingen(db, [_vi('9001')], '2026-2027')
+    _seed_kluisje_met_toewijzing(db, '9001', snapshot_klas='')
+
+    rows = client.get('/api/kluisjes').get_json()
+    row = next((r for r in rows if r.get('leerling_stamnr') == '9001'), None)
+    assert row is not None, 'Kluisje voor stamnr 9001 niet gevonden in /api/kluisjes'
+    assert row['leerling_nieuw_voor_schooljaar'] == '2026-2027'
+
+
+# ---------------------------------------------------------------------------
+# Finding 3: strict schooljaar validation on both routes
+# ---------------------------------------------------------------------------
+
+def test_json_route_rejects_malformed_schooljaar(client, monkeypatch):
+    """JSON route must reject malformed schooljaar (e.g. '2026-') with 400."""
+    import magister_client
+    monkeypatch.setattr(magister_client.magister, 'get_data', lambda *a, **k: [])
+    monkeypatch.setattr(magister_client.magister, 'flush_cache', lambda: None)
+
+    resp = client.post('/api/leerlingen/import-voorinschrijving', json={'schooljaar': '2026-'})
+    assert resp.status_code == 400
+    assert 'schooljaar' in resp.get_json()['error']
+
+
+def test_xlsx_route_rejects_malformed_schooljaar(client):
+    """XLSX route must reject malformed schooljaar (e.g. '2026-') with 400."""
+    xlsx = _xlsx_bytes([('Leerlingnummer', 'Naam'), ('9001', 'Test')])
+    resp = client.post(
+        '/api/leerlingen/import-voorinschrijving-xlsx',
+        data={'schooljaar': '2026-', 'file': (xlsx, 'leerlingen.xlsx')},
+        content_type='multipart/form-data',
+    )
+    assert resp.status_code == 400
+    assert 'schooljaar' in resp.get_json()['error']

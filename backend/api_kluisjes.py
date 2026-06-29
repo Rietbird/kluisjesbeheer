@@ -77,6 +77,7 @@ def search_kluisjes():
                t.periode_van, t.periode_tot, t.borgbedrag, t.borg_betaald,
                t.reservesleutel_uitgegeven, t.reservesleutel_datum,
                l.vertrokken_op as leerling_vertrokken_op,
+               l.nieuw_voor_schooljaar as leerling_nieuw_voor_schooljaar,
                CASE
                  WHEN k.status = 'vrij' AND EXISTS (
                    SELECT 1 FROM toewijzingen t2

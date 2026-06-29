@@ -1,3 +1,4 @@
+import re
 from flask import Blueprint, request, jsonify, g
 from auth import beheerder_required
 from magister_client import magister, safe_error as _safe_error
@@ -37,7 +38,7 @@ def _map_record(rec):
 def import_voorinschrijving():
     data = request.get_json() or {}
     schooljaar = (data.get('schooljaar') or '').strip()
-    if not schooljaar or '-' not in schooljaar:
+    if not re.match(r'^\d{4}-\d{4}$', schooljaar):
         return jsonify({'error': 'schooljaar is verplicht (vorm "2026-2027")'}), 400
 
     row = g.db.execute("SELECT value FROM instellingen WHERE key='voorinschrijving_lijst'").fetchone()
@@ -72,7 +73,7 @@ def _cell_to_str(val):
 def import_voorinschrijving_xlsx():
     """Excel fallback: upload a .xlsx with columns Leerlingnummer/Stamnummer and Naam."""
     schooljaar = (request.form.get('schooljaar') or '').strip()
-    if not schooljaar or '-' not in schooljaar:
+    if not re.match(r'^\d{4}-\d{4}$', schooljaar):
         return jsonify({'error': 'schooljaar is verplicht (vorm "2026-2027")'}), 400
 
     file = request.files.get('file')
@@ -88,52 +89,55 @@ def import_voorinschrijving_xlsx():
     except Exception:
         return jsonify({'error': 'Kan bestand niet verwerken. Controleer het formaat.'}), 400
 
-    ws = wb.active
+    try:
+        ws = wb.active
 
-    # Find the header row (first non-empty row) and map column indices
-    col_stamnr = None
-    col_naam = None
-    col_locatie = None
-    col_email = None
-    header_row_idx = None
+        # Find the header row (first non-empty row) and map column indices
+        col_stamnr = None
+        col_naam = None
+        col_locatie = None
+        col_email = None
+        header_row_idx = None
 
-    for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
-        # Skip empty rows
-        if not any(c is not None for c in row):
-            continue
-        # This is the header row
-        header_row_idx = i
-        for j, cell in enumerate(row):
-            label = str(cell).strip().lower() if cell is not None else ''
-            if label in ('leerlingnummer', 'stamnummer'):
-                col_stamnr = j
-            elif label == 'naam':
-                col_naam = j
-            elif label == 'locatie':
-                col_locatie = j
-            elif label == 'email':
-                col_email = j
-        break
+        for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
+            # Skip empty rows
+            if not any(c is not None for c in row):
+                continue
+            # This is the header row
+            header_row_idx = i
+            for j, cell in enumerate(row):
+                label = str(cell).strip().lower() if cell is not None else ''
+                if label in ('leerlingnummer', 'stamnummer'):
+                    col_stamnr = j
+                elif label == 'naam':
+                    col_naam = j
+                elif label == 'locatie':
+                    col_locatie = j
+                elif label == 'email':
+                    col_email = j
+            break
 
-    if col_stamnr is None or col_naam is None:
-        return jsonify({'error': 'Kolommen "Leerlingnummer" en "Naam" zijn verplicht'}), 400
+        if col_stamnr is None or col_naam is None:
+            return jsonify({'error': 'Kolommen "Leerlingnummer" en "Naam" zijn verplicht'}), 400
 
-    leerlingen = []
-    for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
-        if i <= header_row_idx:
-            continue
-        stamnr = _cell_to_str(row[col_stamnr] if col_stamnr < len(row) else None)
-        naam = _cell_to_str(row[col_naam] if col_naam < len(row) else None)
-        if not stamnr or not naam:
-            continue
-        locatie = _cell_to_str(row[col_locatie] if col_locatie is not None and col_locatie < len(row) else None)
-        email = _cell_to_str(row[col_email] if col_email is not None and col_email < len(row) else None)
-        leerlingen.append({
-            'stamnr': stamnr,
-            'naam': naam,
-            'locatie': locatie,
-            'email': email,
-        })
+        leerlingen = []
+        for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
+            if i <= header_row_idx:
+                continue
+            stamnr = _cell_to_str(row[col_stamnr] if col_stamnr < len(row) else None)
+            naam = _cell_to_str(row[col_naam] if col_naam < len(row) else None)
+            if not stamnr or not naam:
+                continue
+            locatie = _cell_to_str(row[col_locatie] if col_locatie is not None and col_locatie < len(row) else None)
+            email = _cell_to_str(row[col_email] if col_email is not None and col_email < len(row) else None)
+            leerlingen.append({
+                'stamnr': stamnr,
+                'naam': naam,
+                'locatie': locatie,
+                'email': email,
+            })
+    finally:
+        wb.close()
 
     summary = import_voorinschrijvingen(g.db, leerlingen, schooljaar)
     return jsonify({'geimporteerd': summary['imported'], 'schooljaar': schooljaar, 'bron': 'xlsx'})
