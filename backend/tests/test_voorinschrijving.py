@@ -154,3 +154,103 @@ def test_get_data_parses_records(monkeypatch):
     assert records[0]['Leerlingnummer'] == '9001'
     assert records[0]['Voornaam'] == 'Bo'
     assert records[1]['Tussenvoegsel'] == 'de'
+
+
+# ---------------------------------------------------------------------------
+# XLSX fallback import
+# ---------------------------------------------------------------------------
+
+import io
+import openpyxl
+
+
+def _xlsx_bytes(rows):
+    """Build an in-memory .xlsx from a list of row-tuples."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    for r in rows:
+        ws.append(r)
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf
+
+
+def test_xlsx_import_happy_path(client):
+    """Headers + 2 rows (one with numeric leerlingnummer) -> 200, geimporteerd==2."""
+    xlsx = _xlsx_bytes([
+        ('Leerlingnummer', 'Naam'),
+        (19951, 'De Vries Anja'),       # numeric - tests int/float->str conversion
+        ('9002', 'Bakker Sam'),
+    ])
+    resp = client.post(
+        '/api/leerlingen/import-voorinschrijving-xlsx',
+        data={'schooljaar': '2026-2027', 'file': (xlsx, 'leerlingen.xlsx')},
+        content_type='multipart/form-data',
+    )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body['geimporteerd'] == 2
+    assert body['schooljaar'] == '2026-2027'
+    assert body['bron'] == 'xlsx'
+
+    # end-to-end: student should be findable, klasloos, and flagged
+    found = client.get('/api/magister/leerlingen?q=Vries').get_json()
+    anja = next((l for l in found if l['stamnr'] == '19951'), None)
+    assert anja is not None
+    assert anja['nieuw_voor_schooljaar'] == '2026-2027'
+    assert anja['klas'] == ''
+
+
+def test_xlsx_import_synonym_stamnummer(client):
+    """'Stamnummer' header is accepted as synonym for 'Leerlingnummer'."""
+    xlsx = _xlsx_bytes([
+        ('Stamnummer', 'Naam'),
+        ('9003', 'Pietersen Kees'),
+    ])
+    resp = client.post(
+        '/api/leerlingen/import-voorinschrijving-xlsx',
+        data={'schooljaar': '2026-2027', 'file': (xlsx, 'leerlingen.xlsx')},
+        content_type='multipart/form-data',
+    )
+    assert resp.status_code == 200
+    assert resp.get_json()['geimporteerd'] == 1
+
+
+def test_xlsx_import_missing_file(client):
+    """No file uploaded -> 400."""
+    resp = client.post(
+        '/api/leerlingen/import-voorinschrijving-xlsx',
+        data={'schooljaar': '2026-2027'},
+        content_type='multipart/form-data',
+    )
+    assert resp.status_code == 400
+    assert 'Bestand' in resp.get_json()['error']
+
+
+def test_xlsx_import_missing_schooljaar(client):
+    """No schooljaar -> 400."""
+    xlsx = _xlsx_bytes([('Leerlingnummer', 'Naam'), ('9001', 'Test')])
+    resp = client.post(
+        '/api/leerlingen/import-voorinschrijving-xlsx',
+        data={'file': (xlsx, 'leerlingen.xlsx')},
+        content_type='multipart/form-data',
+    )
+    assert resp.status_code == 400
+    assert 'schooljaar' in resp.get_json()['error']
+
+
+def test_xlsx_import_missing_naam_column(client):
+    """Excel without a Naam column -> 400 with the verplicht-message."""
+    xlsx = _xlsx_bytes([
+        ('Leerlingnummer', 'Klas'),
+        ('9001', '1A'),
+    ])
+    resp = client.post(
+        '/api/leerlingen/import-voorinschrijving-xlsx',
+        data={'schooljaar': '2026-2027', 'file': (xlsx, 'leerlingen.xlsx')},
+        content_type='multipart/form-data',
+    )
+    assert resp.status_code == 400
+    assert 'Leerlingnummer' in resp.get_json()['error']
+    assert 'Naam' in resp.get_json()['error']
