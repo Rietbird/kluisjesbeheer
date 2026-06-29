@@ -286,7 +286,9 @@ def actieve_toewijzingen():
     stamnr = request.args.get('stamnr', '').strip()
     query = '''
         SELECT t.*, k.kluisnummer, k.sleutelnummer, k.cluster_id, k.vestiging_id, c.naam as cluster_naam,
-               l.vertrokken_op AS leerling_vertrokken_op
+               l.vertrokken_op AS leerling_vertrokken_op,
+               l.nieuw_voor_schooljaar AS leerling_nieuw_voor_schooljaar,
+               COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) AS leerling_klas_effectief
         FROM toewijzingen t
         JOIN kluisjes k ON t.kluisje_id = k.id
         JOIN clusters c ON k.cluster_id = c.id

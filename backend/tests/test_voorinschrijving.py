@@ -67,3 +67,27 @@ def test_noshow_marked_vertrokken_after_rollover(db):
     import_voorinschrijvingen(db, [_vi('9001')], '2000-2001')
     sync_leerlingen_to_db(db, [_ll('1'), _ll('2')])
     assert db.execute("SELECT vertrokken_op FROM leerlingen WHERE stamnr='9001'").fetchone()['vertrokken_op'] is not None
+
+
+def _seed_kluisje_met_toewijzing(db, stamnr, snapshot_klas=''):
+    db.execute("INSERT INTO vestigingen (id, naam) VALUES (1, 'Hoofd')")
+    db.execute("INSERT INTO clusters (id, vestiging_id, naam) VALUES (1, 1, 'C1')")
+    db.execute("INSERT INTO kluisjes (id, cluster_id, vestiging_id, kluisnummer, status) "
+               "VALUES (1, 1, 1, 'A001', 'uitgeleend')")
+    db.execute("INSERT INTO toewijzingen (kluisje_id, leerling_stamnr, leerling_naam, leerling_klas, "
+               "periode_van, periode_tot, actief) VALUES (1, ?, 'Brug', ?, '2026-08-01', '2027-07-31', 1)",
+               (stamnr, snapshot_klas))
+    db.commit()
+
+
+def test_actieve_toewijzingen_effective_klas_and_flag(client, db, db_path):
+    # voorinschrijving (klasloos) + lege snapshot, daarna krijgt de leerling z'n live klas
+    import_voorinschrijvingen(db, [_vi('9001')], '2026-2027')
+    _seed_kluisje_met_toewijzing(db, '9001', snapshot_klas='')
+    db.execute("UPDATE leerlingen SET klas='1A' WHERE stamnr='9001'")  # alsof 1-8 voorbij is
+    db.commit()
+    rows = client.get('/api/toewijzingen/actief').get_json()
+    row = next(r for r in rows if r['leerling_stamnr'] == '9001')
+    assert row['leerling_klas'] == ''                       # snapshot ongewijzigd
+    assert row['leerling_klas_effectief'] == '1A'           # valt terug op live klas
+    assert row['leerling_nieuw_voor_schooljaar'] == '2026-2027'
