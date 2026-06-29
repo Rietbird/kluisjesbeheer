@@ -36,7 +36,7 @@ def sync_leerlingen_to_db(db, leerlingen):
                 naam=excluded.naam, roepnaam=excluded.roepnaam, tussenvoegsel=excluded.tussenvoegsel,
                 achternaam=excluded.achternaam, email=excluded.email, klas=excluded.klas,
                 leerjaar=excluded.leerjaar, studie=excluded.studie, locatie=excluded.locatie,
-                vertrokken_op=NULL, updated_at=datetime('now')
+                vertrokken_op=NULL, nieuw_voor_schooljaar=NULL, updated_at=datetime('now')
         ''', (
             l['stamnr'], l['naam'], l.get('roepnaam', ''), l.get('tussenvoegsel', ''),
             l.get('achternaam', ''), l.get('email', ''), l['klas'],
@@ -55,6 +55,10 @@ def sync_leerlingen_to_db(db, leerlingen):
     cur = db.execute(f'''
         UPDATE leerlingen SET vertrokken_op = date('now'), updated_at = datetime('now')
         WHERE stamnr NOT IN ({placeholders}) AND vertrokken_op IS NULL
+          AND NOT (
+                nieuw_voor_schooljaar IS NOT NULL
+                AND date('now') < (substr(nieuw_voor_schooljaar, 1, 4) || '-08-01')
+          )
     ''', list(synced_stamnrs))
     summary['vertrokken_marked'] = cur.rowcount
     db.commit()
