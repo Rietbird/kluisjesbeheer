@@ -91,3 +91,29 @@ def test_actieve_toewijzingen_effective_klas_and_flag(client, db, db_path):
     assert row['leerling_klas'] == ''                       # snapshot ongewijzigd
     assert row['leerling_klas_effectief'] == '1A'           # valt terug op live klas
     assert row['leerling_nieuw_voor_schooljaar'] == '2026-2027'
+
+
+def test_get_data_parses_records(monkeypatch):
+    import magister_client as mc
+    client = mc.MagisterClient(url='http://x', user='u', password='p')
+    monkeypatch.setattr(client, '_login', lambda: 'TOKEN')
+    xml = (
+        '<Response><Result>True</Result><Table><Voorinschrijvingen>'
+        '<Voorinschrijving><Leerlingnummer>9001</Leerlingnummer><Voornaam>Bo</Voornaam>'
+        '<Tussenvoegsel></Tussenvoegsel><Achternaam>Jansen</Achternaam>'
+        '<Locatie>HET ERASMUS vestiging PrO</Locatie></Voorinschrijving>'
+        '<Voorinschrijving><Leerlingnummer>9002</Leerlingnummer><Voornaam>Sam</Voornaam>'
+        '<Tussenvoegsel>de</Tussenvoegsel><Achternaam>Vos</Achternaam>'
+        '<Locatie>HET ERASMUS vestiging PrO</Locatie></Voorinschrijving>'
+        '</Voorinschrijvingen></Table></Response>'
+    )
+
+    class FakeResp:
+        text = xml
+
+    monkeypatch.setattr(mc.requests, 'get', lambda *a, **k: FakeResp())
+    records = client.get_data('sql-get-kluisjes-voorinschrijving')
+    assert len(records) == 2
+    assert records[0]['Leerlingnummer'] == '9001'
+    assert records[0]['Voornaam'] == 'Bo'
+    assert records[1]['Tussenvoegsel'] == 'de'

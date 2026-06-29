@@ -227,6 +227,50 @@ class MagisterClient:
         klassen = sorted(set(l['klas'] for l in all_leerlingen if l['klas']))
         return [{'naam': k} for k in klassen]
 
+    def get_data(self, layout, parameters=''):
+        """Run a Magister Decibel DD-lijst via Data.GetData and return a list of
+        dicts (one per record, column-tag -> text).
+
+        DD-lijsten gaan via library=Data (NIET ADFuncties). Parameters vullen
+        #naam#-placeholders in de querydefinitie, vorm 'naam=waarde;naam2=waarde2'.
+        Zie docs/decibel/aanroep-patroon.md.
+        """
+        token = self._login()
+        params = {
+            'library': 'Data',
+            'function': 'GetData',
+            'SessionToken': token,
+            'Layout': layout,
+            'Parameters': parameters,
+            'Type': 'XML',
+        }
+        try:
+            resp = requests.get(self.url, params=params, timeout=60, verify=MAGISTER_SSL_VERIFY)
+            root = ET.fromstring(resp.text)
+        except (requests.Timeout, requests.ConnectionError):
+            raise ConnectionError('Geen verbinding met de Magister-webservice tijdens GetData (poort 8800).')
+        except requests.RequestException:
+            raise ConnectionError('Magister-webservice gaf een onverwacht antwoord (HTTP-fout).')
+        except ET.ParseError:
+            raise ConnectionError('Magister-webservice gaf een ongeldig antwoord (geen geldige XML).')
+        except Exception:
+            raise ConnectionError('Onverwachte fout bij het benaderen van de Magister-webservice.')
+
+        if root.findtext('Result') == 'False':
+            msg = root.findtext('Fout_omschrijving') or root.findtext('ResultMessage') or 'onbekende fout'
+            raise ConnectionError(f'Magister GetData mislukt voor lijst "{layout}": {msg}')
+        exc = root.findtext('Exception')
+        if exc:
+            raise ConnectionError(f'Medius fout: {exc}: {root.findtext("ExceptionMsg")}')
+
+        table = root.find('Table')
+        if table is None:
+            return []
+        wrappers = list(table)
+        if not wrappers:
+            return []
+        return [{child.tag: (child.text or '') for child in item} for item in list(wrappers[0])]
+
     def flush_cache(self):
         """Clear all cached data, forcing fresh API calls."""
         self._cache = {}
