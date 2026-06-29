@@ -5,6 +5,12 @@ import EndRentalForm from './EndRentalForm'
 import { useInstellingen } from '../context/InstellingenContext'
 import { formatDate } from '../utils/formatDate'
 
+// "2026-2027" -> "'26-'27"
+function schooljaarChip(sj) {
+  const m = /^(\d{2})(\d{2})-(\d{2})(\d{2})$/.exec(sj || '')
+  return m ? `'${m[2]}-'${m[4]}` : sj
+}
+
 function InfoRow({ label, children }) {
   return (
     <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-600 last:border-0">
@@ -359,9 +365,19 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
                 Huidige huurder
               </div>
               <div className="text-sm space-y-0">
-                <InfoRow label="Naam"><span className="font-bold text-base text-slate-900 dark:text-slate-100">{detail.leerling_naam}</span></InfoRow>
+                <InfoRow label="Naam">
+                  <span className="font-bold text-base text-slate-900 dark:text-slate-100 flex items-center gap-1.5 justify-end flex-wrap">
+                    {detail.leerling_naam}
+                    {detail.leerling_nieuw_voor_schooljaar ? (
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800"
+                            title="Voorinschrijving volgend schooljaar">
+                        {schooljaarChip(detail.leerling_nieuw_voor_schooljaar)}
+                      </span>
+                    ) : null}
+                  </span>
+                </InfoRow>
                 <InfoRow label="Stamnummer"><span className="text-base">{detail.leerling_stamnr || '—'}</span></InfoRow>
-                <InfoRow label="Klas"><span className="text-base">{detail.leerling_klas || '—'}</span></InfoRow>
+                <InfoRow label="Klas"><span className="text-base">{(detail.leerling_klas_effectief ?? detail.leerling_klas) || '—'}</span></InfoRow>
                 {detail.periode_van && (
                   <InfoRow label="Periode">{formatDate(detail.periode_van)} t/m {formatDate(detail.periode_tot)}</InfoRow>
                 )}

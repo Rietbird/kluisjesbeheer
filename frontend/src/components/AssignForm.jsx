@@ -2,6 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from '../api'
 import { useInstellingen } from '../context/InstellingenContext'
 
+// "2026-2027" -> "'26-'27"
+function schooljaarChip(sj) {
+  const m = /^(\d{2})(\d{2})-(\d{2})(\d{2})$/.exec(sj || '')
+  return m ? `'${m[2]}-'${m[4]}` : sj
+}
+
 export default function AssignForm({ kluisje, onDone, onCancel }) {
   const [q, setQ] = useState('')
   const [results, setResults] = useState([])
@@ -98,7 +104,16 @@ export default function AssignForm({ kluisje, onDone, onCancel }) {
               <button key={i} type="button"
                 className="w-full text-left px-4 py-3 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-slate-100 dark:border-slate-600 last:border-b-0"
                 onClick={() => selectLeerling(l)}>
-                <div className="font-medium text-slate-900 dark:text-white">{l.naam || l.leerling_naam}{l.vertrokken_op && <span className="ml-2 text-xs text-red-600 dark:text-red-400 font-bold">Vertrokken</span>}</div>
+                <div className="font-medium text-slate-900 dark:text-white">
+                  {l.naam || l.leerling_naam}
+                  {l.vertrokken_op && <span className="ml-2 text-xs text-red-600 dark:text-red-400 font-bold">Vertrokken</span>}
+                  {l.nieuw_voor_schooljaar ? (
+                    <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800"
+                          title="Voorinschrijving volgend schooljaar">
+                      {schooljaarChip(l.nieuw_voor_schooljaar)}
+                    </span>
+                  ) : null}
+                </div>
                 <div className="text-xs text-slate-400 mt-0.5">{l.stamnr || l.leerling_stamnr} — {l.klas || l.leerling_klas}</div>
               </button>
             ))}

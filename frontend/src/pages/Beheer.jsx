@@ -1656,6 +1656,126 @@ function EntraTab() {
   )
 }
 
+// ── Voorinschrijving-import panel ────────────────────────────────────────────
+
+const y = new Date().getFullYear()
+const _defStart = (new Date().getMonth() + 1) >= 8 ? y + 1 : y
+const DEFAULT_SCHOOLJAAR = `${_defStart}-${_defStart + 1}`
+
+function VoorInschrijvingPanel() {
+  const cardClass = "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6"
+  const [schooljaar, setSchooljaar] = useState(DEFAULT_SCHOOLJAAR)
+  const [busy, setBusy] = useState(false)
+  const [xlsxBusy, setXlsxBusy] = useState(false)
+  const [xlsxFile, setXlsxFile] = useState(null)
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
+
+  async function handleMagister() {
+    setBusy(true); setError(''); setResult(null)
+    try {
+      const res = await fetch('/api/leerlingen/import-voorinschrijving', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schooljaar }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Importeren mislukt'); return }
+      setResult(`${data.geimporteerd} leerlingen geimporteerd voor ${data.schooljaar}`)
+    } catch (err) { setError(err.message) }
+    finally { setBusy(false) }
+  }
+
+  async function handleXlsx() {
+    if (!xlsxFile) { setError('Kies eerst een .xlsx-bestand.'); return }
+    setXlsxBusy(true); setError(''); setResult(null)
+    try {
+      const formData = new FormData()
+      formData.append('schooljaar', schooljaar)
+      formData.append('file', xlsxFile)
+      const res = await fetch('/api/leerlingen/import-voorinschrijving-xlsx', {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Importeren mislukt'); return }
+      setResult(`${data.geimporteerd} leerlingen geimporteerd voor ${data.schooljaar}`)
+      setXlsxFile(null)
+      const fi = document.getElementById('voorinschrijving-xlsx-input')
+      if (fi) fi.value = ''
+    } catch (err) { setError(err.message) }
+    finally { setXlsxBusy(false) }
+  }
+
+  return (
+    <div className={cardClass}>
+      <h2 className="text-base font-bold text-slate-800 dark:text-white mb-1">Voorinschrijving volgend schooljaar</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+        Importeer leerlingen van het komende schooljaar zodat ze nu al aan een kluisje gekoppeld kunnen worden.
+        Op 1 augustus nemen ze automatisch hun echte klas over.
+      </p>
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Schooljaar</label>
+        <input
+          className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white w-40"
+          value={schooljaar}
+          onChange={e => { setSchooljaar(e.target.value); setResult(null); setError('') }}
+          placeholder="2026-2027"
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-3 items-start mb-4">
+        <button onClick={handleMagister} disabled={busy || xlsxBusy}
+          className="bg-primary text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors flex items-center gap-2">
+          {busy ? (
+            <>
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Ophalen...
+            </>
+          ) : 'Importeer via Magister'}
+        </button>
+
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <input
+              id="voorinschrijving-xlsx-input"
+              type="file"
+              accept=".xlsx"
+              className="text-sm text-slate-600 dark:text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 dark:file:bg-primary-700 file:text-primary-700 dark:file:text-white"
+              onChange={e => { setXlsxFile(e.target.files[0] || null); setResult(null); setError('') }}
+            />
+            <button onClick={handleXlsx} disabled={xlsxBusy || busy || !xlsxFile}
+              className="bg-primary text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors flex items-center gap-2">
+              {xlsxBusy ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Importeren...
+                </>
+              ) : 'Importeer uit Excel'}
+            </button>
+          </div>
+          <p className="text-xs text-slate-400">Kolommen: "Leerlingnummer" en "Naam" (Locatie/Email optioneel)</p>
+        </div>
+      </div>
+
+      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+      {result && (
+        <div className="mt-2 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-xl p-3 text-sm">
+          <div className="font-semibold text-emerald-800 dark:text-emerald-300">Import geslaagd</div>
+          <div className="text-emerald-700 dark:text-emerald-400 mt-0.5">{result}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Onderhoud-tab: software-update + backups ─────────────────────────────────
 function UpdatePanel() {
   const cardClass = "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6"
@@ -1737,6 +1857,7 @@ function OnderhoudTab() {
     <div className="max-w-3xl space-y-5">
       <UpdatePanel />
       <BackupPanel />
+      <VoorInschrijvingPanel />
     </div>
   )
 }
