@@ -1033,6 +1033,11 @@ function ImportTab() {
       <div className={cardClass} style={{ marginTop: '1.25rem' }}>
         <MagisterSyncPanel />
       </div>
+
+      {/* Voorinschrijving volgend schooljaar */}
+      <div style={{ marginTop: '1.25rem' }}>
+        <VoorInschrijvingPanel />
+      </div>
     </div>
   )
 }
@@ -1846,7 +1851,6 @@ function OnderhoudTab() {
     <div className="max-w-3xl space-y-5">
       <UpdatePanel />
       <BackupPanel />
-      <VoorInschrijvingPanel />
     </div>
   )
 }
