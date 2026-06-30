@@ -432,6 +432,7 @@ Een nieuwe school in gebruik nemen vereist server- en cloud-werk. Hieronder een 
 2. **Magister Medius-toegang:**
    - URL van Medius-webservice (poort 8800, SOAP/XML)
    - Service-account met leestoegang op `Algemeen.Login` (voor het ophalen van een sessietoken) en `ADFuncties.GetActiveStudents` (voor de leerlinglijst)
+   - *Optioneel, alleen voor de voorinschrijving van volgend-jaars leerlingen:* een Decibel-opzoeklijst `sql-get-kluisjes-voorinschrijving` waarop ditzelfde account leesrecht heeft. Niet nodig als de school de Excel-import gebruikt. Volledige instructie voor de Magister-beheerder: [MAGISTER-VOORINSCHRIJVING.md](MAGISTER-VOORINSCHRIJVING.md).
    - ⚠️ **IP-whitelist:** SWP blokkeert poort 8800 standaard. Het **uitgaande (publieke) IP-adres van de kluisjes-server** moet door de Magister-/SWP-beheerder van de school op de whitelist worden gezet. Zonder dit loopt de sync vast op een TCP-timeout (DNS resolvet wél, maar de verbinding komt niet tot stand) — dit lijkt op een serverfout maar is een netwerkblokkade. Het uitgaande IP bepaal je vanaf de server zelf met `curl -s https://ifconfig.me`. Let op: dit IP verschilt per omgeving — bij verhuizing naar een andere server moet het nieuwe IP opnieuw aangevraagd worden.
 3. **Subdomein + DNS** richting de hosting (optioneel — IP-only via self-signed cert werkt ook)
 4. **TLS-certificaat** voor het subdomein (`install.sh` regelt een self-signed cert; eigen cert kan je daar overheen plaatsen)

@@ -86,6 +86,7 @@ Zie [docs/docker.md](docs/docker.md).
 | Onderhoud en troubleshooting | [docs/onderhoud.md](docs/onderhoud.md) |
 | Architectuur | [docs/architectuur.md](docs/architectuur.md) |
 | Conciërge-handleiding (functioneel) | [docs/handleiding/HANDLEIDING.md](docs/handleiding/HANDLEIDING.md) |
+| Voorinschrijving volgend schooljaar (Magister-beheerder) | [docs/handleiding/MAGISTER-VOORINSCHRIJVING.md](docs/handleiding/MAGISTER-VOORINSCHRIJVING.md) |
 | Lokaal ontwikkelen (backend + frontend + tests) | [CLAUDE.md](CLAUDE.md) |
 
 ## Licentie
@@ -94,4 +95,4 @@ Zie [docs/docker.md](docs/docker.md).
 
 ## Bijdragen
 
-Issues en pull requests zijn welkom. Voor security-meldingen liever direct contact via een persoonlijk bericht in plaats van een publiek issue.
+Issues en pull requests zijn welkom. Beveiligingsproblemen meld je niet via een publiek issue maar volgens [SECURITY.md](SECURITY.md).
