@@ -1674,13 +1674,7 @@ function VoorInschrijvingPanel() {
   async function handleMagister() {
     setBusy(true); setError(''); setResult(null)
     try {
-      const res = await fetch('/api/leerlingen/import-voorinschrijving', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schooljaar }),
-      })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Importeren mislukt'); return }
+      const data = await api.post('/api/leerlingen/import-voorinschrijving', { schooljaar })
       setResult(`${data.geimporteerd} leerlingen geimporteerd voor ${data.schooljaar}`)
     } catch (err) { setError(err.message) }
     finally { setBusy(false) }
@@ -1693,12 +1687,7 @@ function VoorInschrijvingPanel() {
       const formData = new FormData()
       formData.append('schooljaar', schooljaar)
       formData.append('file', xlsxFile)
-      const res = await fetch('/api/leerlingen/import-voorinschrijving-xlsx', {
-        method: 'POST',
-        body: formData,
-      })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Importeren mislukt'); return }
+      const data = await api.upload('/api/leerlingen/import-voorinschrijving-xlsx', formData)
       setResult(`${data.geimporteerd} leerlingen geimporteerd voor ${data.schooljaar}`)
       setXlsxFile(null)
       const fi = document.getElementById('voorinschrijving-xlsx-input')
