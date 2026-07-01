@@ -470,9 +470,22 @@ def _detect_format(headers):
 
 
 def _extract_prefix(kluisnummer):
-    """Extract prefix from locker number (e.g. 'BL-001' -> 'BL', 'ISK1-0003' -> 'ISK1')."""
+    """Extract the vestiging-prefix from a locker number.
+
+    - Separator schemes keep trailing digits in the prefix ('BL-001' -> 'BL',
+      'MO-0001' -> 'MO', 'ISK1-0003' -> 'ISK1', bare 'ISK1' -> 'ISK1'). Trailing
+      digits count only when followed by a separator or the end of the string.
+    - No-separator schemes where digits are followed by more letters are a plain
+      locker id whose leading letter(s) are the prefix ('O053A' -> 'O',
+      'Z417E' -> 'Z'). This is the Erasmus O/X/Z vestiging numbering; without
+      this the digits would be swallowed and every number would look like its
+      own prefix (O053, O054, ...).
+    """
     import re
-    m = re.match(r'^([A-Za-z]+\d*)', kluisnummer)
+    m = re.match(r'^([A-Za-z]+\d+)(?=[^A-Za-z0-9]|$)', kluisnummer)
+    if m:
+        return m.group(1)
+    m = re.match(r'^([A-Za-z]+)', kluisnummer)
     return m.group(1) if m else 'Overig'
 
 

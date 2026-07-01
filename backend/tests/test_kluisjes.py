@@ -197,6 +197,19 @@ def test_import_normaliseert_niet_zonder_vlag(client):
     nummers = sorted(k['kluisnummer'] for k in kl)
     assert nummers == ['MO-1', 'MO-10']
 
+def test_extract_prefix_scheme_variants():
+    from api_kluisjes import _extract_prefix
+    # Separator schemes keep trailing digits in the prefix (unchanged).
+    assert _extract_prefix('BL-001') == 'BL'
+    assert _extract_prefix('MO-0001') == 'MO'
+    assert _extract_prefix('ISK1-0003') == 'ISK1'
+    assert _extract_prefix('ISK1') == 'ISK1'
+    # No-separator scheme where digits are followed by a letter: the leading
+    # letter(s) are the vestiging prefix (Erasmus O/X/Z lockers like O053A).
+    assert _extract_prefix('O053A') == 'O'
+    assert _extract_prefix('X012B') == 'X'
+    assert _extract_prefix('Z417E') == 'Z'
+
 def test_import_normaliseert_twee_prefixes_gemixt(client):
     rows = [['MO-1'], ['MO-10'], ['MO-100'], ['BL-001'], ['BL-002'], ['BL-050']]
     xlsx = _maak_xlsx(rows, ['omschrijving kluisje'])
