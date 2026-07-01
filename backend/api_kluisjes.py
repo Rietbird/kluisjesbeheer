@@ -470,21 +470,20 @@ def _detect_format(headers):
 
 
 def _extract_prefix(kluisnummer):
-    """Extract the vestiging-prefix from a locker number.
+    """Extract the vestiging-prefix from a locker number: the leading run of letters.
 
-    - Separator schemes keep trailing digits in the prefix, but only when those
-      digits are directly followed by a separator ('BL-001' -> 'BL',
-      'MO-0001' -> 'MO', 'ISK1-0003' -> 'ISK1').
-    - No-separator schemes are a plain locker id whose leading letter(s) are the
-      prefix, whether or not a trailing letter follows the digits ('O053A' -> 'O',
-      'X001' -> 'X', 'Z417E' -> 'Z'). This is the Erasmus O/X/Z vestiging
-      numbering; without this every number would look like its own prefix
-      (O053, X001, X002, ...).
+    The vestiging is encoded by the leading letter(s); everything from the first
+    digit onward is the locker identifier (bank number, separator, sub-letter).
+    So 'O053A' -> 'O', 'X001' -> 'X', 'Z01-A' -> 'Z', 'MO-0001' -> 'MO',
+    'BL-001' -> 'BL'. A number that starts with a digit has no letter prefix
+    and lands under 'Overig'.
+
+    NB: this deliberately does NOT keep a trailing digit as part of the prefix
+    (an earlier version did, for a hypothetical 'ISK1'). Doing so is ambiguous:
+    'Z01-A' (vestiging Z) and 'ISK1-0003' (vestiging ISK1) are pattern-identical,
+    and real data (Erasmus O/X/Z) needs the leading-letters rule.
     """
     import re
-    m = re.match(r'^([A-Za-z]+\d+)(?=[^A-Za-z0-9])', kluisnummer)
-    if m:
-        return m.group(1)
     m = re.match(r'^([A-Za-z]+)', kluisnummer)
     return m.group(1) if m else 'Overig'
 

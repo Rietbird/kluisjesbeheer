@@ -199,16 +199,15 @@ def test_import_normaliseert_niet_zonder_vlag(client):
 
 def test_extract_prefix_scheme_variants():
     from api_kluisjes import _extract_prefix
-    # Separator schemes keep trailing digits in the prefix (digits before a separator).
-    assert _extract_prefix('BL-001') == 'BL'
+    # The prefix is the leading run of letters; everything from the first digit
+    # on is the locker id. Works with or without a separator.
     assert _extract_prefix('MO-0001') == 'MO'
-    assert _extract_prefix('ISK1-0003') == 'ISK1'
-    # No-separator schemes: the leading letter(s) are the vestiging prefix,
-    # with OR without a trailing letter after the digits (Erasmus O/X/Z).
-    assert _extract_prefix('O053A') == 'O'   # letter + digits + trailing letter
-    assert _extract_prefix('X001') == 'X'    # letter + digits, no trailing letter
-    assert _extract_prefix('X012B') == 'X'
+    assert _extract_prefix('BL-001') == 'BL'
+    assert _extract_prefix('O053A') == 'O'    # letter + digits + trailing letter
+    assert _extract_prefix('X001') == 'X'     # letter + digits, no trailing letter
+    assert _extract_prefix('Z01-A') == 'Z'    # letter + digits + separator (the tricky one)
     assert _extract_prefix('Z417E') == 'Z'
+    assert _extract_prefix('123') == 'Overig'  # no leading letter
 
 def test_import_normaliseert_twee_prefixes_gemixt(client):
     rows = [['MO-1'], ['MO-10'], ['MO-100'], ['BL-001'], ['BL-002'], ['BL-050']]
