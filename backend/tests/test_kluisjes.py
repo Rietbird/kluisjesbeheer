@@ -197,6 +197,19 @@ def test_import_normaliseert_niet_zonder_vlag(client):
     nummers = sorted(k['kluisnummer'] for k in kl)
     assert nummers == ['MO-1', 'MO-10']
 
+def test_opmerkingen_persist_and_readback(client):
+    # A kluisje comment saved via PUT must persist and come back on the list
+    # endpoint the modal reads from (regression guard for the "says saved but
+    # isn't" report; the backend was fine, the bug was a missing list-refresh).
+    client.post('/api/clusters/1/kluisjes', json={'kluisnummer': 'P001', 'sleutelnummer': 'S-001'})
+    kid = client.get('/api/clusters/1/kluisjes').get_json()[0]['id']
+    rv = client.put(f'/api/kluisjes/{kid}', json={'opmerkingen': 'sleutel bij balie'})
+    assert rv.status_code == 200
+    assert rv.get_json()['opmerkingen'] == 'sleutel bij balie'
+    kl = client.get('/api/kluisjes?vestiging_id=1').get_json()
+    row = next(k for k in kl if k['id'] == kid)
+    assert row['opmerkingen'] == 'sleutel bij balie'
+
 def test_extract_prefix_scheme_variants():
     from api_kluisjes import _extract_prefix
     # The prefix is the leading run of letters; everything from the first digit

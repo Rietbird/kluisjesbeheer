@@ -124,7 +124,11 @@ export default function LockerModal({ kluisje, onClose, onUpdate }) {
   async function saveOpmerkingen() {
     try {
       setSavingStatus('saving')
-      await api.put(`/api/kluisjes/${kluisje.id}`, { opmerkingen })
+      const updated = await api.put(`/api/kluisjes/${kluisje.id}`, { opmerkingen })
+      // Refresh detail + parent list so the saved comment survives a
+      // close/reopen of the modal (the list is the source of kluisje.opmerkingen).
+      setDetail(d => ({ ...d, opmerkingen: updated.opmerkingen }))
+      onUpdate()
       setSavingStatus('saved')
       setTimeout(() => setSavingStatus(null), 1500)
     } catch {
