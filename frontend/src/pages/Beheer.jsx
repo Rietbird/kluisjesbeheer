@@ -793,6 +793,12 @@ function ImportTab() {
   const [preview, setPreview] = useState(null) // result from /import/preview
   const [prefixNames, setPrefixNames] = useState({}) // prefix -> vestigingnaam
   const [normaliseer, setNormaliseer] = useState(false)
+  // 'nieuw' = kluisjes aanmaken, 'verhuur' = verhuur bijwerken op bestaande kluisjes
+  const [modus, setModus] = useState('nieuw')
+  const [vestigingen, setVestigingen] = useState([])
+  const [verhuurVestigingId, setVerhuurVestigingId] = useState('')
+  const [beeindigConflicten, setBeeindigConflicten] = useState(false)
+  const [dryResult, setDryResult] = useState(null)
   // Magister config
   const [magUrl, setMagUrl] = useState('')
   const [magUser, setMagUser] = useState('')
@@ -809,7 +815,30 @@ function ImportTab() {
         setMagPassSet(data.magister_pass_set)
       })
       .catch(() => {})
+    api.get('/api/vestigingen').then(setVestigingen).catch(() => {})
   }, [])
+
+  async function runVerhuur(dryRun) {
+    setImporting(true); setImportMsg(''); setImportError('')
+    try {
+      const formData = new FormData()
+      formData.append('file', importFile)
+      formData.append('modus', 'verhuur')
+      formData.append('vestiging_id', verhuurVestigingId)
+      formData.append('normaliseer', normaliseer ? '1' : '')
+      formData.append('beeindig_conflicten', beeindigConflicten ? '1' : '')
+      formData.append('dry_run', dryRun ? '1' : '')
+      const res = await api.upload('/api/kluisjes/import', formData)
+      setDryResult(res)
+      if (!dryRun) {
+        let msg = `${res.toegewezen} kluisje(s) toegewezen`
+        if (res.beeindigd > 0) msg += `, ${res.beeindigd} lopende huur(en) beëindigd`
+        if (res.ongewijzigd > 0) msg += `, ${res.ongewijzigd} stond al goed`
+        setImportMsg(msg + '.')
+      }
+    } catch (err) { setImportError(`Mislukt: ${err.message}`) }
+    finally { setImporting(false) }
+  }
 
   async function handleSaveMagister(e) {
     e.preventDefault(); setMagSaving(true); setMagMsg('')
@@ -909,6 +938,22 @@ function ImportTab() {
                 </span>
               </div>
 
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">Wat wil je doen?</div>
+                <label className="flex items-start gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-200">
+                  <input type="radio" name="import-modus" checked={modus === 'nieuw'}
+                    onChange={() => { setModus('nieuw'); setDryResult(null) }}
+                    className="mt-0.5 w-4 h-4 accent-primary" />
+                  <span><strong>Kluisjes aanmaken.</strong> Voor een eerste import. Kluisnummers die al bestaan worden overgeslagen.</span>
+                </label>
+                <label className="flex items-start gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-200">
+                  <input type="radio" name="import-modus" checked={modus === 'verhuur'}
+                    onChange={() => { setModus('verhuur'); setDryResult(null) }}
+                    className="mt-0.5 w-4 h-4 accent-primary" />
+                  <span><strong>Verhuur bijwerken.</strong> Voor een export met nieuwe toewijzingen op kluisjes die al in de app staan. Er worden geen kluisjes aangemaakt.</span>
+                </label>
+              </div>
+
               {preview.normalisatie?.heeft_krom && (
                 <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 text-sm">
                   {preview.normalisatie.heeft_collision ? (
@@ -931,7 +976,52 @@ function ImportTab() {
                 </div>
               )}
 
-              {preview.has_locaties ? (
+              {modus === 'verhuur' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">In welke vestiging staan deze kluisjes?</label>
+                    <select className={inputClass} value={verhuurVestigingId}
+                      onChange={e => { setVerhuurVestigingId(e.target.value); setDryResult(null) }}>
+                      <option value="">Kies een vestiging...</option>
+                      {vestigingen.map(v => <option key={v.id} value={v.id}>{v.naam}</option>)}
+                    </select>
+                  </div>
+
+                  {dryResult && (
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-3 text-sm space-y-1">
+                      <div className="font-semibold text-slate-700 dark:text-slate-200 mb-1">Wat er gaat gebeuren</div>
+                      <div className="flex justify-between"><span>Nieuw toewijzen</span><strong>{dryResult.toegewezen}</strong></div>
+                      <div className="flex justify-between text-slate-500"><span>Stond al goed</span><span>{dryResult.ongewijzigd}</span></div>
+                      <div className="flex justify-between text-slate-500"><span>Kluisnummer onbekend in de app</span><span>{dryResult.onbekend}</span></div>
+                      {dryResult.beeindigd > 0 && (
+                        <div className="flex justify-between text-amber-700 dark:text-amber-300"><span>Lopende huur beëindigen</span><strong>{dryResult.beeindigd}</strong></div>
+                      )}
+                      {dryResult.conflicten > 0 && (
+                        <div className="flex justify-between text-amber-700 dark:text-amber-300"><span>Overgeslagen, kluisje nog verhuurd</span><strong>{dryResult.conflicten}</strong></div>
+                      )}
+                    </div>
+                  )}
+
+                  {dryResult && (dryResult.conflicten > 0 || beeindigConflicten) && (
+                    <label className="flex items-start gap-2 cursor-pointer p-3 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 text-sm text-slate-700 dark:text-slate-200">
+                      <input type="checkbox" checked={beeindigConflicten}
+                        onChange={e => { setBeeindigConflicten(e.target.checked); setDryResult(null) }}
+                        className="mt-0.5 w-4 h-4 accent-primary" />
+                      <span>
+                        <strong>Lopende huur beëindigen als het kluisje aan iemand anders is toegewezen.</strong>
+                        {' '}De sleutel wordt geteld als ingeleverd, want anders had het kluisje niet opnieuw uitgegeven kunnen worden. Een regel zonder leerling in het bestand beëindigt nooit een huur.
+                      </span>
+                    </label>
+                  )}
+
+                  <button type="button" onClick={() => runVerhuur(true)}
+                    disabled={importing || !verhuurVestigingId} className={btnClass}>
+                    {importing ? 'Bezig...' : 'Controleren zonder op te slaan'}
+                  </button>
+                </div>
+              )}
+
+              {modus === 'nieuw' && (preview.has_locaties ? (
                 <div>
                   <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">Vestigingen uit bestand — pas eventueel de naam aan</div>
                   <div className="space-y-2">
@@ -964,9 +1054,9 @@ function ImportTab() {
                     ))}
                   </div>
                 </div>
-              )}
+              ))}
 
-              {preview.clusters.length > 0 && (
+              {modus === 'nieuw' && preview.clusters.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Clusters uit bestand</div>
                   <div className="flex flex-wrap gap-2">
@@ -984,9 +1074,15 @@ function ImportTab() {
           {importError && <p className="text-red-500 text-sm">{importError}</p>}
           {importMsg && <p className="text-emerald-600 text-sm font-medium">{importMsg}</p>}
 
-          {preview && (
+          {preview && modus === 'nieuw' && (
             <button type="button" onClick={handleImport} disabled={importing} className={btnClass}>
               {importing ? 'Importeren...' : `Importeren (${preview.total} kluisjes)`}
+            </button>
+          )}
+
+          {preview && modus === 'verhuur' && dryResult && (
+            <button type="button" onClick={() => runVerhuur(false)} disabled={importing} className={btnClass}>
+              {importing ? 'Bezig...' : `Definitief doorvoeren (${dryResult.toegewezen} toewijzingen)`}
             </button>
           )}
         </div>

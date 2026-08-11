@@ -456,12 +456,24 @@ def _parse_date_desktop(text):
     return f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
 
 
+def _normaliseer_headers(row):
+    """Lowercase header cells and collapse any whitespace to single spaces.
+
+    Magister's Desktop export wraps headers over two lines, so the cell really
+    contains 'Code\nKluisje'. Without collapsing that newline no lookup matches
+    and every row is silently skipped.
+    """
+    import re
+    return [re.sub(r'\s+', ' ', str(c or '')).strip().lower() for c in row]
+
+
 def _detect_format(headers):
     """Detect whether the XLSX is Magister MX or Desktop format."""
     h_set = set(headers)
     if 'kluis' in h_set or 'uitleenperiode' in h_set or 'borgbedrag' in h_set:
         return 'mx'
-    if 'omschrijving kluisje' in h_set or 'verhuur vanaf' in h_set or 'stamnr' in h_set:
+    if ('omschrijving kluisje' in h_set or 'code kluisje' in h_set
+            or 'verhuur vanaf' in h_set or 'stamnr' in h_set):
         return 'desktop'
     # Fallback: simple format (kluisnummer only)
     if 'kluisnummer' in h_set:
@@ -583,7 +595,7 @@ def import_preview():
 
         for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
             if i == 1:
-                headers = [str(c or '').strip().lower() for c in row]
+                headers = _normaliseer_headers(row)
                 fmt = _detect_format(headers)
                 if not fmt:
                     wb.close()
@@ -597,7 +609,7 @@ def import_preview():
                 locatie = row_dict.get('locatie', '')
                 cluster = row_dict.get('cluster', '')
             elif fmt == 'desktop':
-                kluisnummer = row_dict.get('omschrijving kluisje', '') or row_dict.get('omschrijving\nkluisje', '')
+                kluisnummer = row_dict.get('code kluisje', '') or row_dict.get('omschrijving kluisje', '')
                 locatie = ''
                 cluster = ''
             else:
@@ -664,6 +676,14 @@ def import_kluisjes():
     vestiging_id = request.form.get('vestiging_id') or None
     auto_vestiging = request.form.get('auto_vestiging') == '1'
     normaliseer = request.form.get('normaliseer') == '1'
+    # 'verhuur' matches rows against lockers that already exist and only writes
+    # assignments. Needed because after the one-time migration every kluisnummer
+    # is known, so the normal import skips every row and does nothing.
+    modus = request.form.get('modus', '')
+    beeindig_conflicten = request.form.get('beeindig_conflicten') == '1'
+    # Dry run does the whole import and rolls back, so the preview numbers are
+    # by construction the numbers of the real run.
+    dry_run = request.form.get('dry_run') == '1'
     # prefix_mapping: JSON string {"BL": "Blauwlaken", "MO": "Molenstraat"}
     prefix_mapping = {}
     pm_raw = request.form.get('prefix_mapping', '')
@@ -707,7 +727,9 @@ def import_kluisjes():
         if fmt == 'mx':
             return row_dict.get('kluis', '')
         elif fmt == 'desktop':
-            return row_dict.get('omschrijving kluisje', '') or row_dict.get('omschrijving\nkluisje', '')
+            # 'Code Kluisje' is the Verhuuroverzicht export, 'Omschrijving
+            # Kluisje' the older kluisjes-overzicht export.
+            return row_dict.get('code kluisje', '') or row_dict.get('omschrijving kluisje', '')
         else:  # simple
             return row_dict.get('kluisnummer', '') or row_dict.get('kluis', '')
 
@@ -724,7 +746,7 @@ def import_kluisjes():
             scan_nummers = []
             for i, row in enumerate(ws_scan.iter_rows(values_only=True), start=1):
                 if i == 1:
-                    scan_headers = [str(c or '').strip().lower() for c in row]
+                    scan_headers = _normaliseer_headers(row)
                     scan_fmt = _detect_format(scan_headers)
                     if not scan_fmt:
                         break
@@ -748,10 +770,23 @@ def import_kluisjes():
         kluisjes_created = 0
         toewijzingen_created = 0
         skipped = 0
+        # verhuur-modus tellers
+        toegewezen = ongewijzigd = conflicten = beeindigd = onbekend = 0
+
+        def _maak_toewijzing(kluisje_id, stamnr, naam, klas, van, tot, borg):
+            g.db.execute('''
+                INSERT INTO toewijzingen
+                (kluisje_id, leerling_stamnr, leerling_naam, leerling_klas,
+                 periode_van, periode_tot, borgbedrag, borg_betaald, actief, aangemaakt_door)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+            ''', (
+                kluisje_id, stamnr, naam, klas, van, tot, borg,
+                1 if borg > 0 else 0, 'XLSX Import',
+            ))
 
         for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
             if i == 1:
-                headers = [str(c or '').strip().lower() for c in row]
+                headers = _normaliseer_headers(row)
                 fmt = _detect_format(headers)
                 if not fmt:
                     wb.close()
@@ -776,14 +811,18 @@ def import_kluisjes():
                 is_defect = status_text.lower() == 'defect'
 
             elif fmt == 'desktop':
-                sleutelnummer = row_dict.get('slotnummer', '')
+                sleutelnummer = row_dict.get('sleutelnummer', '') or row_dict.get('slotnummer', '')
                 locatie = ''
                 stamnr = row_dict.get('stamnr', '')
-                achternaam = row_dict.get('achternaam', '')
-                tussenv = row_dict.get('tussenv', '')
-                roepnaam = row_dict.get('roepnaam', '')
-                naam = f"{roepnaam} {tussenv} {achternaam}".replace('  ', ' ').strip() if achternaam else ''
-                klas = ''
+                # Verhuuroverzicht has one 'Leerling' column; the older export
+                # splits the name over three columns.
+                naam = row_dict.get('leerling', '')
+                if not naam:
+                    achternaam = row_dict.get('achternaam', '')
+                    tussenv = row_dict.get('tussenv', '')
+                    roepnaam = row_dict.get('roepnaam', '')
+                    naam = f"{roepnaam} {tussenv} {achternaam}".replace('  ', ' ').strip() if achternaam else ''
+                klas = row_dict.get('klas', '')
                 borg = 0.0
                 datum_van = _parse_date_desktop(row_dict.get('verhuur vanaf', ''))
                 datum_tot = _parse_date_desktop(row_dict.get('verhuur tot/met', ''))
@@ -859,6 +898,46 @@ def import_kluisjes():
                 'SELECT id FROM kluisjes WHERE kluisnummer = ? AND vestiging_id = ? AND verwijderd = 0',
                 (kluisnummer, row_vestiging_id)
             ).fetchone()
+
+            if modus == 'verhuur':
+                if not existing:
+                    onbekend += 1
+                    continue
+                # A row without a student is NOT proof the locker is free:
+                # Magister's locker administration is no longer maintained, so
+                # a blank row must never end a running huur.
+                if not (is_uitgeleend and naam):
+                    continue
+                if not datum_van:
+                    datum_van = date.today().isoformat()
+                if not datum_tot:
+                    datum_tot = datum_van
+
+                huidig = g.db.execute(
+                    'SELECT id, leerling_stamnr FROM toewijzingen WHERE kluisje_id = ? AND actief = 1',
+                    (existing['id'],)
+                ).fetchone()
+                if huidig and str(huidig['leerling_stamnr']) == str(stamnr):
+                    ongewijzigd += 1
+                    continue
+                if huidig:
+                    if not beeindig_conflicten:
+                        conflicten += 1
+                        continue
+                    # The locker could only be handed to someone else because
+                    # the previous key was returned, so record it as returned.
+                    g.db.execute('''
+                        UPDATE toewijzingen SET actief = 0, sleutel_ingeleverd = 1,
+                        einddatum = ?, updated_at = datetime('now') WHERE id = ?
+                    ''', (datum_van, huidig['id']))
+                    beeindigd += 1
+
+                _maak_toewijzing(existing['id'], stamnr, naam, klas, datum_van, datum_tot, borg)
+                g.db.execute("UPDATE kluisjes SET status = 'uitgeleend', updated_at = datetime('now') WHERE id = ?",
+                             (existing['id'],))
+                toegewezen += 1
+                continue
+
             if existing:
                 skipped += 1
                 continue
@@ -877,26 +956,30 @@ def import_kluisjes():
                     datum_van = date.today().isoformat()
                 if not datum_tot:
                     datum_tot = datum_van
-                g.db.execute('''
-                    INSERT INTO toewijzingen
-                    (kluisje_id, leerling_stamnr, leerling_naam, leerling_klas,
-                     periode_van, periode_tot, borgbedrag, borg_betaald, actief, aangemaakt_door)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
-                ''', (
-                    kluisje_id, stamnr, naam, klas,
-                    datum_van, datum_tot, borg,
-                    1 if borg > 0 else 0,
-                    'XLSX Import',
-                ))
+                _maak_toewijzing(kluisje_id, stamnr, naam, klas, datum_van, datum_tot, borg)
                 toewijzingen_created += 1
 
         wb.close()
-        g.db.commit()
+        if dry_run:
+            g.db.rollback()
+        else:
+            g.db.commit()
     except Exception as e:
         g.db.rollback()
         if 'UNIQUE' in str(e):
             return jsonify({'error': 'Duplicaat kluisnummer gevonden — import afgebroken'}), 400
         raise
+
+    if modus == 'verhuur':
+        return jsonify({
+            'modus': 'verhuur',
+            'toegewezen': toegewezen,
+            'ongewijzigd': ongewijzigd,
+            'conflicten': conflicten,
+            'beeindigd': beeindigd,
+            'onbekend': onbekend,
+            'format': fmt,
+        }), 201
 
     return jsonify({
         'imported': kluisjes_created,
