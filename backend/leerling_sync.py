@@ -80,16 +80,21 @@ def _verleng_lopende_huren(db):
     Alleen voor leerlingen die in de leerlingentabel staan en niet vertrokken
     zijn. Een huurder zonder bruikbaar stamnummer valt er dus buiten: die is
     niet te verifieren, en de sleutel hoort daar sowieso nagelopen te worden.
+
+    Alleen huren waarvan de einddatum al verstreken is. Een datum die nog in de
+    toekomst ligt is bewust gezet en blijft staan, of dat nu een korte huur
+    binnen dit schooljaar is of een voorlopige einddatum ver vooruit (Hengelo
+    zet er soms een tot bijvoorbeeld 2029).
     """
     from schooljaar import periode_voor
     _, _, eind = periode_voor(db)
     cur = db.execute('''
         UPDATE toewijzingen SET periode_tot = ?, updated_at = datetime('now')
-        WHERE actief = 1 AND periode_tot < ?
+        WHERE actief = 1 AND periode_tot < date('now')
           AND leerling_stamnr IN (
               SELECT stamnr FROM leerlingen WHERE vertrokken_op IS NULL
           )
-    ''', (eind, eind))
+    ''', (eind,))
     return cur.rowcount
 
 

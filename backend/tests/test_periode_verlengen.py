@@ -79,6 +79,31 @@ def test_huurder_zonder_leerlingrij_blijft_ongemoeid(db):
     assert _periode(db, tid)[1] == '2026-07-31'
 
 
+def test_huur_die_verder_in_de_toekomst_loopt_blijft_staan(db):
+    """Hengelo geeft soms een voorlopige einddatum ver vooruit, bv. t/m 2029.
+
+    Die is bewust gezet en mag niet worden ingekort of gelijkgetrokken.
+    """
+    tid = _kluisje_met_huur(db, 'Z001', '100', '2025-08-01', '2029-07-31')
+
+    summary = sync_leerlingen_to_db(db, [_leerling(db, '100')])
+
+    assert _periode(db, tid)[1] == '2029-07-31'
+    assert summary['periodes_verlengd'] == 0
+
+
+def test_einddatum_later_dit_schooljaar_blijft_ook_staan(db):
+    """Een bewust korte huur binnen dit schooljaar is nog niet verlopen."""
+    eind_dit_jaar = _eind_huidig_schooljaar()
+    ergens_later = eind_dit_jaar[:4] + '-05-01'
+    tid = _kluisje_met_huur(db, 'Z001', '100', '2026-08-01', ergens_later)
+
+    summary = sync_leerlingen_to_db(db, [_leerling(db, '100')])
+
+    assert _periode(db, tid)[1] == ergens_later
+    assert summary['periodes_verlengd'] == 0
+
+
 def test_periode_die_al_goed_staat_wordt_niet_aangeraakt(db):
     eind = _eind_huidig_schooljaar()
     tid = _kluisje_met_huur(db, 'Z001', '100', '2026-08-01', eind)
