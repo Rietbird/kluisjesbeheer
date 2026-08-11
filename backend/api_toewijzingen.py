@@ -20,6 +20,103 @@ def _toewijzing_access(tid):
         return jsonify({'error': 'Toewijzing niet gevonden'}), 404
     return assert_vestiging_access(row['vestiging_id'])
 
+@toewijzingen_bp.route('/sleutels/innemen', methods=['POST'])
+@login_required
+def sleutel_innemen():
+    """Take in one returned key by its number and end the huur in one action.
+
+    Built for the physical intake at the counter: a pile of keys, one number
+    typed per key. Sleutelnummers are deliberately not unique (Eraspas, reused
+    keys), so an ambiguous number returns the candidates instead of guessing.
+    """
+    data = request.get_json() or {}
+    sleutelnummer = str(data.get('sleutelnummer', '')).strip()
+    kluisje_id = data.get('kluisje_id')
+    if not sleutelnummer:
+        return jsonify({'error': 'Sleutelnummer is verplicht'}), 400
+
+    query = '''
+        SELECT t.id AS toewijzing_id, k.id AS kluisje_id, k.kluisnummer, k.vestiging_id,
+               t.leerling_naam, t.leerling_stamnr,
+               COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas, '') AS leerling_klas,
+               t.borgbedrag, t.borg_betaald, t.borg_teruggestort
+        FROM toewijzingen t
+        JOIN kluisjes k ON k.id = t.kluisje_id
+        LEFT JOIN leerlingen l ON l.stamnr = t.leerling_stamnr
+        WHERE t.actief = 1 AND k.verwijderd = 0
+          AND LOWER(TRIM(k.sleutelnummer)) = LOWER(?)
+    '''
+    params = [sleutelnummer]
+    allowed = user_vestiging_ids()
+    if allowed is not None:
+        if not allowed:
+            return jsonify({'error': 'Geen toegang tot een vestiging'}), 403
+        query += f" AND k.vestiging_id IN ({','.join('?' * len(allowed))})"
+        params.extend(allowed)
+    if kluisje_id:
+        query += ' AND k.id = ?'
+        params.append(int(kluisje_id))
+    rows = g.db.execute(query + ' ORDER BY k.kluisnummer', params).fetchall()
+
+    if not rows:
+        return jsonify({'error': f'Geen verhuurd kluisje gevonden met sleutel "{sleutelnummer}"'}), 404
+    if len(rows) > 1:
+        return jsonify({
+            'error': f'Sleutel "{sleutelnummer}" hoort bij {len(rows)} verhuurde kluisjes. Kies welke.',
+            'keuzes': [{
+                'kluisje_id': r['kluisje_id'], 'kluisnummer': r['kluisnummer'],
+                'leerling_naam': r['leerling_naam'], 'leerling_klas': r['leerling_klas'],
+            } for r in rows],
+        }), 409
+
+    r = rows[0]
+    # Borg is deliberately left alone: handing in a key says nothing about the
+    # deposit, and the borg attention flag must keep working.
+    g.db.execute('''
+        UPDATE toewijzingen SET actief = 0, sleutel_ingeleverd = 1,
+        einddatum = date('now'), updated_at = datetime('now') WHERE id = ?
+    ''', (r['toewijzing_id'],))
+    g.db.execute("UPDATE kluisjes SET status = 'vrij', updated_at = datetime('now') WHERE id = ?",
+                 (r['kluisje_id'],))
+    g.db.commit()
+
+    borg_open = bool(r['borgbedrag'] and r['borg_betaald'] and not r['borg_teruggestort'])
+    return jsonify({
+        'toewijzing_id': r['toewijzing_id'], 'kluisje_id': r['kluisje_id'],
+        'kluisnummer': r['kluisnummer'], 'leerling_naam': r['leerling_naam'],
+        'leerling_stamnr': r['leerling_stamnr'], 'leerling_klas': r['leerling_klas'],
+        'borg_openstaand': borg_open,
+    })
+
+
+@toewijzingen_bp.route('/sleutels/innemen/<int:tid>/ongedaan', methods=['POST'])
+@login_required
+def sleutel_innemen_ongedaan(tid):
+    """Undo one intake. A fast flow produces typos, so it must be reversible."""
+    err = _toewijzing_access(tid)
+    if err: return err
+    row = g.db.execute(
+        'SELECT kluisje_id FROM toewijzingen WHERE id = ? AND actief = 0 AND sleutel_ingeleverd = 1',
+        (tid,)
+    ).fetchone()
+    if not row:
+        return jsonify({'error': 'Deze inname is niet meer ongedaan te maken'}), 404
+    bezet = g.db.execute(
+        'SELECT 1 FROM toewijzingen WHERE kluisje_id = ? AND actief = 1', (row['kluisje_id'],)
+    ).fetchone()
+    if bezet:
+        return jsonify({'error': 'Het kluisje is inmiddels opnieuw verhuurd'}), 409
+
+    g.db.execute('''
+        UPDATE toewijzingen SET actief = 1, sleutel_ingeleverd = NULL,
+        einddatum = NULL, updated_at = datetime('now') WHERE id = ?
+    ''', (tid,))
+    g.db.execute("UPDATE kluisjes SET status = 'uitgeleend', updated_at = datetime('now') WHERE id = ?",
+                 (row['kluisje_id'],))
+    g.db.commit()
+    return jsonify({'ok': True})
+
+
 @toewijzingen_bp.route('/kluisjes/<int:kid>/toewijzen', methods=['POST'])
 @login_required
 def toewijzen(kid):

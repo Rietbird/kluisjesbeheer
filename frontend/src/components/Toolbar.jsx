@@ -78,6 +78,7 @@ function RapportDropdown({ vestigingId, klas }) {
             <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
             <div className="px-4 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Openstaand</div>
             <RapportRij label="Openstaande sleutels" type="sleutels" onDownload={download} onPreview={preview} />
+            <RapportRij label="Vertrokken met sleutel (per klas)" type="vertrokken" onDownload={download} onPreview={preview} />
             {borgActiefVoor(vestigingId) && (
               <RapportRij label="Openstaande borg" type="borg" onDownload={download} onPreview={preview} />
             )}
@@ -146,7 +147,7 @@ function AandachtspuntenDropdown({ filters, setFilters }) {
   )
 }
 
-export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, onBulkEnd, vestigingId }) {
+export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, onBulkEnd, onSleutelInname, vestigingId }) {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [klassen, setKlassen] = useState([])
 
@@ -233,6 +234,15 @@ export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, o
           <button onClick={onBulkAssign}
             className="bg-primary text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors">
             Collectief toekennen
+          </button>
+        )}
+        {onSleutelInname && (
+          <button onClick={onSleutelInname}
+            className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+            Sleutels innemen
           </button>
         )}
         {onBulkEnd && (

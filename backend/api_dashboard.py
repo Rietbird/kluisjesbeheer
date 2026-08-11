@@ -108,6 +108,7 @@ def _get_rapport_data(report_type, vestiging_id, db):
         'inname': 'Innameoverzicht sleutels/borg',
         'defect': 'Defecte kluisjes',
         'zonder_kluisje': 'Leerlingen zonder kluisje',
+        'vertrokken': 'Vertrokken leerlingen met sleutel',
     }
     title = titles.get(report_type, 'Rapport')
 
@@ -177,6 +178,31 @@ def _get_rapport_data(report_type, vestiging_id, db):
             query += ' AND k.vestiging_id = ?'
             params.append(int(vestiging_id))
         query += ' ORDER BY v.naam, k.kluisnummer'
+        rows = db.execute(query, params).fetchall()
+        return title, rows, borg_actief, vestiging_naam
+
+    elif report_type == 'vertrokken':
+        # Keys still out with someone who left. Rows without a matching leerling
+        # are included on purpose: they cannot be flagged vertrokken anywhere in
+        # the app, so they would otherwise never show up on a chase-up list.
+        query = '''
+            SELECT v.naam as vestiging, k.kluisnummer, k.sleutelnummer,
+                   t.leerling_naam, t.leerling_stamnr,
+                   COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas, '') as leerling_klas,
+                   t.periode_tot, l.vertrokken_op,
+                   CASE WHEN l.stamnr IS NULL THEN 1 ELSE 0 END as onbekend
+            FROM toewijzingen t
+            JOIN kluisjes k ON t.kluisje_id = k.id
+            JOIN vestigingen v ON k.vestiging_id = v.id
+            LEFT JOIN leerlingen l ON t.leerling_stamnr = l.stamnr
+            WHERE k.verwijderd = 0 AND t.actief = 1
+              AND (l.vertrokken_op IS NOT NULL OR l.stamnr IS NULL)
+        '''
+        params = []
+        if vestiging_id:
+            query += ' AND k.vestiging_id = ?'
+            params.append(int(vestiging_id))
+        query += ' ORDER BY leerling_klas, t.leerling_naam'
         rows = db.execute(query, params).fetchall()
         return title, rows, borg_actief, vestiging_naam
 
@@ -404,6 +430,24 @@ def rapport_preview():
                 vertrokken_tag = ' <span style="color:#dc2626;font-size:10px;font-weight:bold">[Vertrokken]</span>' if r['vertrokken_op'] else ''
                 tabel_html += f'<tr class="{row_class}"><td class="naam">{e(r["leerling_naam"])}{vertrokken_tag}</td><td>{e(r["leerling_stamnr"])}</td><td>{e(r["kluisnummer"])}</td>{sleutelnr_td}<td>{e(klas)}</td><td>{e(r["periode_van"])}</td><td>{e(r["periode_tot"])}</td>{borg_tds}</tr>'
             tabel_html += '</tbody></table>'
+    elif report_type == 'vertrokken':
+        klassen = {}
+        for r in rows:
+            klassen.setdefault(r['leerling_klas'] or 'Klas onbekend', []).append(r)
+
+        tabel_html = ''
+        for klas, leerlingen in klassen.items():
+            tabel_html += f'<h3>Klas: {e(klas)} <span>({len(leerlingen)} sleutel(s) open)</span></h3>'
+            tabel_html += '<table><thead><tr><th>Naam</th><th>Stamnr</th><th class="nr">Kluisnr</th><th class="nr">Sleutelnr</th><th>Vertrokken</th><th class="check">Ingeleverd</th></tr></thead><tbody>'
+            for i, r in enumerate(leerlingen):
+                row_class = 'alt' if i % 2 else ''
+                status = 'niet in Magister' if r['onbekend'] else e(r['vertrokken_op'])
+                tabel_html += (f'<tr class="{row_class}"><td class="naam">{e(r["leerling_naam"])}</td>'
+                               f'<td>{e(r["leerling_stamnr"])}</td><td class="nr">{e(r["kluisnummer"])}</td>'
+                               f'<td class="nr">{e(r["sleutelnummer"])}</td><td>{status}</td>'
+                               f'<td class="check"></td></tr>')
+            tabel_html += '</tbody></table>'
+
     elif report_type == 'sleutels':
         tabel_html = '<table><thead><tr><th>Vestiging</th><th class="nr">Kluisnr</th><th class="nr">Sleutelnr</th><th>Laatste huurder</th><th>Stamnr</th><th>Klas</th><th>Periode tot</th><th>Status</th></tr></thead><tbody>'
         for i, r in enumerate(rows):
@@ -577,7 +621,7 @@ def rapport():
     toon_sleutelnr = result[4] if len(result) > 4 else True
 
     buf = io.BytesIO()
-    portrait_types = ('inname', 'zonder_kluisje')
+    portrait_types = ('inname', 'zonder_kluisje', 'vertrokken')
     page_size = A4 if report_type in portrait_types else landscape(A4)
     doc = SimpleDocTemplate(buf, pagesize=page_size,
                             leftMargin=15*mm, rightMargin=15*mm,
@@ -720,6 +764,34 @@ def rapport():
                 for r in leerlingen:
                     data.append([r['naam'], r['stamnr'], r['klas'] or '', r['leerjaar'] or '', r['studie'] or ''])
                 elements.append(make_table(data, col_widths=col_widths))
+                elements.append(Spacer(1, 5*mm))
+
+    elif report_type == 'vertrokken':
+        if not rows:
+            elements.append(Paragraph("Geen openstaande sleutels van vertrokken leerlingen.", styles['Normal']))
+        else:
+            check_w = 24*mm
+            nr_w = 22*mm
+            datum_w = 26*mm
+            naam_w = page_w - 2*nr_w - datum_w - check_w
+            col_widths = [naam_w, nr_w, nr_w, datum_w, check_w]
+
+            klassen = {}
+            for r in rows:
+                klassen.setdefault(r['leerling_klas'] or 'Klas onbekend', []).append(r)
+
+            elements.append(Paragraph(f"{len(rows)} openstaande sleutel(s)", subtitle_style))
+            elements.append(Spacer(1, 3*mm))
+
+            for klas, leerlingen in klassen.items():
+                elements.append(Paragraph(f"Klas: {klas}  ({len(leerlingen)})", klas_style))
+                elements.append(Spacer(1, 1*mm))
+                data = [['Naam', 'Kluisnr', 'Sleutelnr', 'Vertrokken', 'Ingeleverd']]
+                for r in leerlingen:
+                    status = 'niet in Magister' if r['onbekend'] else (r['vertrokken_op'] or '')
+                    data.append([r['leerling_naam'], r['kluisnummer'],
+                                 r['sleutelnummer'] or '', status, ''])
+                elements.append(make_table(data, col_widths=col_widths, checkbox_cols=[4]))
                 elements.append(Spacer(1, 5*mm))
 
     elif report_type == 'inname':

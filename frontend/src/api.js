@@ -11,7 +11,12 @@ export async function apiFetch(path, options = {}) {
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || `HTTP ${res.status}`)
+    // Keep the parsed body on the error: some endpoints return extra data with
+    // the error (e.g. the candidate lockers behind a shared sleutelnummer).
+    const e = new Error(err.error || `HTTP ${res.status}`)
+    e.body = err
+    e.status = res.status
+    throw e
   }
   return res.json()
 }
