@@ -57,7 +57,7 @@ export default function SleutelInname({ vestigingId, onClose, onDone }) {
           <div>
             <h2 className="text-lg font-bold text-navy dark:text-white">Sleutels innemen</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Typ of scan een sleutelnummer en druk op Enter. De huur wordt direct beëindigd met de sleutel als ingeleverd.
+              Typ of scan een sleutelnummer en druk op Enter. De huur wordt direct beëindigd met de sleutel als ingeleverd. Een deel van het nummer mag ook, dan kies je uit de treffers.
             </p>
           </div>
           <button onClick={sluiten} className="text-slate-400 hover:text-slate-600 text-2xl leading-none px-2">&times;</button>
@@ -66,7 +66,7 @@ export default function SleutelInname({ vestigingId, onClose, onDone }) {
         <div className="p-5 space-y-3">
           <form onSubmit={e => { e.preventDefault(); innemen() }}>
             <input ref={inputRef} value={waarde} onChange={e => setWaarde(e.target.value)}
-              disabled={bezig} autoComplete="off" placeholder="Sleutelnummer, bijvoorbeeld 2983 D"
+              disabled={bezig} autoComplete="off" placeholder="Sleutelnummer of deel ervan, bijvoorbeeld 2983 D of 59e"
               className="w-full border-2 border-slate-300 dark:border-slate-600 rounded-xl px-4 py-3 text-lg font-mono bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" />
           </form>
 
@@ -76,9 +76,11 @@ export default function SleutelInname({ vestigingId, onClose, onDone }) {
             <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-3 space-y-1">
               {keuzes.map(k => (
                 <button key={k.kluisje_id} onClick={() => innemen(k.kluisje_id)}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 flex justify-between">
-                  <span className="font-semibold">{k.kluisnummer}</span>
-                  <span className="text-slate-500">{k.leerling_naam} {k.leerling_klas && `(${k.leerling_klas})`}</span>
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-3">
+                  <span className="font-semibold w-20">{k.kluisnummer}</span>
+                  <span className="font-mono text-xs text-slate-400 w-20">{k.sleutelnummer}</span>
+                  <span className="flex-1 truncate text-slate-600 dark:text-slate-300">{k.leerling_naam}</span>
+                  <span className="text-xs text-slate-400">{k.leerling_klas}</span>
                 </button>
               ))}
             </div>

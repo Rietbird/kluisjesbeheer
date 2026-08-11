@@ -29,44 +29,94 @@ def sleutel_innemen():
     typed per key. Sleutelnummers are deliberately not unique (Eraspas, reused
     keys), so an ambiguous number returns the candidates instead of guessing.
     """
+    MAX_KEUZES = 10
+
     data = request.get_json() or {}
     sleutelnummer = str(data.get('sleutelnummer', '')).strip()
     kluisje_id = data.get('kluisje_id')
-    if not sleutelnummer:
+    if not sleutelnummer and not kluisje_id:
         return jsonify({'error': 'Sleutelnummer is verplicht'}), 400
 
-    query = '''
-        SELECT t.id AS toewijzing_id, k.id AS kluisje_id, k.kluisnummer, k.vestiging_id,
-               t.leerling_naam, t.leerling_stamnr,
+    basis = '''
+        SELECT t.id AS toewijzing_id, k.id AS kluisje_id, k.kluisnummer, k.sleutelnummer,
+               k.vestiging_id, t.leerling_naam, t.leerling_stamnr,
                COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas, '') AS leerling_klas,
                t.borgbedrag, t.borg_betaald, t.borg_teruggestort
         FROM toewijzingen t
         JOIN kluisjes k ON k.id = t.kluisje_id
         LEFT JOIN leerlingen l ON l.stamnr = t.leerling_stamnr
         WHERE t.actief = 1 AND k.verwijderd = 0
-          AND LOWER(TRIM(k.sleutelnummer)) = LOWER(?)
     '''
-    params = [sleutelnummer]
+    scope = ''
+    scope_params = []
     allowed = user_vestiging_ids()
     if allowed is not None:
         if not allowed:
             return jsonify({'error': 'Geen toegang tot een vestiging'}), 403
-        query += f" AND k.vestiging_id IN ({','.join('?' * len(allowed))})"
-        params.extend(allowed)
+        scope = f" AND k.vestiging_id IN ({','.join('?' * len(allowed))})"
+        scope_params = list(allowed)
+
+    def zoek(extra_sql, extra_params):
+        return g.db.execute(basis + scope + extra_sql + ' ORDER BY k.kluisnummer',
+                            scope_params + extra_params).fetchall()
+
+    gedeeltelijk = False
     if kluisje_id:
-        query += ' AND k.id = ?'
-        params.append(int(kluisje_id))
-    rows = g.db.execute(query + ' ORDER BY k.kluisnummer', params).fetchall()
+        # The user picked a locker from the candidate list, so the typed text
+        # does not have to match anything anymore.
+        rows = zoek(' AND k.id = ?', [int(kluisje_id)])
+    else:
+        rows = zoek(' AND LOWER(TRIM(k.sleutelnummer)) = LOWER(?)', [sleutelnummer])
+        if not rows:
+            # Fall back to a contains-search over both numbers: the label on the
+            # key often carries the kluisnummer, and people type a fragment.
+            gedeeltelijk = True
+            like = '%' + sleutelnummer.replace('%', '\\%').replace('_', '\\_') + '%'
+            rows = zoek(" AND (k.sleutelnummer LIKE ? ESCAPE '\\' OR k.kluisnummer LIKE ? ESCAPE '\\')",
+                        [like, like])
+
+    def als_keuze(rs):
+        return [{
+            'kluisje_id': r['kluisje_id'], 'kluisnummer': r['kluisnummer'],
+            'sleutelnummer': r['sleutelnummer'], 'leerling_naam': r['leerling_naam'],
+            'leerling_klas': r['leerling_klas'],
+        } for r in rs]
 
     if not rows:
-        return jsonify({'error': f'Geen verhuurd kluisje gevonden met sleutel "{sleutelnummer}"'}), 404
+        # Look again without the rental filter. A key whose locker is already
+        # free is a different story than a typo, and at MHV it is the common
+        # case: plenty of rentals never made it into the app.
+        like = '%' + sleutelnummer.replace('%', '\\%').replace('_', '\\_') + '%'
+        vrij_sql = '''
+            SELECT k.kluisnummer FROM kluisjes k
+            WHERE k.verwijderd = 0
+              AND (k.sleutelnummer LIKE ? ESCAPE '\\' OR k.kluisnummer LIKE ? ESCAPE '\\')
+        '''
+        vrij_params = [like, like]
+        if scope:
+            vrij_sql += scope
+            vrij_params += scope_params
+        vrij = g.db.execute(vrij_sql + ' ORDER BY k.kluisnummer LIMIT 5', vrij_params).fetchall()
+        if vrij:
+            namen = ', '.join(r['kluisnummer'] for r in vrij)
+            return jsonify({
+                'error': f'{namen} staat niet als verhuurd in de app, dus er is geen huur om te beeindigen.',
+                'niet_verhuurd': [r['kluisnummer'] for r in vrij],
+            }), 404
+        return jsonify({'error': f'Niets gevonden op "{sleutelnummer}".'}), 404
+    if gedeeltelijk and len(rows) > MAX_KEUZES:
+        return jsonify({
+            'error': f'"{sleutelnummer}" past op {len(rows)} verhuurde kluisjes. Verfijn de zoekterm.',
+            'te_veel': True,
+        }), 409
+    if gedeeltelijk:
+        # Never end a huur on a partial match, however sure it looks.
+        kop = 'Bedoelde je dit?' if len(rows) == 1 else f'{len(rows)} kluisjes passen op "{sleutelnummer}". Kies welke.'
+        return jsonify({'error': kop, 'keuzes': als_keuze(rows)}), 409
     if len(rows) > 1:
         return jsonify({
             'error': f'Sleutel "{sleutelnummer}" hoort bij {len(rows)} verhuurde kluisjes. Kies welke.',
-            'keuzes': [{
-                'kluisje_id': r['kluisje_id'], 'kluisnummer': r['kluisnummer'],
-                'leerling_naam': r['leerling_naam'], 'leerling_klas': r['leerling_klas'],
-            } for r in rows],
+            'keuzes': als_keuze(rows),
         }), 409
 
     r = rows[0]
