@@ -130,8 +130,8 @@ export default function Handleiding({ onClose }) {
           <Sectie id="innemen" titel="Een huur beëindigen">
             <ol className="list-decimal pl-5">
               <Stap><strong>Open het verhuurde kluisje</strong> en klik op "Huur beëindigen".</Stap>
-              <Stap><strong>Vink aan</strong> of de sleutel is ingeleverd en of de borg is teruggestort.</Stap>
-              <Stap><strong>Bevestig.</strong> Het kluisje wordt weer vrij.</Stap>
+              <Stap><strong>Vink aan</strong> of de borg is teruggestort, en pas zo nodig de einddatum aan.</Stap>
+              <Stap><strong>Antwoord op "Is de sleutel ingeleverd?"</strong> met Ja of Nee. Die knop beëindigt de huur meteen en legt het antwoord vast, dus het kluisje is daarna weer vrij.</Stap>
             </ol>
             <p>Is de sleutel niet ingeleverd of de borg niet teruggestort, dan blijft het kluisje rood gemarkeerd met een waarschuwing, en kan het niet opnieuw worden toegewezen totdat dit is afgehandeld. Vanuit het detailscherm kunt u dit later alsnog op "afgehandeld" zetten.</p>
           </Sectie>

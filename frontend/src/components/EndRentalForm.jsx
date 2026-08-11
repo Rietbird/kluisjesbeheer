@@ -7,7 +7,6 @@ function today() {
 }
 
 export default function EndRentalForm({ kluisje, onDone, onCancel }) {
-  const [sleutelIngeleverd, setSleutelIngeleverd] = useState(false)
   const [borgTeruggestort, setBorgTeruggestort] = useState(false)
   const [einddatum, setEinddatum] = useState(today())
   const [opmerking, setOpmerking] = useState('')
@@ -18,8 +17,10 @@ export default function EndRentalForm({ kluisje, onDone, onCancel }) {
 
   const toewijzingId = kluisje.toewijzing_id
 
-  async function handleSubmit(e) {
-    e.preventDefault()
+  // The key question IS the confirm action: one click both answers it and ends
+  // the huur. A pre-ticked checkbox would be just as fast but nobody reads a
+  // default, and this flag ends up in the audit trail.
+  async function beeindig(sleutelIngeleverd) {
     if (!toewijzingId) { setError('Geen actieve toewijzing gevonden.'); return }
     setLoading(true)
     setError('')
@@ -39,11 +40,7 @@ export default function EndRentalForm({ kluisje, onDone, onCancel }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 mt-3">
-      <label className="flex items-center gap-2 text-sm cursor-pointer">
-        <input type="checkbox" checked={sleutelIngeleverd} onChange={e => setSleutelIngeleverd(e.target.checked)} />
-        Sleutel ingeleverd
-      </label>
+    <div className="space-y-3 mt-3">
       {borgActiefVoor(kluisje.vestiging_id) && (
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input type="checkbox" checked={borgTeruggestort} onChange={e => setBorgTeruggestort(e.target.checked)} />
@@ -61,16 +58,24 @@ export default function EndRentalForm({ kluisje, onDone, onCancel }) {
           onChange={e => setOpmerking(e.target.value)} placeholder="Optionele opmerking..." />
       </div>
       {error && <p className="text-red-500 text-xs">{error}</p>}
-      <div className="flex gap-2">
-        <button type="submit" disabled={loading}
-          className="flex-1 bg-red-600 text-white rounded py-1.5 text-sm hover:bg-red-700 disabled:opacity-50">
-          {loading ? 'Bezig...' : 'Bevestigen'}
-        </button>
-        <button type="button" onClick={onCancel}
-          className="flex-1 border border-slate-300 dark:border-slate-600 rounded py-1.5 text-sm text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+
+      <div className="pt-1 border-t border-slate-200 dark:border-slate-700">
+        <p className="text-sm font-semibold text-navy dark:text-white mt-2 mb-2">Is de sleutel ingeleverd?</p>
+        <div className="flex gap-2">
+          <button type="button" disabled={loading} onClick={() => beeindig(true)}
+            className="flex-1 bg-emerald-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+            {loading ? 'Bezig...' : 'Ja, beëindigen'}
+          </button>
+          <button type="button" disabled={loading} onClick={() => beeindig(false)}
+            className="flex-1 border-2 border-red-400 text-red-600 dark:text-red-400 rounded-lg py-2 text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors">
+            {loading ? 'Bezig...' : 'Nee, beëindigen'}
+          </button>
+        </div>
+        <button type="button" onClick={onCancel} disabled={loading}
+          className="w-full mt-2 py-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
           Annuleren
         </button>
       </div>
-    </form>
+    </div>
   )
 }

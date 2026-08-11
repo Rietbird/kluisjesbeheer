@@ -9,7 +9,6 @@ import LockerTable from '../components/LockerTable'
 import LockerModal from '../components/LockerModal'
 import BulkWizard from '../components/BulkWizard'
 import BulkEndWizard from '../components/BulkEndWizard'
-import SleutelInname from '../components/SleutelInname'
 
 
 function VestigingPicker({ vestigingen, onSelect, onSelectWithFilter }) {
@@ -167,7 +166,6 @@ export default function Uitleenoverzicht() {
   const [selected, setSelected] = useState(null)
   const [showBulk, setShowBulk] = useState(false)
   const [showBulkEnd, setShowBulkEnd] = useState(false)
-  const [showInname, setShowInname] = useState(false)
 
   // Houd geselecteerd kluisje gesynchroniseerd met de lijst na reload
   useEffect(() => {
@@ -218,7 +216,6 @@ export default function Uitleenoverzicht() {
           <Toolbar clusters={clusters} filters={filters} setFilters={setFilters}
             onBulkAssign={() => setShowBulk(true)}
             onBulkEnd={() => setShowBulkEnd(true)}
-            onSleutelInname={() => setShowInname(true)}
             vestigingId={filters.vestiging_id} />
           <div className="flex-1 overflow-auto p-5 bg-slate-50 dark:bg-slate-900">
             {loading && <p className="text-slate-500 text-lg">Laden...</p>}
@@ -242,9 +239,6 @@ export default function Uitleenoverzicht() {
       )}
       {showBulkEnd && (
         <BulkEndWizard vestigingId={filters.vestiging_id} onClose={() => setShowBulkEnd(false)} onDone={() => { setShowBulkEnd(false); reload() }} />
-      )}
-      {showInname && (
-        <SleutelInname vestigingId={filters.vestiging_id} onClose={() => setShowInname(false)} onDone={() => { setShowInname(false); reload() }} />
       )}
     </div>
   )
