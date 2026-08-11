@@ -43,10 +43,13 @@ def sync_leerlingen_to_db(db, leerlingen):
             l.get('leerjaar', ''), l.get('studie', ''), l.get('locatie', ''),
         ))
 
-    summary = {'upserted': len(synced_stamnrs), 'vertrokken_marked': 0, 'brake_triggered': False}
+    summary = {'upserted': len(synced_stamnrs), 'vertrokken_marked': 0,
+               'brake_triggered': False, 'periodes_verlengd': 0}
 
     # Brake: empty list, or suspiciously small vs the prior population.
     if not synced_stamnrs or (prior_active > 0 and len(synced_stamnrs) < VERTROKKEN_BRAKE_FRACTION * prior_active):
+        # No periode-verlenging either: with a suspect list the vertrokken
+        # status is unreliable, and that is exactly what decides who qualifies.
         summary['brake_triggered'] = True
         db.commit()
         return summary
@@ -61,8 +64,33 @@ def sync_leerlingen_to_db(db, leerlingen):
           )
     ''', list(synced_stamnrs))
     summary['vertrokken_marked'] = cur.rowcount
+    summary['periodes_verlengd'] = _verleng_lopende_huren(db)
     db.commit()
     return summary
+
+
+def _verleng_lopende_huren(db):
+    """Trek doorlopende huren mee naar het huidige schooljaar.
+
+    Op 1 augustus kantelt Magister de klassen. Wie blijft, houdt zijn kluisje,
+    maar de huurperiode bleef op het oude schooljaar staan. Alleen de einddatum
+    schuift op: periode_van vertelt wanneer de leerling het kluisje kreeg en dat
+    blijft waar.
+
+    Alleen voor leerlingen die in de leerlingentabel staan en niet vertrokken
+    zijn. Een huurder zonder bruikbaar stamnummer valt er dus buiten: die is
+    niet te verifieren, en de sleutel hoort daar sowieso nagelopen te worden.
+    """
+    from schooljaar import periode_voor
+    _, _, eind = periode_voor(db)
+    cur = db.execute('''
+        UPDATE toewijzingen SET periode_tot = ?, updated_at = datetime('now')
+        WHERE actief = 1 AND periode_tot < ?
+          AND leerling_stamnr IN (
+              SELECT stamnr FROM leerlingen WHERE vertrokken_op IS NULL
+          )
+    ''', (eind, eind))
+    return cur.rowcount
 
 
 def import_voorinschrijvingen(db, leerlingen, schooljaar):

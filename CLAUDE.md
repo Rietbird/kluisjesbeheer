@@ -86,6 +86,7 @@ Three layers of backup protection:
 - SSL-verificatie configureerbaar via `MAGISTER_SSL_VERIFY` (True / CA-bundle pad / False) — oude SWP-systemen hebben soms cert-issues
 - Session tokens gecacht voor 60 seconden, geen retry bij verlopen token
 - Dagelijkse leerling-sync = `cron_sync.py` (cron 06:00 op CT101); roept alleen `get_leerlingen()` aan. De kluisjes-import is een eenmalige Excel-export uit Magister (geen API)
+- Diezelfde sync doet de jaarwisseling: vertrekkers markeren en lopende huren van blijvers doortrekken naar het nieuwe schooljaar. Bij de 50%-veiligheidsrem gaat allebei niet door
 
 **Database:**
 - Migraties zijn try-catch `ALTER TABLE` in `init_db()` — geen versie-tracking of rollback
@@ -115,7 +116,7 @@ Three layers of backup protection:
 - `POST /api/clusters/<id>/verplaats-reeks` (prefix+van+tot, op getal) en `/verplaats-selectie` (kluisje_ids) — alleen binnen dezelfde vestiging (409 anders)
 
 **Deploy:**
-- `schoolvakanties.json` moet jaarlijks handmatig bijgewerkt worden (geen API)
+- Geen jaarlijks onderhoud meer aan vakantiedata: de schooljaargrens is vast 1 augustus t/m 31 juli (`schooljaar.py`), af te wijken via Beheer → Instellingen
 - Gunicorn multi-worker: elke worker heeft eigen Magister token cache (dubbele calls)
 
 ## Spec & Plan

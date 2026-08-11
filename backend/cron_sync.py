@@ -73,6 +73,8 @@ def main():
                   'OVERGESLAGEN (veiligheidsrem). Controleer de Magister-koppeling.')
         else:
             print(f'{summary["vertrokken_marked"]} leerling(en) als vertrokken gemarkeerd.')
+            if summary['periodes_verlengd']:
+                print(f'{summary["periodes_verlengd"]} lopende huur(en) doorgetrokken naar het nieuwe schooljaar.')
         print(f'Database bijgewerkt. Done!')
     except Exception as e:
         # NEVER print {e} directly -- requests exceptions contain the full URL

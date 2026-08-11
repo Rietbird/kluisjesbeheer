@@ -1143,7 +1143,6 @@ function ImportTab() {
 function BeheerInstellingenTab() {
   const [periodeVan, setPeriodeVan] = useState('')
   const [periodeTot, setPeriodeTot] = useState('')
-  const [regio, setRegio] = useState('noord')
   const [schoolNaam, setSchoolNaam] = useState('')
   const [schoolSubtitel, setSchoolSubtitel] = useState('')
   const [schoolKleur, setSchoolKleur] = useState('#FF8200')
@@ -1158,7 +1157,6 @@ function BeheerInstellingenTab() {
       .then(data => {
         setPeriodeVan(data.standaard_periode_van || '')
         setPeriodeTot(data.standaard_periode_tot || '')
-        setRegio(data.regio || 'noord')
         setSchoolNaam(data.schoolNaam || '')
         setSchoolSubtitel(data.schoolSubtitel || '')
         setSchoolKleur(data.schoolKleur || '#FF8200')
@@ -1183,7 +1181,6 @@ function BeheerInstellingenTab() {
       await api.put('/api/instellingen', {
         standaard_periode_van: periodeVan,
         standaard_periode_tot: periodeTot,
-        regio,
       })
       setSaveMsg('Opgeslagen!')
       setTimeout(() => setSaveMsg(''), 2000)
@@ -1222,12 +1219,18 @@ function BeheerInstellingenTab() {
   return (
     <div className="max-w-2xl space-y-5">
       <div className={cardClass}>
-        <h2 className="text-base font-bold text-slate-800 dark:text-white mb-4">Standaard uitleenperiode</h2>
+        <h2 className="text-base font-bold text-slate-800 dark:text-white mb-2">Standaard uitleenperiode</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          De periode die wordt voorgesteld bij een nieuwe toewijzing. Leeg laten betekent
+          1 augustus tot en met 31 juli, gelijk aan de omslag van de klassen in Magister.
+          Lopende huren van leerlingen die op school blijven schuiven bij die omslag
+          automatisch mee.
+        </p>
         <form onSubmit={handleSavePeriode} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">Van (MM-DD)</label>
-              <input className={inputClass} placeholder="09-01" value={periodeVan}
+              <input className={inputClass} placeholder="08-01" value={periodeVan}
                 onChange={e => setPeriodeVan(e.target.value)} pattern="\d{2}-\d{2}" />
             </div>
             <div>
@@ -1247,18 +1250,6 @@ function BeheerInstellingenTab() {
             )}
           </div>
         </form>
-      </div>
-
-      <div className={cardClass}>
-        <h2 className="text-base font-bold text-slate-800 dark:text-white mb-2">Regio</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          De regio bepaalt de standaard uitleenperiode op basis van de zomervakantie.
-        </p>
-        <select className={inputClass} value={regio} onChange={e => setRegio(e.target.value)}>
-          <option value="noord">Noord</option>
-          <option value="midden">Midden</option>
-          <option value="zuid">Zuid</option>
-        </select>
       </div>
 
       <div className={cardClass}>
