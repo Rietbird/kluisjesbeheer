@@ -3,6 +3,7 @@ import io
 import zipfile
 from flask import Blueprint, request, jsonify, g
 from auth import login_required, beheerder_required, assert_vestiging_access, user_vestiging_ids
+from klas import KLAS_SQL
 
 kluisjes_bp = Blueprint('kluisjes', __name__, url_prefix='/api')
 
@@ -69,11 +70,11 @@ def search_kluisjes():
     status = request.args.get('status')
     klas = request.args.get('klas')
 
-    query = '''
+    query = f'''
         SELECT k.*, c.naam as cluster_naam, c.standaard_borg,
                t.id as toewijzing_id,
                t.leerling_naam, t.leerling_stamnr,
-               COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) AS leerling_klas,
+               {KLAS_SQL} AS leerling_klas,
                t.periode_van, t.periode_tot, t.borgbedrag, t.borg_betaald,
                t.reservesleutel_uitgegeven, t.reservesleutel_datum,
                l.vertrokken_op as leerling_vertrokken_op,
@@ -164,7 +165,7 @@ def search_kluisjes():
         like = f'%{q_escaped}%'
         params.extend([like, like, like, like])
     if klas:
-        query += " AND COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) = ?"
+        query += f" AND {KLAS_SQL} = ?"
         params.append(klas)
 
     query += ' ORDER BY k.kluisnummer'
@@ -178,12 +179,12 @@ def klassen_in_vestiging(vid):
     err = assert_vestiging_access(vid)
     if err: return err
     rows = g.db.execute(
-        '''SELECT DISTINCT COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) AS klas
+        f'''SELECT DISTINCT {KLAS_SQL} AS klas
            FROM toewijzingen t
            JOIN kluisjes k ON t.kluisje_id = k.id
            LEFT JOIN leerlingen l ON t.leerling_stamnr = l.stamnr
            WHERE k.verwijderd = 0 AND t.actief = 1 AND k.vestiging_id = ?
-             AND TRIM(COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas)) <> ''
+             AND TRIM({KLAS_SQL}) <> ''
            ORDER BY klas''',
         (vid,)
     ).fetchall()

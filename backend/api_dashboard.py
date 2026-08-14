@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, g, request, Response
 from auth import login_required, user_vestiging_ids
+from klas import KLAS_SQL
 from config import config
 import io
 from datetime import date
@@ -137,10 +138,10 @@ def _get_rapport_data(report_type, vestiging_id, db):
         return title, rows, borg_actief, vestiging_naam
 
     elif report_type == 'sleutels':
-        query = '''
+        query = f'''
             SELECT v.naam as vestiging, k.kluisnummer, k.sleutelnummer,
                    t.leerling_naam, t.leerling_stamnr,
-                   COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) as leerling_klas,
+                   {KLAS_SQL} as leerling_klas,
                    t.periode_tot, t.einddatum,
                    l.vertrokken_op
             FROM kluisjes k
@@ -160,10 +161,10 @@ def _get_rapport_data(report_type, vestiging_id, db):
         return title, rows, borg_actief, vestiging_naam
 
     elif report_type == 'borg':
-        query = '''
+        query = f'''
             SELECT v.naam as vestiging, k.kluisnummer,
                    t.leerling_naam, t.leerling_stamnr,
-                   COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) as leerling_klas,
+                   {KLAS_SQL} as leerling_klas,
                    t.borgbedrag, t.borg_betaald, t.borg_teruggestort, t.actief,
                    l.vertrokken_op
             FROM toewijzingen t
@@ -185,10 +186,10 @@ def _get_rapport_data(report_type, vestiging_id, db):
         # Keys still out with someone who left. Rows without a matching leerling
         # are included on purpose: they cannot be flagged vertrokken anywhere in
         # the app, so they would otherwise never show up on a chase-up list.
-        query = '''
+        query = f'''
             SELECT v.naam as vestiging, k.kluisnummer, k.sleutelnummer,
                    t.leerling_naam, t.leerling_stamnr,
-                   COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas, '') as leerling_klas,
+                   COALESCE({KLAS_SQL}, '') as leerling_klas,
                    t.periode_tot, l.vertrokken_op,
                    CASE WHEN l.stamnr IS NULL THEN 1 ELSE 0 END as onbekend
             FROM toewijzingen t
@@ -228,9 +229,9 @@ def _get_rapport_data(report_type, vestiging_id, db):
         return title, rows, borg_actief, vestiging_naam
 
     else:  # toewijzingen + inname
-        query = '''
+        query = f'''
             SELECT t.leerling_naam,
-                   COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) as leerling_klas,
+                   {KLAS_SQL} as leerling_klas,
                    t.leerling_stamnr,
                    k.kluisnummer, k.sleutelnummer,
                    t.periode_van, t.periode_tot, t.borgbedrag, t.borg_betaald,
@@ -251,27 +252,26 @@ def _get_rapport_data(report_type, vestiging_id, db):
 
 
 def _get_klas_rapport_data(vestiging_id, klassen, db):
-    """Per-klas overzicht. Geeft een dict {klasnaam: {'met': [...], 'zonder': [...]}}.
+    """Per-klas overzicht: {klasnaam: [rij, ...]}, één rij per leerling.
 
-    `klassen` is een lijst met gekozen klassen; leeg betekent alle klassen die in
-    deze vestiging een actieve huurder hebben (zelfde set als de filter-dropdown).
-    'zonder' = leerlingen in die klas zonder actieve toewijzing (leunt op de
-    leerlingen-tabel / Magister-sync).
+    Iedereen uit de klas staat er precies één keer in, met een leeg kluisveld
+    als hij er geen heeft. Zo is de uitdraai regel voor regel naast de papieren
+    klassenlijst te leggen, want die bevat de hele klas.
 
-    Een expliciet gekozen klas komt altijd terug, ook als niemand daar een
-    kluisje heeft. Anders zou zo'n klas bij het naflopen tegen de papieren lijst
-    gewoon lijken te ontbreken, en dat is precies het geval dat je wilt zien.
+    `klassen` is een lijst met gekozen klassen; leeg betekent alle klassen die
+    in deze vestiging een actieve huurder hebben (zelfde set als de
+    filter-dropdown). Een expliciet gekozen klas komt altijd terug, ook als
+    niemand daar een kluisje heeft: dat lege geval is juist wat je zoekt.
     """
-    KLAS = "COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas)"
     klassen = [k for k in (klassen or []) if k]
     params = [int(vestiging_id)]
     klas_filter = ''
     if klassen:
         placeholders = ','.join('?' * len(klassen))
-        klas_filter = f' AND {KLAS} IN ({placeholders})'
+        klas_filter = f' AND {KLAS_SQL} IN ({placeholders})'
         params.extend(klassen)
     met_rows = db.execute(f'''
-        SELECT {KLAS} AS klas, t.leerling_naam, t.leerling_stamnr,
+        SELECT {KLAS_SQL} AS klas, t.leerling_naam AS naam, t.leerling_stamnr AS stamnr,
                k.kluisnummer, k.sleutelnummer, t.periode_van, t.periode_tot,
                l.vertrokken_op
         FROM toewijzingen t
@@ -293,20 +293,31 @@ def _get_klas_rapport_data(vestiging_id, klassen, db):
 
     result = {}
     for kn in volgorde:
-        result[kn] = {
-            'met': [r for r in met_rows if (r['klas'] or '-') == kn],
-            'zonder': [],
-        }
-        if kn == '-':
-            continue
-        result[kn]['zonder'] = db.execute('''
-            SELECT l.naam, l.stamnr, l.klas
-            FROM leerlingen l
-            WHERE l.klas = ? AND l.vertrokken_op IS NULL
-              AND NOT EXISTS (
-                SELECT 1 FROM toewijzingen t WHERE t.leerling_stamnr = l.stamnr AND t.actief = 1)
-            ORDER BY l.naam
-        ''', (kn,)).fetchall()
+        eigen = [dict(r) for r in met_rows if (r['klas'] or '-') == kn]
+        # Vertrekkers staan niet op de papieren klassenlijst, dus ook niet in de
+        # klaslijst. Ze verdwijnen niet: hun sleutel staat nog uit en dat hoort
+        # zichtbaar te blijven, dus ze krijgen een eigen blok.
+        rijen = [r for r in eigen if not r['vertrokken_op']]
+        vertrokken = [r for r in eigen if r['vertrokken_op']]
+        if kn != '-':
+            # Klasgenoten zonder kluisje erbij, met lege kluisvelden.
+            zonder = db.execute('''
+                SELECT l.naam, l.stamnr
+                FROM leerlingen l
+                WHERE l.klas = ? AND l.vertrokken_op IS NULL
+                  AND NOT EXISTS (
+                    SELECT 1 FROM toewijzingen t WHERE t.leerling_stamnr = l.stamnr AND t.actief = 1)
+                ORDER BY l.naam
+            ''', (kn,)).fetchall()
+            for r in zonder:
+                rijen.append({
+                    'klas': kn, 'naam': r['naam'], 'stamnr': r['stamnr'],
+                    'kluisnummer': '', 'sleutelnummer': '',
+                    'periode_van': '', 'periode_tot': '', 'vertrokken_op': None,
+                })
+        for lijst in (rijen, vertrokken):
+            lijst.sort(key=lambda r: (r['naam'] or '').lower())
+        result[kn] = {'leerlingen': rijen, 'vertrokken': vertrokken}
     return result
 
 
@@ -348,21 +359,25 @@ def rapport_preview():
         kleur = config.get('SchoolKleur', '#FF8200')
         title = f"Kluisjes per klas{(' - ' + ', '.join(klassen)) if klassen else ''}"
         secties = ''
-        for kn, groep in data.items():
-            secties += f'<section class="klas">'
-            secties += f'<h3>Klas: {e(kn)} <span>({len(groep["met"])} mét kluisje, {len(groep["zonder"])} zonder)</span></h3>'
-            secties += '<h4>Mét kluisje</h4><table><thead><tr><th>Naam</th><th class="nr">Kluisnr</th><th class="nr">Sleutelnr</th><th>Van</th><th>Tot</th></tr></thead><tbody>'
-            for i, r in enumerate(groep['met']):
+        def klas_tabel(rows):
+            h = '<table><thead><tr><th>Naam</th><th>Stamnr</th><th class="nr">Kluisnr</th><th class="nr">Sleutelnr</th><th>Van</th><th>Tot</th></tr></thead><tbody>'
+            for i, r in enumerate(rows):
                 rc = 'alt' if i % 2 else ''
-                vt = ' <span style="color:#dc2626;font-size:10px;font-weight:bold">[Vertrokken]</span>' if r['vertrokken_op'] else ''
-                secties += f'<tr class="{rc}"><td class="naam">{e(r["leerling_naam"])}{vt}</td><td class="nr">{e(r["kluisnummer"])}</td><td class="nr">{e(r["sleutelnummer"])}</td><td>{e(r["periode_van"])}</td><td>{e(r["periode_tot"])}</td></tr>'
-            secties += '</tbody></table>'
-            if groep['zonder']:
-                secties += '<h4>Zonder kluisje</h4><table><thead><tr><th>Naam</th><th>Stamnr</th></tr></thead><tbody>'
-                for i, r in enumerate(groep['zonder']):
-                    rc = 'alt' if i % 2 else ''
-                    secties += f'<tr class="{rc}"><td class="naam">{e(r["naam"])}</td><td>{e(r["stamnr"])}</td></tr>'
-                secties += '</tbody></table>'
+                h += (f'<tr class="{rc}"><td class="naam">{e(r["naam"])}</td><td>{e(r["stamnr"])}</td>'
+                      f'<td class="nr">{e(r["kluisnummer"])}</td><td class="nr">{e(r["sleutelnummer"])}</td>'
+                      f'<td>{e(r["periode_van"])}</td><td>{e(r["periode_tot"])}</td></tr>')
+            return h + '</tbody></table>'
+
+        for kn, groep in data.items():
+            rijen, vertrokken = groep['leerlingen'], groep['vertrokken']
+            zonder = sum(1 for r in rijen if not r['kluisnummer'])
+            meervoud = 'en' if len(rijen) != 1 else ''
+            secties += '<section class="klas">'
+            secties += f'<h3>Klas: {e(kn)} <span>({len(rijen)} leerling{meervoud}, {zonder} zonder kluisje)</span></h3>'
+            secties += klas_tabel(rijen)
+            if vertrokken:
+                secties += f'<h4>Vertrokken, sleutel nog uit ({len(vertrokken)})</h4>'
+                secties += klas_tabel(vertrokken)
             secties += '</section>'
         if not data:
             secties = '<p>Geen klassen met huurders gevonden.</p>'
@@ -612,26 +627,32 @@ def rapport():
             elements.append(Paragraph("Geen klassen met huurders gevonden.", styles['Normal']))
         nr_w = 28*mm
         date_w = 26*mm
+        kolommen = [page_w - 3*nr_w - 2*date_w, nr_w, nr_w, nr_w, date_w, date_w]
+
+        def klas_tabel(rows):
+            mdata = [['Naam', 'Stamnr', 'Kluisnr', 'Sleutelnr', 'Van', 'Tot']]
+            for r in rows:
+                mdata.append([r['naam'] or '', r['stamnr'] or '', r['kluisnummer'] or '',
+                              r['sleutelnummer'] or '', r['periode_van'] or '',
+                              r['periode_tot'] or ''])
+            return ktable(mdata, kolommen)
+
         for index, (kn, groep) in enumerate(data.items()):
             # Elke klas op een eigen bladzijde: de uitdraai gaat per klas naast
             # de papieren klassenlijst om met de hand na te lopen.
             if index:
                 elements.append(PageBreak())
+            rijen, vertrokken = groep['leerlingen'], groep['vertrokken']
+            zonder = sum(1 for r in rijen if not r['kluisnummer'])
+            meervoud = 'en' if len(rijen) != 1 else ''
             elements.append(Paragraph(
-                f"Klas: {kn}  ({len(groep['met'])} mét kluisje, {len(groep['zonder'])} zonder)", klas_style))
-            elements.append(Paragraph("Mét kluisje", sub_style))
-            mdata = [['Naam', 'Kluisnr', 'Sleutelnr', 'Van', 'Tot']]
-            for r in groep['met']:
-                naam = r['leerling_naam'] + (' [V]' if r['vertrokken_op'] else '')
-                mdata.append([naam, r['kluisnummer'], r['sleutelnummer'] or '',
-                              r['periode_van'] or '', r['periode_tot'] or ''])
-            elements.append(ktable(mdata, [page_w - 2*nr_w - 2*date_w, nr_w, nr_w, date_w, date_w]))
-            if groep['zonder']:
-                elements.append(Paragraph("Zonder kluisje", sub_style))
-                zdata = [['Naam', 'Stamnr']]
-                for r in groep['zonder']:
-                    zdata.append([r['naam'], r['stamnr']])
-                elements.append(ktable(zdata, [page_w - nr_w, nr_w]))
+                f"Klas: {kn}  ({len(rijen)} leerling{meervoud}, {zonder} zonder kluisje)",
+                klas_style))
+            elements.append(klas_tabel(rijen))
+            if vertrokken:
+                elements.append(Paragraph(
+                    f"Vertrokken, sleutel nog uit ({len(vertrokken)})", sub_style))
+                elements.append(klas_tabel(vertrokken))
             elements.append(Spacer(1, 5*mm))
         doc.build(elements)
         buf.seek(0)

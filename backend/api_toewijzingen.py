@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, g, session
 from auth import login_required, assert_vestiging_access, user_vestiging_ids
+from klas import KLAS_SQL
 
 toewijzingen_bp = Blueprint('toewijzingen', __name__, url_prefix='/api')
 
@@ -284,11 +285,11 @@ def actieve_toewijzingen():
     vestiging_id = request.args.get('vestiging_id')
     cluster_id = request.args.get('cluster_id')
     stamnr = request.args.get('stamnr', '').strip()
-    query = '''
+    query = f'''
         SELECT t.*, k.kluisnummer, k.sleutelnummer, k.cluster_id, k.vestiging_id, c.naam as cluster_naam,
                l.vertrokken_op AS leerling_vertrokken_op,
                l.nieuw_voor_schooljaar AS leerling_nieuw_voor_schooljaar,
-               COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas) AS leerling_klas_effectief
+               {KLAS_SQL} AS leerling_klas_effectief
         FROM toewijzingen t
         JOIN kluisjes k ON t.kluisje_id = k.id
         JOIN clusters c ON k.cluster_id = c.id

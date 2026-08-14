@@ -113,6 +113,46 @@ def test_pdf_van_een_enkele_klas_is_een_bladzijde(client, db):
     assert _paginas(resp.get_data()) == 1
 
 
+def test_klas_is_een_lijst_met_iedereen_en_een_leeg_kluisveld(client, db):
+    """Regel voor regel te leggen naast de papieren klassenlijst, die ook iedereen bevat."""
+    _verhuur(client, db, 'X0011', '1', 'Stan Hannink', 'M4A')
+    _leerling(client, db, '2', 'Alrick Roelofs', 'M4A')
+
+    html = _preview(client, '&klas=M4A')
+
+    assert 'Stan Hannink' in html
+    assert 'Alrick Roelofs' in html
+    # Eén tabel per klas, dus geen aparte kop meer voor de groep zonder kluisje.
+    assert 'Zonder kluisje' not in html
+    assert html.count('<table>') == 1
+
+
+def _vertrokken_huurder(client, db, kluisnummer, stamnr, naam, klas):
+    db.execute('INSERT INTO leerlingen (stamnr, naam, klas, vertrokken_op) VALUES (?, ?, ?, ?)',
+               (stamnr, naam, klas, '2026-08-01'))
+    db.commit()
+    kid = _kluisje(client, kluisnummer)
+    client.post(f'/api/kluisjes/{kid}/toewijzen', json={
+        'leerling_stamnr': stamnr, 'leerling_naam': naam, 'leerling_klas': klas,
+        'periode_van': '2025-08-01', 'periode_tot': '2026-07-31', 'borgbedrag': 0,
+    })
+
+
+def test_vertrokken_huurder_staat_apart_en_niet_in_de_klaslijst(client, db):
+    """De klaslijst moet het papier volgen; een vertrekker staat daar niet op.
+
+    Verstoppen mag niet: zijn sleutel staat nog uit.
+    """
+    _verhuur(client, db, 'X0011', '1', 'Stan Hannink', 'M4A')
+    _vertrokken_huurder(client, db, 'X0999', '9', 'Weg Gegaan', 'M4A')
+
+    html = _preview(client, '&klas=M4A')
+
+    assert 'Klas: M4A <span>(1 leerling,' in html
+    assert 'Weg Gegaan' in html
+    assert 'Vertrokken, sleutel nog uit' in html
+
+
 def test_preview_breekt_bij_printen_af_per_klas(client, db):
     """Printen vanuit de preview moet dezelfde indeling geven als de PDF."""
     _verhuur(client, db, 'X0011', '1', 'Stan Hannink', 'M4A')
