@@ -71,3 +71,29 @@ def test_onzinnige_instelling_wordt_genegeerd(client):
 
     assert p['periode_van'].endswith('-08-01')
     assert p['periode_tot'].endswith('-07-31')
+
+
+def test_vertrek_op_1_augustus_hoort_bij_het_jaar_dat_net_afliep():
+    """De sync markeert vertrekkers op 1 augustus, als Magister de klassen kantelt.
+
+    Wie dan wegvalt heeft het vorige jaar afgemaakt, dus die hoort bij 2025-2026
+    en niet bij het jaar dat op diezelfde dag begint.
+    """
+    from schooljaar import schooljaar_van_vertrek
+    assert schooljaar_van_vertrek('2026-08-01') == '2025-2026'
+
+
+def test_vertrek_midden_in_het_jaar_hoort_bij_het_lopende_jaar():
+    from schooljaar import schooljaar_van_vertrek
+    assert schooljaar_van_vertrek('2026-11-15') == '2026-2027'
+
+
+def test_vertrek_op_de_laatste_dag_van_het_schooljaar():
+    from schooljaar import schooljaar_van_vertrek
+    assert schooljaar_van_vertrek('2026-07-31') == '2025-2026'
+
+
+def test_zonder_datum_geen_schooljaar():
+    from schooljaar import schooljaar_van_vertrek
+    assert schooljaar_van_vertrek(None) is None
+    assert schooljaar_van_vertrek('') is None

@@ -5,7 +5,7 @@ sync (doorlopende huren meetrekken naar het nieuwe schooljaar), dus dit staat
 los van Flask: de cron draait buiten een request-context.
 """
 import re
-from datetime import date
+from datetime import date, timedelta
 
 # 1 augustus tot en met 31 juli. Dat is de grens waar de rest van het systeem al
 # op draait: Magister kantelt op 1 augustus de klassen, de leerlingsync markeert
@@ -49,3 +49,25 @@ def periode_voor(db, vandaag=None):
     van = maanddag(cfg.get('standaard_periode_van'), STANDAARD_VAN)
     tot = maanddag(cfg.get('standaard_periode_tot'), STANDAARD_TOT)
     return sj, f'{start_jaar}-{van}', f'{eind_jaar}-{tot}'
+
+
+def schooljaar_van_vertrek(vertrokken_op):
+    """Het schooljaar waarin een leerling van school ging.
+
+    De dagelijkse sync markeert vertrekkers op de dag dat ze uit de actieve
+    Magister-lijst vallen, en dat is bij de jaarwisseling 1 augustus. Zo iemand
+    heeft het vorige jaar gewoon afgemaakt, dus die hoort bij het jaar dat net
+    eindigde en niet bij het jaar dat diezelfde dag begint. Daarom telt de dag
+    vóór de vertrekdatum.
+
+    Geeft None als er geen vertrekdatum is (huurders zonder stamnummer hebben
+    er nooit een).
+    """
+    if not vertrokken_op:
+        return None
+    tekst = str(vertrokken_op).split(' ')[0].split('T')[0]
+    try:
+        d = date.fromisoformat(tekst)
+    except ValueError:
+        return None
+    return huidig_schooljaar(d - timedelta(days=1))

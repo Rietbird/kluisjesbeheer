@@ -109,7 +109,7 @@ def _get_rapport_data(report_type, vestiging_id, db):
         'inname': 'Innameoverzicht sleutels/borg',
         'defect': 'Defecte kluisjes',
         'zonder_kluisje': 'Leerlingen zonder kluisje',
-        'vertrokken': 'Vertrokken leerlingen met sleutel',
+        'vertrokken': 'Vertrokken leerlingen (per schooljaar)',
     }
     title = titles.get(report_type, 'Rapport')
 
@@ -183,21 +183,30 @@ def _get_rapport_data(report_type, vestiging_id, db):
         return title, rows, borg_actief, vestiging_naam
 
     elif report_type == 'vertrokken':
-        # Keys still out with someone who left. Rows without a matching leerling
-        # are included on purpose: they cannot be flagged vertrokken anywhere in
-        # the app, so they would otherwise never show up on a chase-up list.
-        query = f'''
+        # Historie van iedereen die van school is en een kluisje had, inclusief
+        # de al afgehandelde gevallen: de vraag is niet alleen wie nog een
+        # sleutel heeft, maar ook wat er met de rest gebeurd is.
+        #
+        # Rijen zonder bijbehorende leerling staan er bewust in: die zijn
+        # nergens als vertrokken te markeren en zouden anders nooit opduiken.
+        #
+        # De klas is hier expres de MOMENTOPNAME van de toewijzing, niet de
+        # actuele: een vertrekker heeft geen actuele klas meer, en je zoekt hem
+        # op onder de klas waarin hij zat toen hij het kluisje had.
+        query = '''
             SELECT v.naam as vestiging, k.kluisnummer, k.sleutelnummer,
                    t.leerling_naam, t.leerling_stamnr,
-                   COALESCE({KLAS_SQL}, '') as leerling_klas,
-                   t.periode_tot, l.vertrokken_op,
+                   COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas, '') as leerling_klas,
+                   t.periode_tot, t.einddatum, t.actief, l.vertrokken_op,
+                   CASE WHEN t.actief = 0 AND t.sleutel_ingeleverd = 1
+                        THEN 1 ELSE 0 END as sleutel_terug,
                    CASE WHEN l.stamnr IS NULL THEN 1 ELSE 0 END as onbekend
             FROM toewijzingen t
             JOIN kluisjes k ON t.kluisje_id = k.id
             JOIN vestigingen v ON k.vestiging_id = v.id
             LEFT JOIN leerlingen l ON t.leerling_stamnr = l.stamnr
-            WHERE k.verwijderd = 0 AND t.actief = 1
-              AND (l.vertrokken_op IS NOT NULL OR l.stamnr IS NULL)
+            WHERE k.verwijderd = 0
+              AND (l.vertrokken_op IS NOT NULL OR (l.stamnr IS NULL AND t.actief = 1))
         '''
         params = []
         if vestiging_id:
@@ -317,6 +326,37 @@ def _get_klas_rapport_data(vestiging_id, klassen, db):
         rijen.sort(key=lambda r: (r['naam'] or '').lower())
         result[kn] = rijen
     return result
+
+
+ONBEKEND_IN_MAGISTER = 'Onbekend in Magister'
+
+
+def _groepeer_vertrokken(rows):
+    """Groepeer vertrekkers per schooljaar van vertrek, daarbinnen per klas.
+
+    Nieuwste schooljaar bovenaan. Huurders zonder stamnummer hebben geen
+    vertrekdatum en dus geen schooljaar; die vormen de laatste groep.
+    """
+    from schooljaar import schooljaar_van_vertrek
+    groepen = {}
+    for r in rows:
+        sj = schooljaar_van_vertrek(r['vertrokken_op']) or ONBEKEND_IN_MAGISTER
+        klas = r['leerling_klas'] or 'Klas onbekend'
+        groepen.setdefault(sj, {}).setdefault(klas, []).append(r)
+    volgorde = sorted((s for s in groepen if s != ONBEKEND_IN_MAGISTER), reverse=True)
+    if ONBEKEND_IN_MAGISTER in groepen:
+        volgorde.append(ONBEKEND_IN_MAGISTER)
+    return {s: groepen[s] for s in volgorde}
+
+
+def _sleutel_status(row):
+    """Twee waarden: de sleutel is terug, of hij is dat niet.
+
+    Een huur die nog loopt is nooit afgesloten, dus die sleutel is ook niet
+    ingeleverd. Dat telt hier hetzelfde als een afgesloten huur waarbij hij
+    niet terugkwam.
+    """
+    return 'ingeleverd' if row['sleutel_terug'] else 'NIET ingeleverd'
 
 
 def _register_font():
@@ -460,22 +500,26 @@ def rapport_preview():
                 tabel_html += f'<tr class="{row_class}"><td class="naam">{e(r["leerling_naam"])}{vertrokken_tag}</td><td>{e(r["leerling_stamnr"])}</td><td>{e(r["kluisnummer"])}</td>{sleutelnr_td}<td>{e(klas)}</td><td>{e(r["periode_van"])}</td><td>{e(r["periode_tot"])}</td>{borg_tds}</tr>'
             tabel_html += '</tbody></table>'
     elif report_type == 'vertrokken':
-        klassen = {}
-        for r in rows:
-            klassen.setdefault(r['leerling_klas'] or 'Klas onbekend', []).append(r)
-
         tabel_html = ''
-        for klas, leerlingen in klassen.items():
-            tabel_html += f'<h3>Klas: {e(klas)} <span>({len(leerlingen)} sleutel(s) open)</span></h3>'
-            tabel_html += '<table><thead><tr><th>Naam</th><th>Stamnr</th><th class="nr">Kluisnr</th><th class="nr">Sleutelnr</th><th>Vertrokken</th><th class="check">Ingeleverd</th></tr></thead><tbody>'
-            for i, r in enumerate(leerlingen):
-                row_class = 'alt' if i % 2 else ''
-                status = 'niet in Magister' if r['onbekend'] else e(r['vertrokken_op'])
-                tabel_html += (f'<tr class="{row_class}"><td class="naam">{e(r["leerling_naam"])}</td>'
-                               f'<td>{e(r["leerling_stamnr"])}</td><td class="nr">{e(r["kluisnummer"])}</td>'
-                               f'<td class="nr">{e(r["sleutelnummer"])}</td><td>{status}</td>'
-                               f'<td class="check"></td></tr>')
-            tabel_html += '</tbody></table>'
+        for sj, klassen in _groepeer_vertrokken(rows).items():
+            aantal = sum(len(v) for v in klassen.values())
+            open_sleutels = sum(1 for v in klassen.values() for r in v if not r['sleutel_terug'])
+            kop = e(sj) if sj == ONBEKEND_IN_MAGISTER else f'Schooljaar {e(sj)}'
+            tabel_html += (f'<h2>{kop} <span>({aantal} leerlingen, '
+                           f'{open_sleutels} sleutel niet ingeleverd)</span></h2>')
+            for klas, leerlingen in klassen.items():
+                tabel_html += f'<h3>Klas: {e(klas)} <span>({len(leerlingen)})</span></h3>'
+                tabel_html += '<table><thead><tr><th>Naam</th><th>Stamnr</th><th class="nr">Kluisnr</th><th class="nr">Sleutelnr</th><th>Vertrokken</th><th>Sleutel</th></tr></thead><tbody>'
+                for i, r in enumerate(leerlingen):
+                    row_class = 'alt' if i % 2 else ''
+                    vertrek = 'niet in Magister' if r['onbekend'] else e(r['vertrokken_op'])
+                    status = _sleutel_status(r)
+                    kleur = '' if r['sleutel_terug'] else ' style="color:#dc2626;font-weight:bold"'
+                    tabel_html += (f'<tr class="{row_class}"><td class="naam">{e(r["leerling_naam"])}</td>'
+                                   f'<td>{e(r["leerling_stamnr"])}</td><td class="nr">{e(r["kluisnummer"])}</td>'
+                                   f'<td class="nr">{e(r["sleutelnummer"])}</td><td>{vertrek}</td>'
+                                   f'<td{kleur}>{status}</td></tr>')
+                tabel_html += '</tbody></table>'
 
     elif report_type == 'sleutels':
         tabel_html = '<table><thead><tr><th>Vestiging</th><th class="nr">Kluisnr</th><th class="nr">Sleutelnr</th><th>Laatste huurder</th><th>Stamnr</th><th>Klas</th><th>Periode tot</th><th>Status</th></tr></thead><tbody>'
@@ -807,31 +851,42 @@ def rapport():
 
     elif report_type == 'vertrokken':
         if not rows:
-            elements.append(Paragraph("Geen openstaande sleutels van vertrokken leerlingen.", styles['Normal']))
+            elements.append(Paragraph("Geen vertrokken leerlingen met een kluisje.", styles['Normal']))
         else:
-            check_w = 24*mm
+            status_w = 28*mm
             nr_w = 22*mm
             datum_w = 26*mm
-            naam_w = page_w - 2*nr_w - datum_w - check_w
-            col_widths = [naam_w, nr_w, nr_w, datum_w, check_w]
+            stamnr_w = 20*mm
+            naam_w = page_w - 2*nr_w - stamnr_w - datum_w - status_w
+            col_widths = [naam_w, stamnr_w, nr_w, nr_w, datum_w, status_w]
 
-            klassen = {}
-            for r in rows:
-                klassen.setdefault(r['leerling_klas'] or 'Klas onbekend', []).append(r)
-
-            elements.append(Paragraph(f"{len(rows)} openstaande sleutel(s)", subtitle_style))
+            open_totaal = sum(1 for r in rows if not r['sleutel_terug'])
+            elements.append(Paragraph(
+                f"{len(rows)} leerlingen, {open_totaal} sleutel niet ingeleverd", subtitle_style))
             elements.append(Spacer(1, 3*mm))
 
-            for klas, leerlingen in klassen.items():
-                elements.append(Paragraph(f"Klas: {klas}  ({len(leerlingen)})", klas_style))
-                elements.append(Spacer(1, 1*mm))
-                data = [['Naam', 'Kluisnr', 'Sleutelnr', 'Vertrokken', 'Ingeleverd']]
-                for r in leerlingen:
-                    status = 'niet in Magister' if r['onbekend'] else (r['vertrokken_op'] or '')
-                    data.append([r['leerling_naam'], r['kluisnummer'],
-                                 r['sleutelnummer'] or '', status, ''])
-                elements.append(make_table(data, col_widths=col_widths, checkbox_cols=[4]))
-                elements.append(Spacer(1, 5*mm))
+            for index, (sj, klassen) in enumerate(_groepeer_vertrokken(rows).items()):
+                # Elk schooljaar op een eigen bladzijde: dit is per jaar een
+                # afgerond overzicht dat je los archiveert.
+                if index:
+                    elements.append(PageBreak())
+                aantal = sum(len(v) for v in klassen.values())
+                open_sleutels = sum(1 for v in klassen.values() for r in v if not r['sleutel_terug'])
+                kop = sj if sj == ONBEKEND_IN_MAGISTER else f'Schooljaar {sj}'
+                elements.append(Paragraph(
+                    f"{kop}  ({aantal} leerlingen, {open_sleutels} sleutel niet ingeleverd)",
+                    klas_style))
+                for klas, leerlingen in klassen.items():
+                    elements.append(Paragraph(f"Klas: {klas}  ({len(leerlingen)})", subtitle_style))
+                    elements.append(Spacer(1, 1*mm))
+                    data = [['Naam', 'Stamnr', 'Kluisnr', 'Sleutelnr', 'Vertrokken', 'Sleutel']]
+                    for r in leerlingen:
+                        vertrek = 'niet in Magister' if r['onbekend'] else (r['vertrokken_op'] or '')
+                        data.append([r['leerling_naam'], r['leerling_stamnr'] or '',
+                                     r['kluisnummer'], r['sleutelnummer'] or '', vertrek,
+                                     _sleutel_status(r)])
+                    elements.append(make_table(data, col_widths=col_widths))
+                    elements.append(Spacer(1, 5*mm))
 
     elif report_type == 'inname':
         if not rows:
