@@ -37,24 +37,35 @@ function RapportRij({ label, type, onDownload, onPreview }) {
   )
 }
 
-function RapportDropdown({ vestigingId, klas }) {
+function RapportDropdown({ vestigingId, klas, klassen }) {
   const [open, setOpen] = useState(false)
+  const [selectie, setSelectie] = useState([])
   const { borgActiefVoor } = useInstellingen()
 
-  function download(type, extra = {}) {
+  // Een array-waarde wordt herhaald in de querystring (klas=M4A&klas=M4B), want
+  // het per-klas rapport accepteert meerdere klassen in één PDF.
+  function bouwParams(type, extra) {
     const params = new URLSearchParams({ type })
     if (vestigingId) params.set('vestiging_id', vestigingId)
-    Object.entries(extra).forEach(([k, v]) => v && params.set(k, v))
-    window.open(`/api/dashboard/rapport?${params}`, '_blank')
+    Object.entries(extra).forEach(([k, v]) => {
+      if (Array.isArray(v)) v.forEach(item => item && params.append(k, item))
+      else if (v) params.set(k, v)
+    })
+    return params
+  }
+
+  function download(type, extra = {}) {
+    window.open(`/api/dashboard/rapport?${bouwParams(type, extra)}`, '_blank')
     setOpen(false)
   }
 
   function preview(type, extra = {}) {
-    const params = new URLSearchParams({ type })
-    if (vestigingId) params.set('vestiging_id', vestigingId)
-    Object.entries(extra).forEach(([k, v]) => v && params.set(k, v))
-    window.open(`/api/dashboard/rapport/preview?${params}`, '_blank')
+    window.open(`/api/dashboard/rapport/preview?${bouwParams(type, extra)}`, '_blank')
     setOpen(false)
+  }
+
+  function toggleKlas(k) {
+    setSelectie(s => s.includes(k) ? s.filter(x => x !== k) : [...s, k])
   }
 
   return (
@@ -69,7 +80,7 @@ function RapportDropdown({ vestigingId, klas }) {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 z-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-2 w-64">
+          <div className="absolute right-0 mt-2 z-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-2 w-72">
             <div className="px-4 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Overzichten</div>
             <RapportRij label="Actieve toewijzingen" type="toewijzingen" onDownload={download} onPreview={preview} />
             <RapportRij label="Innameoverzicht (afvinklijst)" type="inname" onDownload={download} onPreview={preview} />
@@ -102,6 +113,39 @@ function RapportDropdown({ vestigingId, klas }) {
               </button>
               <button onClick={() => preview('klas')} className="text-slate-400 hover:text-primary px-2 py-1" title="Preview"><EyeIcon /></button>
             </div>
+
+            {klassen.length > 0 && (
+              <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
+                <div className="flex items-center justify-between px-4 py-1.5">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Selectie</span>
+                  <button
+                    onClick={() => setSelectie(s => s.length === klassen.length ? [] : [...klassen])}
+                    className="text-xs text-primary hover:underline">
+                    {selectie.length === klassen.length ? 'Niets' : 'Alles'}
+                  </button>
+                </div>
+                <div className="max-h-44 overflow-y-auto px-4 py-1">
+                  {klassen.map(k => (
+                    <label key={k} className="flex items-center gap-2 py-1 text-sm cursor-pointer">
+                      <input type="checkbox" checked={selectie.includes(k)} onChange={() => toggleKlas(k)}
+                        className="rounded border-slate-300 text-primary focus:ring-primary/30" />
+                      <span>{k}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between pr-2">
+                  <button disabled={selectie.length === 0}
+                    onClick={() => download('klas', { klas: selectie })}
+                    className="flex-1 text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 disabled:text-slate-300 dark:disabled:text-slate-600 disabled:hover:bg-transparent">
+                    Download selectie ({selectie.length})
+                  </button>
+                  <button disabled={selectie.length === 0}
+                    onClick={() => preview('klas', { klas: selectie })}
+                    className="text-slate-400 hover:text-primary px-2 py-1 disabled:text-slate-200 dark:disabled:text-slate-700"
+                    title="Preview"><EyeIcon /></button>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -244,7 +288,7 @@ export default function Toolbar({ clusters, filters, setFilters, onBulkAssign, o
         )}
 
         {/* Rapport */}
-        <RapportDropdown vestigingId={vestigingId} klas={filters.klas} />
+        <RapportDropdown vestigingId={vestigingId} klas={filters.klas} klassen={klassen} />
       </div>
     </div>
   )

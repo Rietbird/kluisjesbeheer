@@ -250,17 +250,26 @@ def _get_rapport_data(report_type, vestiging_id, db):
         return title, rows, borg_actief, vestiging_naam, True
 
 
-def _get_klas_rapport_data(vestiging_id, klas, db):
+def _get_klas_rapport_data(vestiging_id, klassen, db):
     """Per-klas overzicht. Geeft een dict {klasnaam: {'met': [...], 'zonder': [...]}}.
-    Klassen-set = de klassen die in deze vestiging een actieve huurder hebben
-    (zelfde set als de filter-dropdown). 'zonder' = leerlingen in die klas zonder
-    actieve toewijzing (leunt op de leerlingen-tabel / Magister-sync)."""
+
+    `klassen` is een lijst met gekozen klassen; leeg betekent alle klassen die in
+    deze vestiging een actieve huurder hebben (zelfde set als de filter-dropdown).
+    'zonder' = leerlingen in die klas zonder actieve toewijzing (leunt op de
+    leerlingen-tabel / Magister-sync).
+
+    Een expliciet gekozen klas komt altijd terug, ook als niemand daar een
+    kluisje heeft. Anders zou zo'n klas bij het naflopen tegen de papieren lijst
+    gewoon lijken te ontbreken, en dat is precies het geval dat je wilt zien.
+    """
     KLAS = "COALESCE(NULLIF(TRIM(t.leerling_klas), ''), l.klas)"
+    klassen = [k for k in (klassen or []) if k]
     params = [int(vestiging_id)]
     klas_filter = ''
-    if klas:
-        klas_filter = f' AND {KLAS} = ?'
-        params.append(klas)
+    if klassen:
+        placeholders = ','.join('?' * len(klassen))
+        klas_filter = f' AND {KLAS} IN ({placeholders})'
+        params.extend(klassen)
     met_rows = db.execute(f'''
         SELECT {KLAS} AS klas, t.leerling_naam, t.leerling_stamnr,
                k.kluisnummer, k.sleutelnummer, t.periode_van, t.periode_tot,
@@ -272,14 +281,18 @@ def _get_klas_rapport_data(vestiging_id, klas, db):
         ORDER BY klas, t.leerling_naam
     ''', params).fetchall()
 
-    klassen = []
-    for r in met_rows:
-        kn = r['klas'] or '-'
-        if kn not in klassen:
-            klassen.append(kn)
+    if klassen:
+        # Gekozen volgorde aanhouden, dubbelingen eruit.
+        volgorde = list(dict.fromkeys(klassen))
+    else:
+        volgorde = []
+        for r in met_rows:
+            kn = r['klas'] or '-'
+            if kn not in volgorde:
+                volgorde.append(kn)
 
     result = {}
-    for kn in klassen:
+    for kn in volgorde:
         result[kn] = {
             'met': [r for r in met_rows if (r['klas'] or '-') == kn],
             'zonder': [],
@@ -327,14 +340,16 @@ def rapport_preview():
     today = date.today().strftime('%d-%m-%Y')
 
     if report_type == 'klas':
-        klas = request.args.get('klas')
-        data = _get_klas_rapport_data(vestiging_id, klas, g.db)
+        from urllib.parse import quote
+        klassen = [k for k in request.args.getlist('klas') if k]
+        data = _get_klas_rapport_data(vestiging_id, klassen, g.db)
         def e(v):
             return htmllib.escape(str(v) if v else '')
         kleur = config.get('SchoolKleur', '#FF8200')
-        title = f"Kluisjes per klas{(' — ' + klas) if klas else ''}"
+        title = f"Kluisjes per klas{(' - ' + ', '.join(klassen)) if klassen else ''}"
         secties = ''
         for kn, groep in data.items():
+            secties += f'<section class="klas">'
             secties += f'<h3>Klas: {e(kn)} <span>({len(groep["met"])} mét kluisje, {len(groep["zonder"])} zonder)</span></h3>'
             secties += '<h4>Mét kluisje</h4><table><thead><tr><th>Naam</th><th class="nr">Kluisnr</th><th class="nr">Sleutelnr</th><th>Van</th><th>Tot</th></tr></thead><tbody>'
             for i, r in enumerate(groep['met']):
@@ -348,9 +363,12 @@ def rapport_preview():
                     rc = 'alt' if i % 2 else ''
                     secties += f'<tr class="{rc}"><td class="naam">{e(r["naam"])}</td><td>{e(r["stamnr"])}</td></tr>'
                 secties += '</tbody></table>'
+            secties += '</section>'
         if not data:
             secties = '<p>Geen klassen met huurders gevonden.</p>'
-        pdf_url = '/api/dashboard/rapport?type=klas' + (f'&vestiging_id={vestiging_id}' if vestiging_id else '') + (f'&klas={htmllib.escape(klas)}' if klas else '')
+        pdf_url = ('/api/dashboard/rapport?type=klas'
+                   + (f'&vestiging_id={vestiging_id}' if vestiging_id else '')
+                   + ''.join(f'&klas={htmllib.escape(quote(k))}' for k in klassen))
         html_out = f'''<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>{e(title)}</title>
 <style>
   body {{ font-family: Arial, sans-serif; font-size: 13px; margin: 0; background: #f8fafc; color: #1e293b; }}
@@ -365,7 +383,9 @@ def rapport_preview():
   th {{ background: {kleur}; color: white; text-align: left; padding: 7px 10px; font-size: 12px; }}
   td {{ padding: 6px 10px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }}
   tr.alt td {{ background: #fff7ed; }}
-  @media print {{ .toolbar {{ display: none; }} body {{ background: white; }} .content {{ margin: 0; max-width: 100%; }} table {{ page-break-inside: avoid; }} }}
+  @media print {{ .toolbar {{ display: none; }} body {{ background: white; }} .content {{ margin: 0; max-width: 100%; }} table {{ page-break-inside: avoid; }}
+    /* Elke klas op een eigen bladzijde, ook bij printen vanuit deze preview. */
+    .klas {{ page-break-before: always; }} .klas:first-of-type {{ page-break-before: auto; }} }}
 </style></head><body>
 <div class="toolbar"><h1>Kluisjesbeheer &mdash; {e(title)}</h1><a href="{pdf_url}">Download PDF</a></div>
 <div class="content"><p style="color:#64748b;font-size:12px">{e(config.get('SchoolNaam', ''))} &mdash; {today}</p>{secties}</div>
@@ -538,7 +558,7 @@ def rapport():
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.units import mm
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
     report_type = request.args.get('type', 'toewijzingen')
@@ -550,8 +570,8 @@ def rapport():
     font_normal, font_bold = _register_font()
 
     if report_type == 'klas':
-        klas = request.args.get('klas')
-        data = _get_klas_rapport_data(vestiging_id, klas, g.db)
+        klassen = [k for k in request.args.getlist('klas') if k]
+        data = _get_klas_rapport_data(vestiging_id, klassen, g.db)
         buf = io.BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15*mm, rightMargin=15*mm,
                                 topMargin=15*mm, bottomMargin=15*mm)
@@ -584,7 +604,7 @@ def rapport():
             ]))
             return t
 
-        title = f"Kluisjes per klas{(' - ' + klas) if klas else ''}"
+        title = f"Kluisjes per klas{(' - ' + ', '.join(klassen)) if klassen else ''}"
         elements = [Paragraph(f"Kluisjesbeheer - {title}", title_style),
                     Paragraph(f"{config.get('SchoolNaam', '')} - {today}", sub_style),
                     Spacer(1, 6*mm)]
@@ -592,7 +612,11 @@ def rapport():
             elements.append(Paragraph("Geen klassen met huurders gevonden.", styles['Normal']))
         nr_w = 28*mm
         date_w = 26*mm
-        for kn, groep in data.items():
+        for index, (kn, groep) in enumerate(data.items()):
+            # Elke klas op een eigen bladzijde: de uitdraai gaat per klas naast
+            # de papieren klassenlijst om met de hand na te lopen.
+            if index:
+                elements.append(PageBreak())
             elements.append(Paragraph(
                 f"Klas: {kn}  ({len(groep['met'])} mét kluisje, {len(groep['zonder'])} zonder)", klas_style))
             elements.append(Paragraph("Mét kluisje", sub_style))
@@ -611,7 +635,12 @@ def rapport():
             elements.append(Spacer(1, 5*mm))
         doc.build(elements)
         buf.seek(0)
-        suffix = f'-{klas}' if klas else '-alle'
+        if len(klassen) == 1:
+            suffix = f'-{klassen[0]}'
+        elif klassen:
+            suffix = f'-{len(klassen)}klassen'
+        else:
+            suffix = '-alle'
         filename = f'kluisjes-klas{suffix}-{date.today().isoformat()}.pdf'
         return Response(buf.getvalue(), mimetype='application/pdf',
                         headers={'Content-Disposition': f'attachment; filename={filename}'})
