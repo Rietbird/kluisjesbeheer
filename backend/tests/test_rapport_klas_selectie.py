@@ -138,10 +138,11 @@ def _vertrokken_huurder(client, db, kluisnummer, stamnr, naam, klas):
     })
 
 
-def test_vertrokken_huurder_staat_apart_en_niet_in_de_klaslijst(client, db):
-    """De klaslijst moet het papier volgen; een vertrekker staat daar niet op.
+def test_vertrokken_huurder_staat_niet_in_het_klasoverzicht(client, db):
+    """Wie van school is hoort niet bij de nieuwe klas.
 
-    Verstoppen mag niet: zijn sleutel staat nog uit.
+    Het klasoverzicht is een momentopname van nu. De historie van vertrekkers,
+    inclusief of hun sleutel terug is, hoort in het vertrokken-rapport.
     """
     _verhuur(client, db, 'X0011', '1', 'Stan Hannink', 'M4A')
     _vertrokken_huurder(client, db, 'X0999', '9', 'Weg Gegaan', 'M4A')
@@ -149,8 +150,7 @@ def test_vertrokken_huurder_staat_apart_en_niet_in_de_klaslijst(client, db):
     html = _preview(client, '&klas=M4A')
 
     assert 'Klas: M4A <span>(1 leerling,' in html
-    assert 'Weg Gegaan' in html
-    assert 'Vertrokken, sleutel nog uit' in html
+    assert 'Weg Gegaan' not in html
 
 
 def test_preview_breekt_bij_printen_af_per_klas(client, db):

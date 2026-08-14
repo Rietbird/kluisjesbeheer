@@ -293,12 +293,11 @@ def _get_klas_rapport_data(vestiging_id, klassen, db):
 
     result = {}
     for kn in volgorde:
-        eigen = [dict(r) for r in met_rows if (r['klas'] or '-') == kn]
-        # Vertrekkers staan niet op de papieren klassenlijst, dus ook niet in de
-        # klaslijst. Ze verdwijnen niet: hun sleutel staat nog uit en dat hoort
-        # zichtbaar te blijven, dus ze krijgen een eigen blok.
-        rijen = [r for r in eigen if not r['vertrokken_op']]
-        vertrokken = [r for r in eigen if r['vertrokken_op']]
+        # Vertrekkers zijn van school en horen dus niet bij de nieuwe klas. Dit
+        # overzicht is een momentopname van nu; hun historie, inclusief of de
+        # sleutel terug is, staat in het rapport 'vertrokken'.
+        rijen = [dict(r) for r in met_rows
+                 if (r['klas'] or '-') == kn and not r['vertrokken_op']]
         if kn != '-':
             # Klasgenoten zonder kluisje erbij, met lege kluisvelden.
             zonder = db.execute('''
@@ -315,9 +314,8 @@ def _get_klas_rapport_data(vestiging_id, klassen, db):
                     'kluisnummer': '', 'sleutelnummer': '',
                     'periode_van': '', 'periode_tot': '', 'vertrokken_op': None,
                 })
-        for lijst in (rijen, vertrokken):
-            lijst.sort(key=lambda r: (r['naam'] or '').lower())
-        result[kn] = {'leerlingen': rijen, 'vertrokken': vertrokken}
+        rijen.sort(key=lambda r: (r['naam'] or '').lower())
+        result[kn] = rijen
     return result
 
 
@@ -368,16 +366,12 @@ def rapport_preview():
                       f'<td>{e(r["periode_van"])}</td><td>{e(r["periode_tot"])}</td></tr>')
             return h + '</tbody></table>'
 
-        for kn, groep in data.items():
-            rijen, vertrokken = groep['leerlingen'], groep['vertrokken']
+        for kn, rijen in data.items():
             zonder = sum(1 for r in rijen if not r['kluisnummer'])
             meervoud = 'en' if len(rijen) != 1 else ''
             secties += '<section class="klas">'
             secties += f'<h3>Klas: {e(kn)} <span>({len(rijen)} leerling{meervoud}, {zonder} zonder kluisje)</span></h3>'
             secties += klas_tabel(rijen)
-            if vertrokken:
-                secties += f'<h4>Vertrokken, sleutel nog uit ({len(vertrokken)})</h4>'
-                secties += klas_tabel(vertrokken)
             secties += '</section>'
         if not data:
             secties = '<p>Geen klassen met huurders gevonden.</p>'
@@ -637,22 +631,17 @@ def rapport():
                               r['periode_tot'] or ''])
             return ktable(mdata, kolommen)
 
-        for index, (kn, groep) in enumerate(data.items()):
+        for index, (kn, rijen) in enumerate(data.items()):
             # Elke klas op een eigen bladzijde: de uitdraai gaat per klas naast
             # de papieren klassenlijst om met de hand na te lopen.
             if index:
                 elements.append(PageBreak())
-            rijen, vertrokken = groep['leerlingen'], groep['vertrokken']
             zonder = sum(1 for r in rijen if not r['kluisnummer'])
             meervoud = 'en' if len(rijen) != 1 else ''
             elements.append(Paragraph(
                 f"Klas: {kn}  ({len(rijen)} leerling{meervoud}, {zonder} zonder kluisje)",
                 klas_style))
             elements.append(klas_tabel(rijen))
-            if vertrokken:
-                elements.append(Paragraph(
-                    f"Vertrokken, sleutel nog uit ({len(vertrokken)})", sub_style))
-                elements.append(klas_tabel(vertrokken))
             elements.append(Spacer(1, 5*mm))
         doc.build(elements)
         buf.seek(0)
