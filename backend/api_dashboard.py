@@ -328,6 +328,19 @@ def _get_klas_rapport_data(vestiging_id, klassen, db):
     return result
 
 
+def _klas_titel(klassen):
+    """Titel voor het per-klas rapport.
+
+    Bij 'alles selecteren' stond elke klasnaam in de titelbalk, wat een
+    onleesbare regel gaf. Vanaf vier klassen dus alleen het aantal.
+    """
+    if not klassen:
+        return 'Kluisjes per klas'
+    if len(klassen) <= 3:
+        return 'Kluisjes per klas - ' + ', '.join(klassen)
+    return f'Kluisjes per klas ({len(klassen)} klassen)'
+
+
 ONBEKEND_IN_MAGISTER = 'Onbekend in Magister'
 
 
@@ -395,15 +408,14 @@ def rapport_preview():
         def e(v):
             return htmllib.escape(str(v) if v else '')
         kleur = config.get('SchoolKleur', '#FF8200')
-        title = f"Kluisjes per klas{(' - ' + ', '.join(klassen)) if klassen else ''}"
+        title = _klas_titel(klassen)
         secties = ''
         def klas_tabel(rows):
-            h = '<table><thead><tr><th>Naam</th><th>Stamnr</th><th class="nr">Kluisnr</th><th class="nr">Sleutelnr</th><th>Van</th><th>Tot</th></tr></thead><tbody>'
+            h = '<table><thead><tr><th>Naam</th><th>Stamnr</th><th class="nr">Kluisnr</th><th class="nr">Sleutelnr</th></tr></thead><tbody>'
             for i, r in enumerate(rows):
                 rc = 'alt' if i % 2 else ''
                 h += (f'<tr class="{rc}"><td class="naam">{e(r["naam"])}</td><td>{e(r["stamnr"])}</td>'
-                      f'<td class="nr">{e(r["kluisnummer"])}</td><td class="nr">{e(r["sleutelnummer"])}</td>'
-                      f'<td>{e(r["periode_van"])}</td><td>{e(r["periode_tot"])}</td></tr>')
+                      f'<td class="nr">{e(r["kluisnummer"])}</td><td class="nr">{e(r["sleutelnummer"])}</td></tr>')
             return h + '</tbody></table>'
 
         for kn, rijen in data.items():
@@ -436,8 +448,8 @@ def rapport_preview():
     /* Elke klas op een eigen bladzijde, ook bij printen vanuit deze preview. */
     .klas {{ page-break-before: always; }} .klas:first-of-type {{ page-break-before: auto; }} }}
 </style></head><body>
-<div class="toolbar"><h1>Kluisjesbeheer &mdash; {e(title)}</h1><a href="{pdf_url}">Download PDF</a></div>
-<div class="content"><p style="color:#64748b;font-size:12px">{e(config.get('SchoolNaam', ''))} &mdash; {today}</p>{secties}</div>
+<div class="toolbar"><h1>Kluisjesbeheer - {e(title)}</h1><a href="{pdf_url}">Download PDF</a></div>
+<div class="content"><p style="color:#64748b;font-size:12px">{e(config.get('SchoolNaam', ''))} - {today}</p>{secties}</div>
 </body></html>'''
         return Response(html_out, mimetype='text/html; charset=utf-8')
 
@@ -591,11 +603,11 @@ def rapport_preview():
 </head>
 <body>
 <div class="toolbar">
-  <h1>Kluisjesbeheer &mdash; {e(title)}</h1>
+  <h1>Kluisjesbeheer - {e(title)}</h1>
   <a href="{pdf_url}">Download PDF</a>
 </div>
 <div class="content">
-  <p class="meta">{e(config.get('SchoolNaam', ''))} &mdash; {today} &mdash; {len(rows)} rijen</p>
+  <p class="meta">{e(config.get('SchoolNaam', ''))} - {today} - {len(rows)} rijen</p>
   {tabel_html}
 </div>
 </body>
@@ -657,7 +669,7 @@ def rapport():
             ]))
             return t
 
-        title = f"Kluisjes per klas{(' - ' + ', '.join(klassen)) if klassen else ''}"
+        title = _klas_titel(klassen)
         elements = [Paragraph(f"Kluisjesbeheer - {title}", title_style),
                     Paragraph(f"{config.get('SchoolNaam', '')} - {today}", sub_style),
                     Spacer(1, 6*mm)]
@@ -665,14 +677,13 @@ def rapport():
             elements.append(Paragraph("Geen klassen met huurders gevonden.", styles['Normal']))
         nr_w = 28*mm
         date_w = 26*mm
-        kolommen = [page_w - 3*nr_w - 2*date_w, nr_w, nr_w, nr_w, date_w, date_w]
+        kolommen = [page_w - 3*nr_w, nr_w, nr_w, nr_w]
 
         def klas_tabel(rows):
-            mdata = [['Naam', 'Stamnr', 'Kluisnr', 'Sleutelnr', 'Van', 'Tot']]
+            mdata = [['Naam', 'Stamnr', 'Kluisnr', 'Sleutelnr']]
             for r in rows:
-                mdata.append([r['naam'] or '', r['stamnr'] or '', r['kluisnummer'] or '',
-                              r['sleutelnummer'] or '', r['periode_van'] or '',
-                              r['periode_tot'] or ''])
+                mdata.append([r['naam'] or '', r['stamnr'] or '',
+                              r['kluisnummer'] or '', r['sleutelnummer'] or ''])
             return ktable(mdata, kolommen)
 
         for index, (kn, rijen) in enumerate(data.items()):

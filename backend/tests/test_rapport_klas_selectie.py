@@ -171,3 +171,33 @@ def test_bestandsnaam_noemt_het_aantal_bij_een_selectie(client, db):
     resp = _pdf(client, '&klas=M4A&klas=M4B')
 
     assert '2klassen' in resp.headers['Content-Disposition']
+
+
+def test_klasoverzicht_toont_geen_periodekolommen(client, db):
+    """De periode is voor de balie ruis; die staat voor de hele klas toch gelijk."""
+    _verhuur(client, db, 'X0011', '1', 'Stan Hannink', 'M4A')
+
+    html = _preview(client, '&klas=M4A')
+
+    assert '<th>Van</th>' not in html
+    assert '<th>Tot</th>' not in html
+    assert '2026-08-01' not in html
+
+
+def test_titel_vat_samen_bij_veel_klassen(client, db):
+    """Alles selecteren zette elke klasnaam in de titelbalk."""
+    for i, kl in enumerate(['M4A', 'M4B', 'M4C', 'GV1A'], start=1):
+        _verhuur(client, db, 'X%04d' % i, str(i), 'Leerling %d' % i, kl)
+
+    html = _preview(client, '&klas=M4A&klas=M4B&klas=M4C&klas=GV1A')
+
+    assert '4 klassen' in html
+    assert 'M4A, M4B, M4C, GV1A' not in html
+
+
+def test_titel_noemt_de_klas_bij_een_kleine_selectie(client, db):
+    _verhuur(client, db, 'X0011', '1', 'Stan Hannink', 'M4A')
+
+    html = _preview(client, '&klas=M4A')
+
+    assert 'Kluisjes per klas - M4A' in html
