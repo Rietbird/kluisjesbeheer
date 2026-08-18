@@ -46,7 +46,10 @@ export default function BulkWizard({ vestigingId, onClose, onDone }) {
     if (selectedCluster) {
       api.get(`/api/clusters/${selectedCluster}/kluisjes`)
         .then(data => {
-          const vrij = data.filter(k => k.status === 'vrij')
+          // Uitleenbaar, niet alleen 'vrij': defect en geen-sleutel houden status
+          // 'vrij' zolang er niemand in zit. Meetellen gaf een te hoge teller en
+          // liet de server de toewijzing weigeren, waardoor een leerling niets kreeg.
+          const vrij = data.filter(k => k.status === 'vrij' && !k.is_defect && !k.geen_sleutel)
             .sort((a, b) => String(a.kluisnummer).localeCompare(String(b.kluisnummer), undefined, { numeric: true, sensitivity: 'base' }))
           setVrijeKluisjes(vrij)
           setAvailableCount(vrij.length)

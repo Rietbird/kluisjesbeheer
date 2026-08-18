@@ -109,17 +109,6 @@ def get_klassen():
     return jsonify([{'naam': r['klas']} for r in rows])
 
 
-@magister_bp.route('/vestigingen/<int:vid>/klassen', methods=['GET'])
-@login_required
-def get_vestiging_klassen(vid):
-    err = assert_vestiging_access(vid)
-    if err: return err
-    rows = g.db.execute(
-        'SELECT klas FROM vestigingen_klassen WHERE vestiging_id = ? ORDER BY klas', (vid,)
-    ).fetchall()
-    return jsonify([r['klas'] for r in rows])
-
-
 @magister_bp.route('/vestigingen/<int:vid>/klassen', methods=['PUT'])
 @beheerder_required
 def set_vestiging_klassen(vid):

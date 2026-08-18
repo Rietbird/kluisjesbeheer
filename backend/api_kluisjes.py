@@ -4,6 +4,7 @@ import zipfile
 from flask import Blueprint, request, jsonify, g
 from auth import login_required, beheerder_required, assert_vestiging_access, user_vestiging_ids
 from klas import KLAS_SQL
+from kluisje_status import UITLEENBAAR_SQL
 
 kluisjes_bp = Blueprint('kluisjes', __name__, url_prefix='/api')
 
@@ -152,8 +153,8 @@ def search_kluisjes():
         # Bezet kluisje waarvan de huurder van school is (vertrokken_op gezet)
         query += ' AND t.actief = 1 AND l.vertrokken_op IS NOT NULL'
     elif status == 'vrij':
-        # Vrij = écht uitleenbaar: geen kluisje-zonder-sleutel ertussen
-        query += " AND k.status = 'vrij' AND k.geen_sleutel = 0"
+        # Vrij = écht uitleenbaar: defect en geen-sleutel horen er niet tussen
+        query += f" AND {UITLEENBAAR_SQL}"
     elif status:
         query += ' AND k.status = ?'
         params.append(status)
@@ -175,20 +176,48 @@ def search_kluisjes():
 @kluisjes_bp.route('/vestigingen/<int:vid>/klassen', methods=['GET'])
 @login_required
 def klassen_in_vestiging(vid):
-    """Unieke klassen met een actieve huurder in deze vestiging (voor de filter-dropdown)."""
+    """Klassen voor de filter-dropdown van deze vestiging.
+
+    Twee bronnen samen. Klassen met een actieve huurder, want die hebben hier
+    hoe dan ook kluisjes staan, ook huurders die Magister niet kent. En de
+    klassen die volgens Magister op de locaties van deze vestiging zitten, want
+    anders mist precies de klas waar nog niemand een kluisje heeft, en dat is
+    nu juist de klas die je zoekt.
+
+    Zonder locatie-koppeling blijft het bij de eerste bron: alle klassen van de
+    school erbij halen zou de dropdown van een vestiging vullen met klassen die
+    daar niet komen.
+    """
     err = assert_vestiging_access(vid)
     if err: return err
+
     rows = g.db.execute(
         f'''SELECT DISTINCT {KLAS_SQL} AS klas
            FROM toewijzingen t
            JOIN kluisjes k ON t.kluisje_id = k.id
            LEFT JOIN leerlingen l ON t.leerling_stamnr = l.stamnr
            WHERE k.verwijderd = 0 AND t.actief = 1 AND k.vestiging_id = ?
-             AND TRIM({KLAS_SQL}) <> ''
-           ORDER BY klas''',
+             AND LENGTH(TRIM(COALESCE({KLAS_SQL}, ''))) > 0
+        ''',
         (vid,)
     ).fetchall()
-    return jsonify([r['klas'] for r in rows])
+    klassen = {r['klas'] for r in rows}
+
+    locaties = g.db.execute(
+        'SELECT locatie FROM vestigingen_locaties WHERE vestiging_id = ?', (vid,)
+    ).fetchall()
+    if locaties:
+        ph = ','.join('?' * len(locaties))
+        extra = g.db.execute(
+            f'''SELECT DISTINCT klas FROM leerlingen
+                WHERE LENGTH(TRIM(COALESCE(klas, ''))) > 0 AND vertrokken_op IS NULL
+                  AND locatie IN ({ph})
+            ''',
+            [r['locatie'] for r in locaties]
+        ).fetchall()
+        klassen.update(r['klas'] for r in extra)
+
+    return jsonify(sorted(klassen))
 
 
 @kluisjes_bp.route('/kluisjes/<int:kid>', methods=['GET'])

@@ -24,7 +24,9 @@ def test_dashboard_stats(client):
     assert len(stats) == 1  # one vestiging
     assert stats[0]['totaal'] == 3
     assert stats[0]['uitgeleend'] == 1
-    assert stats[0]['vrij'] == 2  # P002 + P003 (defect blijft 'vrij' qua huurstatus)
+    # Alleen P002: 'Vrij' op de kaart betekent uitleenbaar, en een defect
+    # kluisje kun je niet uitgeven. Het telt in de kolom Defect ernaast.
+    assert stats[0]['vrij'] == 1
     assert stats[0]['defect'] == 1
 
 def test_dashboard_sleutel_niet_ingeleverd(client):
