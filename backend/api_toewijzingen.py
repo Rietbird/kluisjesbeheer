@@ -387,6 +387,12 @@ def bulk_toewijzen():
         if kluisje['is_defect']:
             skipped.append({'kluisje_id': kid, 'reden': 'Kluisje is defect'})
             continue
+        # Gelijk aan de losse toewijsroute, die dit met een 409 weigert. Zonder
+        # deze regel kon een collectieve ronde een kluisje uitdelen waar geen
+        # sleutel bij hoort.
+        if kluisje['geen_sleutel']:
+            skipped.append({'kluisje_id': kid, 'reden': 'Kluisje heeft geen sleutel'})
+            continue
         laatste = g.db.execute(
             'SELECT * FROM toewijzingen WHERE kluisje_id = ? ORDER BY id DESC LIMIT 1', (kid,)
         ).fetchone()
