@@ -29,6 +29,7 @@ const SECTIES = [
   ['start', 'Inloggen & overzicht'],
   ['kleuren', 'Kleuren & status'],
   ['toewijzen', 'Een kluisje toewijzen'],
+  ['collectief', 'Een hele klas in één keer'],
   ['defect', 'Een defect melden'],
   ['geensleutel', 'Geen sleutel'],
   ['reserve', 'Reservesleutel'],
@@ -68,20 +69,20 @@ export default function Handleiding({ onClose }) {
         {/* Inhoud */}
         <div>
           <Sectie id="start" titel="Inloggen & overzicht">
-            <p>De applicatie werkt in de browser. U logt in met uw schoolaccount (hetzelfde Microsoft-account als voor e-mail) — er zijn geen aparte wachtwoorden.</p>
-            <p>Na het inloggen ziet u uw vestiging(en). Bij meerdere vestigingen kiest u er één via de tabbladen bovenaan. Het hoofdscherm toont alle kluisjes als tegels met het kluisnummer en — afhankelijk van de status — de huurder of een label.</p>
+            <p>De applicatie werkt in de browser. U logt in met uw schoolaccount (hetzelfde Microsoft-account als voor e-mail) - er zijn geen aparte wachtwoorden.</p>
+            <p>Na het inloggen ziet u uw vestiging(en). Bij meerdere vestigingen kiest u er één via de tabbladen bovenaan. Het hoofdscherm toont alle kluisjes als tegels met het kluisnummer en, afhankelijk van de status, de huurder of een label.</p>
           </Sectie>
 
           <Sectie id="kleuren" titel="Kleuren & status">
             <p>De kleur van een tegel vertelt in één oogopslag wat er met het kluisje aan de hand is:</p>
             <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Groen — Vrij.</strong> Beschikbaar voor toewijzing.</li>
-              <li><strong>Blauw — Uitgeleend.</strong> Toont de naam van de huidige huurder.</li>
-              <li><strong>Oranje — Uitgeleend, borg niet betaald.</strong> Met een 💰-teken.</li>
-              <li><strong>Amber — Defect (en vrij).</strong> Gemarkeerd als defect, geen huurder.</li>
-              <li><strong>Blauw met amber rand — Defect én in gebruik.</strong> ⚠ voor het nummer; de huurder blijft zichtbaar.</li>
-              <li><strong>Rood — Vrij, maar sleutel/borg openstaand</strong> van de vorige huurder (🔑 / 💰).</li>
-              <li><strong>Grijs — Geen sleutel.</strong> Buiten gebruik tot er een sleutel is; niet uitleenbaar (🔑✕).</li>
+              <li><strong>Groen: Vrij.</strong> Beschikbaar voor toewijzing.</li>
+              <li><strong>Blauw: Uitgeleend.</strong> Toont de naam van de huidige huurder.</li>
+              <li><strong>Oranje: Uitgeleend, borg niet betaald.</strong> Met een 💰-teken.</li>
+              <li><strong>Amber: Defect (en vrij).</strong> Gemarkeerd als defect, geen huurder.</li>
+              <li><strong>Blauw met amber rand: Defect én in gebruik.</strong> ⚠ voor het nummer; de huurder blijft zichtbaar.</li>
+              <li><strong>Rood: Vrij, maar sleutel/borg openstaand</strong> van de vorige huurder (🔑 / 💰).</li>
+              <li><strong>Grijs: Geen sleutel.</strong> Buiten gebruik tot er een sleutel is; niet uitleenbaar (🔑✕).</li>
             </ul>
             <p>Een 🗝️ bij een huurder betekent dat er een reservesleutel is uitgegeven. Let op het onderscheid: <strong>🔑</strong> = sleutel niet ingeleverd, <strong>🗝️</strong> = reservesleutel uitgegeven.</p>
           </Sectie>
@@ -97,15 +98,26 @@ export default function Handleiding({ onClose }) {
             <Tip>Een leerling kan maar één kluisje per vestiging hebben. Een kluisje kan pas opnieuw worden toegewezen als de sleutel is ingeleverd én de borg is teruggestort.</Tip>
           </Sectie>
 
+          <Sectie id="collectief" titel="Een hele klas in één keer">
+            <p>Met <strong>Collectief toekennen</strong> in de werkbalk geeft u een hele klas in één handeling kluisjes. De wizard loopt door zes stappen: klas, leerlingen, periode en kluisjes, toekenning, bevestigen en het resultaat.</p>
+            <ol className="list-decimal pl-5">
+              <Stap><strong>Kies de klas</strong> en daarna de leerlingen die een kluisje moeten krijgen.</Stap>
+              <Stap><strong>Kies het cluster</strong> waaruit geput wordt. U ziet hoeveel kluisjes daar beschikbaar zijn.</Stap>
+              <Stap><strong>Kies de toekenning:</strong> op volgorde (oplopend op kluisnummer) of willekeurig.</Stap>
+              <Stap><strong>Controleer en bevestig.</strong> Daarna ziet u wat er is toegekend en wat eventueel is overgeslagen.</Stap>
+            </ol>
+            <Tip>Defecte kluisjes en kluisjes zonder sleutel worden overgeslagen; de wizard gaat door naar het eerstvolgende bruikbare nummer. Ze tellen ook niet mee in het aantal beschikbare kluisjes. Een leerling die al een kluisje in deze vestiging heeft wordt overgeslagen en genoemd in het resultaat.</Tip>
+          </Sectie>
+
           <Sectie id="defect" titel="Een defect melden">
             <p>Een kluisje kan defect zijn terwijl het nog in gebruik is. Het defect markeren raakt de huurder en de opmerkingen <strong>niet</strong> aan.</p>
             <ol className="list-decimal pl-5">
-              <Stap><strong>Open het kluisje</strong> — vrij of verhuurd, beide kan.</Stap>
+              <Stap><strong>Open het kluisje</strong> - vrij of verhuurd, beide kan.</Stap>
               <Stap><strong>Klik op "Markeer als defect".</strong> Er verschijnt een amber "defect"-label.</Stap>
               <Stap>In het overzicht krijgt een verhuurd-en-defect kluisje een amber rand met ⚠; de huurder blijft zichtbaar.</Stap>
               <Stap><strong>Opgelost?</strong> Open het kluisje en klik op "Defect opheffen".</Stap>
             </ol>
-            <Tip>Een defect kluisje kan niet aan een nieuwe leerling worden toegewezen — hef eerst het defect op. Een lopende verhuur blijft wél gewoon doorlopen.</Tip>
+            <Tip>Een defect kluisje kan niet aan een nieuwe leerling worden toegewezen: hef eerst het defect op. Een lopende verhuur blijft wél gewoon doorlopen. Een defect kluisje valt bovendien buiten de <strong>Vrij</strong>-lijst en telt niet mee als vrij op de vestigingskaart, zodat u het niet per ongeluk uitdeelt. U vindt ze terug via de status-chip <strong>Defect</strong>.</Tip>
           </Sectie>
 
           <Sectie id="geensleutel" titel="Geen sleutel">
@@ -114,7 +126,7 @@ export default function Handleiding({ onClose }) {
               <Stap><strong>Open een vrij kluisje</strong> en klik op <strong>"Geen sleutel"</strong>. De tegel wordt grijs met 🔑✕.</Stap>
               <Stap><strong>Weer een sleutel?</strong> Open het kluisje en klik op <strong>"Sleutel weer aanwezig"</strong>.</Stap>
             </ol>
-            <Tip>Een "geen sleutel"-kluisje is niet uitleenbaar en valt buiten de "Vrij"-lijst; je vindt ze terug via de status-chip <strong>Geen sleutel</strong>. Dit geldt alleen voor niet-verhuurde kluisjes — een verhuurd kluisje heeft immers een sleutel bij de leerling.</Tip>
+            <Tip>Een "geen sleutel"-kluisje is niet uitleenbaar en valt buiten de "Vrij"-lijst; je vindt ze terug via de status-chip <strong>Geen sleutel</strong>. Dit geldt alleen voor niet-verhuurde kluisjes - een verhuurd kluisje heeft immers een sleutel bij de leerling.</Tip>
           </Sectie>
 
           <Sectie id="reserve" titel="Reservesleutel">
@@ -137,28 +149,30 @@ export default function Handleiding({ onClose }) {
           </Sectie>
 
           <Sectie id="eindeschooljaar" titel="Einde schooljaar">
-            <p>De meeste leerlingen gaan gewoon over naar het volgende leerjaar en houden hun kluisje. Alleen <strong>examengeslaagden en uitstromers</strong> verlaten de school — hun kluisjes moeten worden vrijgemaakt voor het nieuwe jaar. Zo werkt dat:</p>
+            <p>De meeste leerlingen gaan gewoon over naar het volgende leerjaar en houden hun kluisje. Alleen <strong>examengeslaagden en uitstromers</strong> verlaten de school - hun kluisjes moeten worden vrijgemaakt voor het nieuwe jaar. Zo werkt dat:</p>
 
             <p className="font-semibold text-navy dark:text-white mt-4">Vertrokken leerlingen</p>
-            <p>Als de Magister-koppeling actief is, wordt een leerling die niet meer in Magister staat automatisch gemarkeerd als <strong>vertrokken</strong>. Zo'n leerling verdwijnt niet uit de app zolang hij nog een kluisje heeft — overal is een rode markering zichtbaar:</p>
+            <p>Als de Magister-koppeling actief is, wordt een leerling die niet meer in Magister staat automatisch gemarkeerd als <strong>vertrokken</strong>. Zo'n leerling verdwijnt niet uit de app zolang hij nog een kluisje heeft - overal is een rode markering zichtbaar:</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>In het overzicht: een rood <strong>⚠</strong> vóór de naam (tooltip "Vertrokken van school")</li>
               <li>In het detailscherm: een rood <strong>"Vertrokken"</strong>-label</li>
               <li>In de lijstweergave en in de PDF-rapporten: <strong>[V]</strong> / "Vertrokken" achter de naam</li>
             </ul>
 
-            <Tip>Een vertrokken leerling houdt zijn kluisje totdat u de huur beëindigt — het kluisje wordt <strong>niet</strong> automatisch vrijgegeven. U moet immers nog de sleutel innemen en eventueel de borg terugstorten.</Tip>
+            <Tip>Een vertrokken leerling houdt zijn kluisje totdat u de huur beëindigt - het kluisje wordt <strong>niet</strong> automatisch vrijgegeven. U moet immers nog de sleutel innemen en eventueel de borg terugstorten.</Tip>
 
-            <p className="font-semibold text-navy dark:text-white mt-4">Kluisjes vrijmaken — collectief beëindigen</p>
+            <p className="font-semibold text-navy dark:text-white mt-4">Kluisjes vrijmaken: collectief beëindigen</p>
             <p>Om niet elk kluisje los te hoeven afhandelen, is er <strong>"Collectief beëindigen"</strong> in de werkbalk van het overzicht: hiermee beëindigt u in één keer de huur van een selectie of een hele klas. Vink per kluisje af of de sleutel is ingeleverd en de borg is teruggestort. Gebruik de rapporten <strong>"Openstaande sleutels"</strong> en <strong>"Innameoverzicht"</strong> als werklijst om te zien wat er nog open staat.</p>
-            <Tip>Vink in stap 1 <strong>"Alleen vertrokken"</strong> aan om in één keer alle vertrokken leerlingen te selecteren. Voor die groep staat "sleutel ingeleverd" standaard uit (ze leveren niets meer in). In het overzicht doet het filter <strong>Aandachtspunten ▾ → Vertrokken</strong> hetzelfde — dat toont alleen kluisjes met een vertrokken huurder.</Tip>
+            <Tip>Vink in stap 1 <strong>"Alleen vertrokken"</strong> aan om in één keer alle vertrokken leerlingen te selecteren. Voor die groep staat "sleutel ingeleverd" standaard uit (ze leveren niets meer in). In het overzicht doet het filter <strong>Aandachtspunten ▾ → Vertrokken</strong> hetzelfde - dat toont alleen kluisjes met een vertrokken huurder.</Tip>
 
-            <p className="font-semibold text-navy dark:text-white mt-4">Nieuw schooljaar — automatisch</p>
-            <p>U hoeft de standaardperiode niet zelf te wijzigen. Vanaf 1 augustus stelt het systeem bij een nieuwe toewijzing automatisch de periode van het nieuwe schooljaar voor (1 september tot de zomervakantie erna). Bestaande huren van het oude jaar blijven gewoon staan tot u ze beëindigt — de overgang verandert daar niets aan.</p>
+            <p className="font-semibold text-navy dark:text-white mt-4">Nieuw schooljaar - automatisch</p>
+            <p>Het schooljaar loopt in de app van <strong>1 augustus tot en met 31 juli</strong>. U hoeft de standaardperiode niet zelf te wijzigen: vanaf 1 augustus stelt het systeem bij een nieuwe toewijzing automatisch de periode van het nieuwe schooljaar voor.</p>
+            <p><strong>Lopende huren gaan vanzelf mee.</strong> De dagelijkse synchronisatie schuift de einddatum van een huur door naar het nieuwe schooljaar zodra die datum verstreken is en de leerling nog gewoon op school zit. U hoeft daar niets voor te doen.</p>
+            <Tip>Twee uitzonderingen. Een einddatum die nog in de toekomst ligt blijft staan, want die is bewust zo gezet. En de huur van een vertrokken leerling schuift niet mee: die blijft openstaan tot u hem beëindigt, zodat u de sleutel nog kunt innemen.</Tip>
           </Sectie>
 
           <Sectie id="ruilen" titel="Kluisjes ruilen">
-            <p>Soms krijgt een leerling een kluisje dat fysiek te hoog of te laag zit en wil die ruilen met een andere leerling. Beide leerlingen wisselen van kluisje in één handeling — zonder huren te beëindigen en opnieuw toe te wijzen.</p>
+            <p>Soms krijgt een leerling een kluisje dat fysiek te hoog of te laag zit en wil die ruilen met een andere leerling. Beide leerlingen wisselen van kluisje in één handeling - zonder huren te beëindigen en opnieuw toe te wijzen.</p>
             <ol className="list-decimal pl-5">
               <Stap>Open het verhuurde kluisje van de ene leerling.</Stap>
               <Stap>Klik onderaan op <strong>"Ruilen met…"</strong>.</Stap>
@@ -177,7 +191,7 @@ export default function Handleiding({ onClose }) {
               <Stap>Bij "Bestaande kluisjes naar dit cluster halen": kies de <strong>prefix</strong> uit de lijst en vul <strong>van</strong> en <strong>tot</strong> in.</Stap>
               <Stap>Klik <strong>"Verplaats reeks naar dit cluster"</strong>.</Stap>
             </ol>
-            <Tip>De prefix kiest u uit een lijst — niets typen. Voorloopnullen maken niet uit (1 vindt ook nummer 0001). U kunt meerdere reeksen achter elkaar doen; de prefix blijft staan.</Tip>
+            <Tip>De prefix kiest u uit een lijst - niets typen. Voorloopnullen maken niet uit (1 vindt ook nummer 0001). U kunt meerdere reeksen achter elkaar doen; de prefix blijft staan.</Tip>
 
             <p className="font-semibold text-navy dark:text-white mt-4">Een selectie verplaatsen</p>
             <ol className="list-decimal pl-5">
@@ -190,10 +204,10 @@ export default function Handleiding({ onClose }) {
               <Stap>Open het kluisje in het overzicht.</Stap>
               <Stap>Klik op <strong>"Verplaats naar cluster"</strong>, kies het doelcluster en bevestig.</Stap>
             </ol>
-            <p>Verplaatsen verandert alleen de indeling — huurder, borg, sleutel en opmerkingen blijven ongewijzigd. Alleen binnen dezelfde vestiging.</p>
+            <p>Verplaatsen verandert alleen de indeling - huurder, borg, sleutel en opmerkingen blijven ongewijzigd. Alleen binnen dezelfde vestiging.</p>
 
             <p className="font-semibold text-navy dark:text-white mt-4">Een cluster verwijderen</p>
-            <p>Klik op het prullenbak-icoon bij een cluster. Dit kan ook als er al verhuurhistorie in zit — die historie blijft bewaard. Alleen als er nog een <strong>actieve</strong> verhuur in het cluster loopt, moet u die eerst beëindigen.</p>
+            <p>Klik op het prullenbak-icoon bij een cluster. Dit kan ook als er al verhuurhistorie in zit - die historie blijft bewaard. Alleen als er nog een <strong>actieve</strong> verhuur in het cluster loopt, moet u die eerst beëindigen.</p>
           </Sectie>
 
           <Sectie id="zoeken" titel="Zoeken & filteren">
@@ -202,19 +216,33 @@ export default function Handleiding({ onClose }) {
               <li><strong>Zoeken</strong> op kluisnummer, sleutelnummer, leerlingnaam of stamnummer.</li>
               <li><strong>Status</strong> (wat het kluisje is): Alles, Vrij, Uitgeleend, Defect, Geen sleutel.</li>
               <li><strong>Aandachtspunten ▾</strong> (vlaggen op een kluisje): Borg openstaand, Sleutel niet ingeleverd, Vertrokken, Reservesleutel uitgegeven.</li>
-              <li><strong>Cluster</strong> — beperk tot een gang of afdeling binnen de vestiging.</li>
+              <li><strong>Cluster</strong> - beperk tot een gang of afdeling binnen de vestiging.</li>
+              <li><strong>Klas</strong> - toont alleen de kluisjes van leerlingen uit die klas. De lijst bevat ook klassen waar nog niemand een kluisje heeft, juist om te kunnen zien wie er nog een nodig heeft.</li>
             </ul>
             <p>Na een aanpassing blijft het detailscherm open staan, zodat u meerdere handelingen op hetzelfde kluisje kunt doen zonder uw plek in de lijst kwijt te raken.</p>
           </Sectie>
 
           <Sectie id="rapport" titel="Rapporten">
-            <p>Via de werkbalk maakt u PDF-overzichten, per vestiging of klas:</p>
+            <p>De knop <strong>Rapport</strong> in de werkbalk opent een venster met alle overzichten. Klik op een rapport om de PDF te downloaden, of op het oogje ernaast voor een preview in de browser. Elk rapport geldt voor de vestiging die u op dat moment open heeft.</p>
+
+            <p className="font-semibold text-navy dark:text-white mt-4">Overzichten</p>
             <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Openstaande sleutels</strong> — wie heeft nog niet ingeleverd.</li>
-              <li><strong>Openstaande borg</strong> — niet betaald of niet teruggestort.</li>
-              <li><strong>Actieve toewijzingen</strong> en <strong>innameoverzicht</strong> — handig aan het eind van het schooljaar.</li>
-              <li><strong>Defecte kluisjes</strong> — overzicht voor de technische dienst.</li>
+              <li><strong>Actieve toewijzingen</strong> - alle lopende huren.</li>
+              <li><strong>Innameoverzicht</strong> - afvinklijst voor aan de balie.</li>
+              <li><strong>Defecte kluisjes</strong> - overzicht voor de technische dienst.</li>
+              <li><strong>Leerlingen zonder kluisje</strong> - wie er nog een nodig heeft.</li>
             </ul>
+
+            <p className="font-semibold text-navy dark:text-white mt-4">Openstaand</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong>Openstaande sleutels</strong> - huur afgesloten, sleutel niet terug.</li>
+              <li><strong>Vertrokken leerlingen</strong> - iedereen die van school ging en een kluisje had, gegroepeerd per schooljaar van vertrek, met per leerling of de sleutel is ingeleverd. Elk schooljaar begint op een eigen bladzijde.</li>
+              <li><strong>Openstaande borg</strong> - niet betaald of niet teruggestort. Alleen zichtbaar als borg voor die vestiging aan staat.</li>
+            </ul>
+
+            <p className="font-semibold text-navy dark:text-white mt-4">Per klas</p>
+            <p>Rechts in het venster vinkt u klassen aan. U krijgt <strong>één PDF</strong> met alle gekozen klassen, elke klas op een eigen bladzijde. De lijst bevat iedere leerling van de klas precies één keer, met een leeg kluisnummerveld als hij er nog geen heeft. Zo legt u de uitdraai regel voor regel naast de papieren klassenlijst.</p>
+            <Tip>Gebruik het zoekveld boven de lijst om snel een klas te vinden, of <strong>Alles</strong> om in één keer alles aan of uit te zetten. Vertrokken leerlingen staan bewust niet in dit overzicht: die horen niet meer bij de klas. U vindt ze in het rapport <strong>Vertrokken leerlingen</strong>.</Tip>
           </Sectie>
 
           <p className="text-xs text-slate-400 dark:text-slate-500 pt-6 border-t border-slate-200 dark:border-slate-700">
